@@ -1,0 +1,72 @@
+@use "mixins" as *;
+
+.root {
+  position: relative;
+}
+
+.trigger {
+  @include unbutton;
+}
+
+.menu {
+  position: absolute;
+  z-index: 60;
+  top: calc(100% + 0.5rem);
+  min-width: 14rem;
+  padding: var(--space-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-raised);
+  box-shadow: var(--shadow-md);
+  animation: pop var(--dur-fast) var(--ease);
+}
+
+@keyframes pop {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+.end {
+  right: 0;
+}
+
+.start {
+  left: 0;
+}
+
+.item {
+  @include unbutton;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  padding: 0.55rem 0.75rem;
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+  color: var(--fg);
+
+  svg {
+    width: 1rem;
+    height: 1rem;
+    color: var(--fg-muted);
+  }
+
+  &:hover,
+  &:focus-visible {
+    background: var(--bg-sunken);
+    outline: none;
+  }
+}
+
+.separator {
+  height: 1px;
+  margin: var(--space-1) 0;
+  background: var(--border);
+}
+
+.label {
+  padding: 0.5rem 0.75rem 0.25rem;
+  @include eyebrow;
+}

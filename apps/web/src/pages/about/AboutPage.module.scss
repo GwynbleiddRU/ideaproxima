@@ -1,0 +1,156 @@
+@use "mixins" as *;
+
+.principles {
+  display: grid;
+  gap: var(--space-6) var(--space-7);
+
+  @include up(md) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  @include up(xl) {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  article {
+    display: grid;
+    gap: var(--space-2);
+    align-content: start;
+    padding-top: var(--space-4);
+    border-top: 1px solid var(--border-strong);
+  }
+
+  h2 {
+    @include serif(450);
+    font-size: var(--text-xl);
+  }
+
+  p {
+    color: var(--fg-muted);
+    line-height: 1.65;
+  }
+}
+
+.number {
+  font-size: var(--text-xs);
+  color: var(--fg-subtle);
+  font-variant-numeric: tabular-nums;
+}
+
+.section {
+  margin-top: var(--space-9);
+}
+
+.lede {
+  max-width: 66ch;
+  margin: calc(var(--space-3) * -1) 0 var(--space-5);
+  color: var(--fg-muted);
+}
+
+.stages {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  counter-reset: stage;
+
+  @include up(md) {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  li {
+    display: grid;
+    gap: var(--space-1);
+    padding: var(--space-4);
+    @include card;
+  }
+
+  strong {
+    @include serif(500);
+    font-size: var(--text-lg);
+  }
+
+  span {
+    font-size: var(--text-sm);
+    color: var(--fg-muted);
+  }
+}
+
+.statuses {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+
+  @include up(md) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  div {
+    display: grid;
+    grid-template-columns: 9.5rem 1fr;
+    align-items: start;
+    gap: var(--space-3);
+  }
+
+  dd {
+    margin: 0;
+    font-size: var(--text-sm);
+    color: var(--fg-muted);
+  }
+}
+
+.lenses {
+  display: grid;
+  gap: var(--space-6);
+
+  @include up(md) {
+    grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  }
+
+  h3 {
+    @include eyebrow;
+    color: var(--fg);
+  }
+
+  ul {
+    display: grid;
+    gap: var(--space-3);
+    margin-top: var(--space-3);
+  }
+
+  li {
+    display: grid;
+    gap: 0.15rem;
+
+    span {
+      font-size: var(--text-sm);
+      color: var(--fg-muted);
+    }
+  }
+}
+
+.signal {
+  margin-top: var(--space-1);
+  font-size: var(--text-xs);
+  color: var(--fg-subtle);
+}
+
+.closing {
+  display: grid;
+  gap: var(--space-5);
+  max-width: 52rem;
+  margin-top: var(--space-9);
+  padding: var(--space-6);
+  border-radius: var(--radius-lg);
+  background: var(--bg-sunken);
+
+  p {
+    line-height: 1.65;
+  }
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3) var(--space-5);
+}

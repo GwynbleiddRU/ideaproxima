@@ -1,0 +1,10 @@
+node_modules
+dist
+.data
+package-lock.json
+apps/api/drizzle
+concept.txt
+docs/developer/api-reference.md
+docs/developer/api/
+audit/artifacts
+temp-reference-folder

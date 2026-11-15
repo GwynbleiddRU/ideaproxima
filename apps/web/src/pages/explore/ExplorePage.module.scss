@@ -1,0 +1,178 @@
+@use "mixins" as *;
+
+.layout {
+  display: grid;
+  gap: var(--space-6);
+
+  @include up(lg) {
+    grid-template-columns: 15rem minmax(0, 1fr);
+    gap: var(--space-7);
+  }
+}
+
+.sidebar {
+  display: grid;
+  gap: var(--space-5);
+  align-content: start;
+
+  @include up(lg) {
+    position: sticky;
+    top: calc(var(--header-h) + var(--space-5));
+  }
+}
+
+.lensNav {
+  display: flex;
+  gap: var(--space-4);
+  overflow-x: auto;
+  padding-bottom: var(--space-2);
+  scrollbar-width: thin;
+
+  @include up(lg) {
+    display: grid;
+    gap: var(--space-4);
+    overflow: visible;
+  }
+}
+
+.lensGroup {
+  display: flex;
+  gap: var(--space-1);
+  flex-shrink: 0;
+
+  @include up(lg) {
+    display: grid;
+  }
+}
+
+.groupLabel {
+  @include eyebrow;
+  display: none;
+  padding: 0 0.75rem var(--space-1);
+
+  @include up(lg) {
+    display: block;
+  }
+}
+
+.lensLink {
+  padding: 0.4rem 0.75rem;
+  border-radius: var(--radius-pill);
+  font-size: var(--text-sm);
+  color: var(--fg-muted);
+  white-space: nowrap;
+  border: 1px solid var(--border);
+  transition:
+    color var(--dur-fast) var(--ease),
+    background-color var(--dur-fast) var(--ease);
+
+  &:hover {
+    color: var(--fg);
+    background: var(--bg-sunken);
+  }
+
+  @include up(lg) {
+    border: 0;
+    border-radius: var(--radius-sm);
+  }
+}
+
+.lensActive {
+  background: var(--fg);
+  border-color: var(--fg);
+  color: var(--bg);
+  font-weight: 540;
+
+  &:hover {
+    background: var(--fg);
+    color: var(--bg);
+  }
+
+  @include up(lg) {
+    background: var(--primary-soft);
+    color: var(--primary-soft-fg);
+
+    &:hover {
+      background: var(--primary-soft);
+      color: var(--primary-soft-fg);
+    }
+  }
+}
+
+.filters {
+  display: grid;
+  gap: var(--space-3);
+
+  @include up(sm) {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  @include up(lg) {
+    grid-template-columns: 1fr;
+    padding-top: var(--space-4);
+    border-top: 1px solid var(--border);
+  }
+}
+
+.filter {
+  display: grid;
+  gap: 0.35rem;
+
+  span {
+    @include eyebrow;
+  }
+
+  input,
+  select {
+    min-height: 2.35rem;
+    font-size: var(--text-sm);
+  }
+}
+
+.results {
+  min-width: 0;
+}
+
+.lensBanner {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: start;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-5);
+  border-radius: var(--radius-lg);
+  background: var(--bg-sunken);
+}
+
+.lensTitle {
+  @include serif(450);
+  font-size: var(--text-xl);
+}
+
+.lensDescription {
+  margin-top: var(--space-1);
+  color: var(--fg-muted);
+  font-size: var(--text-sm);
+
+  strong {
+    color: var(--fg);
+    font-weight: 580;
+  }
+}
+
+.active {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+}
+
+.list {
+  display: grid;
+  margin-top: var(--space-2);
+}
+
+.more {
+  display: flex;
+  justify-content: center;
+  margin-top: var(--space-6);
+}

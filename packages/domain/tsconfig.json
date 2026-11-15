@@ -1,0 +1,8 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    // Platform-agnostic on purpose: the frontend imports this package too.
+    "types": []
+  },
+  "include": ["src", "test"]
+}

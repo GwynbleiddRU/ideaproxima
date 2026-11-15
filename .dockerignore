@@ -1,0 +1,13 @@
+**/node_modules
+**/dist
+**/.data
+**/.env
+**/coverage
+**/*.log
+.git
+.github
+docs
+prompts
+scripts
+audit
+temp-reference-folder

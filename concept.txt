@@ -1,0 +1,53 @@
+## A Collective Repository of Humanity's Possible Futures
+
+Humanity's future is shaped not only by the problems we recognize today, but by ideas that expand what we believe is possible.
+
+Many potentially transformative ideas never progress beyond the mind of the person who imagined them. They are scattered across scientific discussions, engineering communities, political philosophy, private conversations, research notes and the imagination of ordinary people. Some are developed decades before the technology or social conditions required to realize them exist. Others are forgotten entirely.
+
+This platform is intended to become a persistent, open repository of such ideas.
+
+Anyone should be able to propose a possibility for the future of humanity: a new technology, scientific direction, social structure, political principle, economic model, biological capability, environmental technology, method of cooperation, or any other concept that could meaningfully change what humanity is capable of doing.
+
+An idea does not need to be immediately feasible, scientifically proven, or universally accepted to deserve preservation.
+
+The platform's purpose is to allow ideas to be discovered, discussed, challenged, developed, connected to evidence, evaluated and eventually brought into reality when circumstances allow.
+
+Community voting provides one signal: what people care about.
+
+It does not determine what is true, scientifically valid, feasible or valuable.
+
+The platform therefore evaluates ideas through multiple dimensions, including the quality and completeness of their development, available evidence, scientific or logical support, potential impact, feasibility, novelty, expert assessment and community interest.
+
+These dimensions produce different ways of discovering ideas rather than one supposedly objective ranking.
+
+An idea with enormous public support but no evidence should remain visible as a highly popular idea, but it should not automatically outrank a less popular idea supported by strong evidence and rigorous development.
+
+Likewise, an extremely speculative idea with enormous potential should not disappear simply because it cannot yet be implemented.
+
+The platform should preserve uncertainty rather than hide it.
+
+Users should also develop reputations based on the quality of their contributions. Rather than attempting to assign an absolute measure of intelligence, the system should measure demonstrated intellectual contribution: the quality of ideas a person develops, the usefulness of their criticism, their ability to contribute evidence, the accuracy of their evaluations and predictions, their expertise in particular domains, and their ability to collaborate with others.
+
+Over time, these signals can influence how strongly a person's evaluations contribute to collective rankings.
+
+The objective is not to create an intellectual hierarchy, but to make collective decision-making more sensitive to people who have demonstrated useful judgment.
+
+The ultimate goal is to connect ideas with the people capable of advancing them.
+
+A scientist might discover an idea worth researching. An engineer might find a concept worth building. A philanthropist might find an opportunity worth funding. A political organization might discover a new governance model. An entrepreneur might discover a technology worth developing. A community might discover a social experiment worth conducting.
+
+When an idea is acted upon, the platform should preserve the history of that transition: who proposed it, who developed it, what evidence emerged, what experiments were performed, what succeeded, what failed and what was learned.
+
+In this way, the platform becomes more than a social network.
+
+It becomes a form of collective memory for humanity's attempts to imagine its future.
+
+Its fundamental unit of value is not engagement.
+
+It is the progression of an idea:
+
+**imagined → developed → examined → tested → implemented → learned from.**
+
+The platform exists to increase the probability that humanity's potentially valuable ideas are not lost simply because the right person, technology, resource or historical moment had not yet appeared.
+
+Platform serves not for people dreaming but primarly for scientists to find out ideas and what they are connected to (as one idea is brought to life, they can instantly find other uses of it by browsing connected ideas) and influencers to find investment ideas

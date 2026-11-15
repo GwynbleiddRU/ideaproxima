@@ -1,0 +1,71 @@
+@use "mixins" as *;
+
+.form {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-4);
+  max-width: 48rem;
+  margin-bottom: var(--space-7);
+
+  input {
+    flex: 1 1 0;
+    width: 0;
+    min-width: 0;
+  }
+}
+
+.hint {
+  color: var(--fg-muted);
+}
+
+.results {
+  display: grid;
+  gap: var(--space-7);
+
+  @include up(lg) {
+    grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+  }
+}
+
+.side {
+  display: grid;
+  gap: var(--space-6);
+  align-content: start;
+}
+
+.list {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+
+  li {
+    display: grid;
+    gap: 0.2rem;
+    padding-bottom: var(--space-3);
+    border-bottom: 1px solid var(--border);
+  }
+}
+
+.claim {
+  @include serif(450);
+  line-height: 1.4;
+
+  &:hover {
+    color: var(--primary);
+  }
+}
+
+.meta {
+  font-size: var(--text-xs);
+  color: var(--fg-muted);
+}
+
+.person {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+
+  &:hover {
+    color: var(--primary);
+  }
+}

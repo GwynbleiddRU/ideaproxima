@@ -1,0 +1,128 @@
+@use "mixins" as *;
+
+.people {
+  display: grid;
+  gap: var(--space-5);
+
+  @include up(md) {
+    grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+  }
+}
+
+.peopleGroup {
+  display: grid;
+  gap: var(--space-3);
+  align-content: start;
+}
+
+.peopleList {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+
+  li {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2) var(--space-3);
+  }
+}
+
+.note {
+  flex-basis: 100%;
+  font-size: var(--text-xs);
+  color: var(--fg-muted);
+}
+
+.initiative {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-5);
+  @include card;
+}
+
+.initiativeHead {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.initiativeTitle {
+  @include serif(450);
+  font-size: var(--text-xl);
+}
+
+.description {
+  line-height: 1.65;
+  white-space: pre-line;
+  max-width: var(--reading-max);
+}
+
+.outcomes {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.outcome {
+  --result: var(--border-strong);
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  border-radius: var(--radius);
+  background: var(--bg-sunken);
+  border-left: 3px solid var(--result);
+
+  &[data-result="succeeded"] {
+    --result: var(--success);
+  }
+  &[data-result="partially_succeeded"] {
+    --result: var(--warning);
+  }
+  &[data-result="failed"] {
+    --result: var(--danger);
+  }
+}
+
+.outcomeHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+
+  .note {
+    flex-basis: auto;
+  }
+}
+
+.lessons {
+  display: flex;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border-radius: var(--radius-sm);
+  background: var(--warning-soft);
+  font-size: var(--text-sm);
+
+  svg {
+    flex-shrink: 0;
+    margin-top: 0.1rem;
+    color: var(--warning);
+  }
+
+  strong {
+    font-weight: 620;
+  }
+}
+
+.initiativeFoot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+}

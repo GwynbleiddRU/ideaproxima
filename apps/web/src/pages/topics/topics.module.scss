@@ -1,0 +1,96 @@
+@use "mixins" as *;
+
+.grid {
+  display: grid;
+  gap: var(--space-4);
+  margin: 0;
+
+  @include up(sm) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  @include up(lg) {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.topic {
+  position: relative;
+  display: grid;
+  gap: var(--space-2);
+  height: 100%;
+  padding: var(--space-5);
+  @include card;
+  transition:
+    border-color var(--dur) var(--ease),
+    box-shadow var(--dur) var(--ease);
+
+  &:hover {
+    border-color: var(--border-strong);
+    box-shadow: var(--shadow-md);
+
+    .name {
+      color: var(--primary);
+    }
+  }
+}
+
+.count {
+  position: absolute;
+  top: var(--space-5);
+  right: var(--space-5);
+  @include serif(400);
+  font-size: var(--text-2xl);
+  color: var(--fg-subtle);
+  font-variant-numeric: tabular-nums;
+}
+
+.name {
+  @include serif(450);
+  font-size: var(--text-xl);
+  transition: color var(--dur-fast) var(--ease);
+}
+
+.description {
+  max-width: 34ch;
+  color: var(--fg-muted);
+  font-size: var(--text-sm);
+}
+
+.children {
+  font-size: var(--text-xs);
+  color: var(--fg-subtle);
+}
+
+.subtopics,
+.lenses {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+}
+
+.lensNote {
+  margin-bottom: var(--space-5);
+  font-size: var(--text-sm);
+  color: var(--fg-muted);
+}
+
+.ideas {
+  display: grid;
+  gap: var(--space-4);
+
+  @include up(md) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  @include up(xl) {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.more {
+  display: flex;
+  justify-content: center;
+  margin-top: var(--space-6);
+}

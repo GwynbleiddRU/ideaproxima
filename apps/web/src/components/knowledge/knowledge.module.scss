@@ -1,0 +1,238 @@
+@use "mixins" as *;
+
+// ---------------------------------------------------------------- claim
+
+.claim {
+  --claim: var(--status-unassessed);
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-5);
+  @include card;
+  border-left: 3px solid var(--claim);
+  scroll-margin-top: calc(var(--header-h) + 4rem);
+
+  &:target,
+  &.targeted {
+    box-shadow: 0 0 0 3px color-mix(in oklab, var(--claim) 35%, transparent);
+  }
+
+  @each $status in established, supported, hypothesis, unknown, doubtful, refuted, contested, unassessed {
+    &[data-status="#{$status}"] {
+      --claim: var(--status-#{$status});
+    }
+  }
+}
+
+.claimHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.claimStatement {
+  @include serif(450);
+  font-size: var(--text-lg);
+  line-height: 1.4;
+}
+
+.claimMeters {
+  display: grid;
+  gap: var(--space-3);
+
+  @include up(sm) {
+    grid-template-columns: repeat(2, minmax(0, 14rem));
+    gap: var(--space-5);
+  }
+}
+
+.evidenceCounts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  font-size: var(--text-xs);
+  color: var(--fg-muted);
+
+  b {
+    color: var(--fg);
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+.shared {
+  font-size: var(--text-xs);
+  color: var(--primary);
+  font-weight: 540;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.evidenceList {
+  display: grid;
+  gap: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border);
+}
+
+// ---------------------------------------------------------------- evidence
+
+.evidence {
+  --stance: var(--status-hypothesis);
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border-radius: var(--radius);
+  background: var(--bg-sunken);
+  border-left: 3px solid var(--stance);
+
+  &[data-stance="supports"] {
+    --stance: var(--status-established);
+  }
+
+  &[data-stance="challenges"] {
+    --stance: var(--status-refuted);
+  }
+}
+
+.withdrawn {
+  opacity: 0.7;
+
+  .evidenceSummary,
+  .argumentBody,
+  .argumentTitle {
+    text-decoration: line-through;
+    text-decoration-color: var(--fg-subtle);
+  }
+}
+
+.evidenceHead {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.evidenceSummary {
+  font-size: var(--text-base);
+  line-height: 1.6;
+}
+
+.limitations {
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  background: var(--warning-soft);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+
+  strong {
+    color: var(--warning);
+    font-weight: 620;
+  }
+}
+
+.source {
+  font-size: var(--text-sm);
+  color: var(--fg-muted);
+  line-height: 1.5;
+}
+
+.external {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  margin-left: 0.5rem;
+  color: var(--primary);
+  font-weight: 540;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+.withdrawnReason {
+  font-size: var(--text-sm);
+  color: var(--danger);
+}
+
+.evidenceMeters {
+  display: grid;
+  gap: var(--space-3);
+
+  @include up(sm) {
+    grid-template-columns: repeat(2, minmax(0, 13rem));
+    gap: var(--space-5);
+  }
+}
+
+// ---------------------------------------------------------------- shared footer
+
+.footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-4);
+}
+
+.footerActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+// ---------------------------------------------------------------- arguments
+
+.argument {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  @include card;
+  border-left: 3px solid var(--stance);
+}
+
+.argumentHead {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.argumentTitle {
+  @include serif(500);
+  font-size: var(--text-lg);
+  line-height: 1.35;
+}
+
+.argumentBody {
+  color: color-mix(in oklab, var(--fg) 88%, transparent);
+  line-height: 1.65;
+  white-space: pre-line;
+  max-width: var(--reading-max);
+}
+
+.argumentMeter {
+  max-width: 16rem;
+}
+
+.usefulOn {
+  color: var(--primary) !important;
+}
+
+.replies {
+  display: grid;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+  padding-left: var(--space-4);
+  border-left: 1px dashed var(--border-strong);
+
+  .argument {
+    background: var(--bg);
+  }
+}
+
+.replyForm {
+  padding: var(--space-4);
+  border-radius: var(--radius);
+  background: var(--bg-sunken);
+}

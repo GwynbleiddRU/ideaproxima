@@ -1,0 +1,94 @@
+@use "mixins" as *;
+
+// Shared layout for the idea's tabs.
+
+.tab {
+  display: grid;
+  gap: var(--space-6);
+  align-content: start;
+  max-width: 60rem;
+}
+
+.wide {
+  max-width: none;
+}
+
+.lede {
+  max-width: 68ch;
+  margin-top: calc(var(--space-6) * -1 + var(--space-1));
+  color: var(--fg-muted);
+}
+
+.group {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.groupHead {
+  display: grid;
+  gap: var(--space-1);
+
+  p {
+    font-size: var(--text-sm);
+    color: var(--fg-muted);
+  }
+}
+
+.groupTitle {
+  @include eyebrow;
+  color: var(--fg);
+  font-size: var(--text-xs);
+
+  span {
+    margin-left: 0.4rem;
+    color: var(--fg-subtle);
+  }
+}
+
+.stack {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.panel {
+  padding: var(--space-5);
+  @include card;
+}
+
+.columns {
+  display: grid;
+  gap: var(--space-6);
+
+  @include up(lg) {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+}
+
+.list {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  > li {
+    padding: var(--space-4) 0;
+    border-bottom: 1px solid var(--border);
+
+    &:last-child {
+      border-bottom: 0;
+    }
+  }
+}
+
+.muted {
+  color: var(--fg-muted);
+  font-size: var(--text-sm);
+}

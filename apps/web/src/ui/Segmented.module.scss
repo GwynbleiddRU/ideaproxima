@@ -1,0 +1,52 @@
+@use "mixins" as *;
+
+.group {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  padding: 3px;
+  border-radius: var(--radius-pill);
+  background: var(--bg-sunken);
+  border: 1px solid var(--border);
+}
+
+.option {
+  position: relative;
+  cursor: pointer;
+
+  span {
+    display: block;
+    padding: 0.4rem 0.85rem;
+    border-radius: var(--radius-pill);
+    font-size: var(--text-sm);
+    color: var(--fg-muted);
+    white-space: nowrap;
+    transition:
+      background-color var(--dur-fast) var(--ease),
+      color var(--dur-fast) var(--ease);
+  }
+
+  &:hover span {
+    color: var(--fg);
+  }
+}
+
+.sm .option span {
+  padding: 0.25rem 0.65rem;
+  font-size: var(--text-xs);
+}
+
+.input {
+  @include visually-hidden;
+
+  &:checked + span {
+    background: var(--bg-raised);
+    color: var(--fg);
+    box-shadow: var(--shadow-sm);
+    font-weight: 540;
+  }
+
+  &:focus-visible + span {
+    @include focus-ring(1px);
+  }
+}

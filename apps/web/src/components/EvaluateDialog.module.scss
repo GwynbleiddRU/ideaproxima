@@ -1,0 +1,89 @@
+@use "mixins" as *;
+
+.dimension {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0 0 var(--space-5);
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  min-width: 0;
+}
+
+.legend {
+  padding: 0;
+  font-weight: 620;
+}
+
+.question {
+  color: var(--fg-muted);
+  font-size: var(--text-sm);
+}
+
+.scale {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-2);
+
+  @include up(sm) {
+    grid-template-columns: repeat(6, 1fr);
+  }
+}
+
+.point {
+  display: grid;
+  align-content: start;
+  gap: 0.15rem;
+  min-height: 4rem;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-raised);
+  cursor: pointer;
+  transition:
+    border-color var(--dur-fast) var(--ease),
+    background-color var(--dur-fast) var(--ease);
+
+  &:hover {
+    border-color: var(--border-strong);
+  }
+
+  &:has(input:focus-visible) {
+    @include focus-ring;
+  }
+}
+
+.selected {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+}
+
+.skip {
+  border-style: dashed;
+  align-content: center;
+}
+
+.pointValue {
+  @include serif(500);
+  font-size: var(--text-lg);
+  line-height: 1;
+}
+
+.pointLabel {
+  font-size: var(--text-xs);
+  color: var(--fg-muted);
+  line-height: 1.3;
+}
+
+.selected .pointLabel {
+  color: var(--primary-soft-fg);
+}
+
+.confidence {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--fg-muted);
+}

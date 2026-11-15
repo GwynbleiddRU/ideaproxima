@@ -1,0 +1,18 @@
+{
+  "name": "@ideaproxima/contracts",
+  "version": "0.1.0",
+  "private": true,
+  "description": "API contract: zod request schemas and response DTO types shared by the API and any client.",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@ideaproxima/domain": "0.1.0",
+    "zod": "^4.1.0"
+  }
+}

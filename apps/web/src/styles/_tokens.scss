@@ -1,0 +1,138 @@
+// Design tokens. Colours are CSS custom properties so themes switch without re-rendering; the light and dark
+// palettes are tuned separately ("a quiet research library by day and at night"), not inverted.
+//
+// Epistemic colours (status-*) are always paired with a text label and an icon in the UI: colour alone never
+// carries meaning.
+
+$breakpoints: (
+  sm: 640px,
+  md: 768px,
+  lg: 1024px,
+  xl: 1280px,
+);
+
+@mixin light-palette {
+  color-scheme: light;
+  --bg: oklch(0.975 0.007 85);
+  --bg-raised: oklch(0.993 0.004 85);
+  --bg-sunken: oklch(0.952 0.009 82);
+  --bg-overlay: oklch(0.22 0.008 60 / 0.38);
+  --fg: oklch(0.22 0.008 60);
+  --fg-muted: oklch(0.46 0.01 60);
+  --fg-subtle: oklch(0.52 0.01 65);
+  --border: oklch(0.895 0.01 80);
+  --border-strong: oklch(0.78 0.012 70);
+  --primary: oklch(0.44 0.075 200);
+  --primary-hover: oklch(0.39 0.075 200);
+  --primary-fg: oklch(0.985 0.005 85);
+  --primary-soft: oklch(0.935 0.024 195);
+  --primary-soft-fg: oklch(0.33 0.06 200);
+  --danger: oklch(0.52 0.17 30);
+  --danger-soft: oklch(0.955 0.025 30);
+  --success: oklch(0.47 0.09 158);
+  --success-soft: oklch(0.95 0.03 158);
+  --warning: oklch(0.5 0.11 68);
+  --warning-soft: oklch(0.955 0.035 85);
+  --meter: oklch(0.32 0.012 60);
+  --meter-accent: var(--primary);
+  --meter-track: oklch(0.905 0.008 80);
+  --focus: oklch(0.55 0.1 200);
+  --selection: oklch(0.9 0.04 195);
+
+  --status-established: oklch(0.45 0.09 160);
+  --status-supported: oklch(0.47 0.08 205);
+  --status-hypothesis: oklch(0.53 0.11 72);
+  --status-unknown: oklch(0.53 0.012 60);
+  --status-doubtful: oklch(0.52 0.1 50);
+  --status-refuted: oklch(0.46 0.13 25);
+  --status-contested: oklch(0.52 0.15 32);
+  --status-unassessed: oklch(0.62 0.006 60);
+
+  --shadow-sm: 0 1px 2px oklch(0.3 0.02 60 / 0.06);
+  --shadow-md: 0 4px 16px -4px oklch(0.3 0.02 60 / 0.12), 0 1px 3px oklch(0.3 0.02 60 / 0.06);
+  --shadow-lg: 0 24px 48px -12px oklch(0.3 0.02 60 / 0.22), 0 2px 6px oklch(0.3 0.02 60 / 0.06);
+}
+
+@mixin dark-palette {
+  color-scheme: dark;
+  --bg: oklch(0.18 0.006 60);
+  --bg-raised: oklch(0.212 0.007 60);
+  --bg-sunken: oklch(0.16 0.006 60);
+  --bg-overlay: oklch(0.08 0.005 60 / 0.6);
+  --fg: oklch(0.925 0.01 85);
+  --fg-muted: oklch(0.72 0.01 75);
+  --fg-subtle: oklch(0.65 0.01 70);
+  --border: oklch(0.29 0.007 60);
+  --border-strong: oklch(0.41 0.009 60);
+  --primary: oklch(0.77 0.08 190);
+  --primary-hover: oklch(0.83 0.08 190);
+  --primary-fg: oklch(0.18 0.012 200);
+  --primary-soft: oklch(0.29 0.035 195);
+  --primary-soft-fg: oklch(0.86 0.06 190);
+  --danger: oklch(0.7 0.15 30);
+  --danger-soft: oklch(0.27 0.05 30);
+  --success: oklch(0.76 0.1 158);
+  --success-soft: oklch(0.26 0.04 158);
+  --warning: oklch(0.8 0.11 80);
+  --warning-soft: oklch(0.28 0.04 80);
+  --meter: oklch(0.86 0.01 85);
+  --meter-accent: var(--primary);
+  --meter-track: oklch(0.3 0.007 60);
+  --focus: oklch(0.75 0.09 190);
+  --selection: oklch(0.36 0.05 195);
+
+  --status-established: oklch(0.76 0.1 160);
+  --status-supported: oklch(0.77 0.08 205);
+  --status-hypothesis: oklch(0.81 0.11 80);
+  --status-unknown: oklch(0.7 0.012 70);
+  --status-doubtful: oklch(0.76 0.1 55);
+  --status-refuted: oklch(0.72 0.13 28);
+  --status-contested: oklch(0.74 0.14 35);
+  --status-unassessed: oklch(0.6 0.008 70);
+
+  --shadow-sm: 0 1px 2px oklch(0 0 0 / 0.3);
+  --shadow-md: 0 6px 20px -6px oklch(0 0 0 / 0.5), 0 1px 3px oklch(0 0 0 / 0.3);
+  --shadow-lg: 0 28px 56px -12px oklch(0 0 0 / 0.65), 0 2px 6px oklch(0 0 0 / 0.3);
+}
+
+@mixin scale {
+  --font-sans: "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-serif: "Literata Variable", "Iowan Old Style", Georgia, serif;
+
+  --text-2xs: 0.6875rem;
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-md: 1.0625rem;
+  --text-lg: 1.1875rem;
+  --text-xl: clamp(1.3rem, 1.2rem + 0.4vw, 1.5rem);
+  --text-2xl: clamp(1.55rem, 1.3rem + 1vw, 2rem);
+  --text-3xl: clamp(1.9rem, 1.45rem + 1.9vw, 2.75rem);
+  --text-4xl: clamp(2.3rem, 1.5rem + 3.4vw, 3.75rem);
+  --text-display: clamp(2.75rem, 1.4rem + 5.6vw, 5.75rem);
+
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 3rem;
+  --space-8: 4rem;
+  --space-9: 6rem;
+
+  --radius-sm: 6px;
+  --radius: 10px;
+  --radius-lg: 16px;
+  --radius-pill: 999px;
+
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --dur-fast: 120ms;
+  --dur: 200ms;
+  --dur-slow: 420ms;
+
+  --header-h: 64px;
+  --content-max: 1200px;
+  --reading-max: 68ch;
+  --gutter: clamp(1rem, 0.5rem + 2.5vw, 2.5rem);
+}

@@ -1,0 +1,54 @@
+@use "mixins" as *;
+
+.person {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: var(--fg);
+  font-weight: 520;
+
+  &:hover span {
+    color: var(--primary);
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+  }
+}
+
+.time {
+  color: var(--fg-muted);
+  white-space: nowrap;
+}
+
+.topics {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.15rem 0.85rem;
+}
+
+.topic {
+  @include eyebrow;
+  transition: color var(--dur-fast) var(--ease);
+
+  &:hover {
+    color: var(--primary);
+  }
+}
+
+.primary {
+  color: var(--primary);
+}
+
+.metaLine {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.6rem;
+  font-size: var(--text-sm);
+  color: var(--fg-muted);
+
+  > * + *::before {
+    content: "·";
+    margin-right: 0.6rem;
+    color: var(--fg-subtle);
+  }
+}

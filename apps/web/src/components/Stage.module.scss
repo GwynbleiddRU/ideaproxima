@@ -1,0 +1,97 @@
+.badge {
+  gap: 0.5rem;
+}
+
+.pips {
+  display: inline-flex;
+  gap: 2px;
+}
+
+.pip {
+  width: 4px;
+  height: 9px;
+  border-radius: 1px;
+  background: var(--border-strong);
+}
+
+.pipOn {
+  background: var(--primary);
+}
+
+.track {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.step {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1.25rem 1fr;
+  gap: var(--space-3);
+  padding-bottom: var(--space-3);
+
+  &:not(:last-child)::before {
+    content: "";
+    position: absolute;
+    left: calc(0.625rem - 0.5px);
+    top: 1.35rem;
+    bottom: 0;
+    border-left: 1px solid var(--border-strong);
+  }
+}
+
+.marker {
+  display: grid;
+  place-items: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  margin-top: 0.05rem;
+  border-radius: 50%;
+  border: 1px solid var(--border-strong);
+  background: var(--bg-raised);
+  color: var(--border-strong);
+}
+
+.past .marker {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: var(--primary-fg);
+}
+
+.current .marker {
+  border: 2px solid var(--primary);
+  color: var(--primary);
+  box-shadow: 0 0 0 4px var(--primary-soft);
+}
+
+.stepBody {
+  display: grid;
+  gap: 0.1rem;
+}
+
+.stepLabel {
+  font-size: var(--text-sm);
+  color: var(--fg-muted);
+}
+
+.past .stepLabel {
+  color: var(--fg);
+}
+
+.current .stepLabel {
+  color: var(--fg);
+  font-weight: 620;
+}
+
+.requirement {
+  font-size: var(--text-xs);
+  color: var(--fg-subtle);
+  line-height: 1.4;
+}
+
+.met {
+  color: var(--success);
+}

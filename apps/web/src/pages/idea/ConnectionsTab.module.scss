@@ -1,0 +1,59 @@
+@use "mixins" as *;
+
+.relations {
+  display: grid;
+  gap: var(--space-6);
+
+  @include up(lg) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.relation {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.relationMain {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+}
+
+.other {
+  @include serif(500);
+  font-size: var(--text-lg);
+  line-height: 1.3;
+
+  &:hover {
+    color: var(--primary);
+  }
+}
+
+.rationale {
+  color: var(--fg-muted);
+  font-size: var(--text-sm);
+}
+
+.relationFoot {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.validity {
+  max-width: 16rem;
+}
+
+.actions {
+  display: flex;
+  gap: var(--space-4);
+}
+
+.preview {
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius);
+  background: var(--primary-soft);
+  color: var(--primary-soft-fg);
+  @include serif(450);
+}

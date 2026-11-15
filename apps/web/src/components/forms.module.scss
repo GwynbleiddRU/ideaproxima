@@ -1,0 +1,96 @@
+@use "mixins" as *;
+
+// Shared layout for forms across the app (dialogs and pages).
+
+.form {
+  display: grid;
+  gap: var(--space-5);
+}
+
+.tight {
+  gap: var(--space-4);
+}
+
+.row {
+  display: grid;
+  align-items: start;
+  gap: var(--space-4);
+
+  @include up(sm) {
+    grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  }
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+.actionsSpread {
+  justify-content: space-between;
+}
+
+.note {
+  font-size: var(--text-xs);
+  color: var(--fg-muted);
+}
+
+/// Radio choices rendered as selectable cards.
+.choices {
+  display: grid;
+  gap: var(--space-2);
+
+  @include up(sm) {
+    grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
+  }
+}
+
+.choice {
+  position: relative;
+  display: grid;
+  gap: 0.15rem;
+  padding: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-raised);
+  cursor: pointer;
+  transition:
+    border-color var(--dur-fast) var(--ease),
+    background-color var(--dur-fast) var(--ease);
+
+  input {
+    @include visually-hidden;
+  }
+
+  strong {
+    font-size: var(--text-sm);
+    font-weight: 580;
+  }
+
+  span {
+    font-size: var(--text-xs);
+    color: var(--fg-muted);
+    line-height: 1.4;
+  }
+
+  &:hover {
+    border-color: var(--border-strong);
+  }
+
+  &:has(input:checked) {
+    border-color: var(--primary);
+    background: var(--primary-soft);
+  }
+
+  &:has(input:focus-visible) {
+    @include focus-ring;
+  }
+
+  &:has(input:disabled) {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}

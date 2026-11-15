@@ -1,0 +1,83 @@
+@use "sass:map";
+@use "tokens";
+
+/// Min-width media query by breakpoint name (sm, md, lg, xl).
+@mixin up($name) {
+  @media (min-width: map.get(tokens.$breakpoints, $name)) {
+    @content;
+  }
+}
+
+/// Max-width media query: below the named breakpoint.
+@mixin down($name) {
+  @media (max-width: calc(map.get(tokens.$breakpoints, $name) - 0.02px)) {
+    @content;
+  }
+}
+
+@mixin focus-ring($offset: 2px) {
+  outline: 2px solid var(--focus);
+  outline-offset: $offset;
+}
+
+@mixin visually-hidden {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@mixin line-clamp($lines) {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: $lines;
+  line-clamp: $lines;
+  overflow: hidden;
+}
+
+/// Small uppercase label above titles and groups.
+@mixin eyebrow {
+  font-family: var(--font-sans);
+  font-size: var(--text-2xs);
+  font-weight: 560;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--fg-muted);
+}
+
+/// Editorial serif for idea titles and display headings.
+@mixin serif($weight: 420) {
+  font-family: var(--font-serif);
+  font-weight: $weight;
+  letter-spacing: -0.012em;
+}
+
+/// Plain button reset for custom interactive elements.
+@mixin unbutton {
+  appearance: none;
+  background: none;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  text-align: inherit;
+}
+
+@mixin card {
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+}
+
+@mixin reduced-motion {
+  @media (prefers-reduced-motion: reduce) {
+    @content;
+  }
+}

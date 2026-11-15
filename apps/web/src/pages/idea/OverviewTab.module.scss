@@ -1,0 +1,228 @@
+@use "mixins" as *;
+
+.overview {
+  display: grid;
+  gap: var(--space-7);
+
+  @include up(lg) {
+    grid-template-columns: minmax(0, 1fr) 21rem;
+    gap: var(--space-8);
+  }
+}
+
+.narrative {
+  display: grid;
+  gap: var(--space-7);
+  align-content: start;
+  min-width: 0;
+}
+
+.section {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.sectionTitle {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-4);
+  @include eyebrow;
+  color: var(--fg);
+  font-size: var(--text-xs);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border);
+}
+
+.sectionNumber {
+  color: var(--fg-subtle);
+  font-variant-numeric: tabular-nums;
+}
+
+.missing {
+  display: grid;
+  gap: var(--space-3);
+  justify-items: start;
+  padding: var(--space-5);
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-lg);
+  color: var(--fg-muted);
+  font-size: var(--text-sm);
+}
+
+// ---------------------------------------------------------------- rail
+
+.rail {
+  display: grid;
+  gap: var(--space-4);
+  align-content: start;
+}
+
+.card {
+  display: grid;
+  gap: var(--space-4);
+  padding: var(--space-5);
+  @include card;
+}
+
+.cardHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.cardTitle {
+  @include eyebrow;
+  color: var(--fg);
+}
+
+.meters {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.caption {
+  font-size: var(--text-xs);
+  color: var(--fg-muted);
+  line-height: 1.5;
+}
+
+.cardLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: var(--text-sm);
+  font-weight: 540;
+
+  &:hover {
+    color: var(--primary);
+  }
+}
+
+.statusList {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+
+  li {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: var(--text-sm);
+  }
+}
+
+.perspectives {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+
+  li {
+    display: grid;
+    grid-template-columns: 8.5rem 1fr 1.75rem;
+    align-items: center;
+    gap: var(--space-3);
+    font-size: var(--text-sm);
+    color: var(--fg-muted);
+
+    > :last-child {
+      text-align: right;
+      color: var(--fg);
+    }
+  }
+}
+
+.bar {
+  height: 6px;
+  border-radius: var(--radius-pill);
+  background: var(--meter-track);
+  overflow: hidden;
+
+  span {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: var(--warning);
+  }
+}
+
+.stewards {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+
+  li {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2);
+    font-size: var(--text-sm);
+  }
+}
+
+.appoint {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: var(--space-2);
+
+  input {
+    min-height: 2rem;
+    font-size: var(--text-sm);
+  }
+
+  > p {
+    grid-column: 1 / -1;
+  }
+}
+
+.plot {
+  display: grid;
+  gap: var(--space-2);
+
+  svg {
+    width: 100%;
+    max-width: 15rem;
+    margin-inline: auto;
+    overflow: visible;
+  }
+
+  text {
+    font-size: 9px;
+    fill: var(--fg-subtle);
+  }
+
+  figcaption {
+    text-align: center;
+    font-size: var(--text-xs);
+    color: var(--fg-muted);
+  }
+}
+
+.plotFrame {
+  fill: var(--bg-sunken);
+  stroke: var(--border);
+}
+
+.plotAxis {
+  stroke: var(--border-strong);
+  stroke-dasharray: 2 3;
+}
+
+.plotSpread {
+  stroke: var(--primary);
+  stroke-width: 1.5;
+  opacity: 0.5;
+}
+
+.plotPoint {
+  fill: var(--primary);
+  stroke: var(--bg-raised);
+  stroke-width: 3;
+}
+
+.plotEarly {
+  fill: var(--bg-raised);
+  stroke: var(--primary);
+  stroke-width: 2;
+  stroke-dasharray: 3 2;
+}

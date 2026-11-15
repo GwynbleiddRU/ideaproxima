@@ -1,0 +1,8 @@
+# Normalise line endings to LF in the repository and in working trees on every OS, so formatting checks and the
+# generated-docs freshness test behave identically on Windows, macOS and Linux.
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.ico binary
+*.woff2 binary

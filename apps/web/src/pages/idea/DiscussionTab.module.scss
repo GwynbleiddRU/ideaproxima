@@ -1,0 +1,74 @@
+@use "mixins" as *;
+
+.composer {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border-radius: var(--radius-lg);
+  background: var(--bg-sunken);
+
+  textarea {
+    background: var(--bg-raised);
+  }
+}
+
+.composerActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+.thread {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.comment {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-3) 0;
+
+  & + & {
+    border-top: 1px solid var(--border);
+  }
+}
+
+.commentHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: var(--text-sm);
+}
+
+.body {
+  padding-left: calc(24px + 0.45rem);
+  line-height: 1.6;
+  white-space: pre-line;
+}
+
+.hidden {
+  padding-left: calc(24px + 0.45rem);
+  color: var(--fg-subtle);
+  font-style: italic;
+  font-size: var(--text-sm);
+}
+
+.commentActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  padding-left: calc(24px + 0.45rem);
+}
+
+.replies {
+  display: grid;
+  margin: var(--space-1) 0 0 calc(12px);
+  padding-left: var(--space-5);
+  border-left: 1px solid var(--border);
+
+  .comment + .comment {
+    border-top: 0;
+  }
+}

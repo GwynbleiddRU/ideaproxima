@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#f7f4ee" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#1c1a18" media="(prefers-color-scheme: dark)" />
+    <meta
+      name="description"
+      content="An open repository of humanity's possible futures: ideas, the claims and evidence behind them, and what they are connected to."
+    />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <title>ideaproxima</title>
+    <!-- Applies the saved theme before first paint (no flash). Allowed by hash in the API's Content-Security-Policy. -->
+    <script>
+      try {
+        var t = localStorage.getItem("ip-theme");
+        if (t === "light" || t === "dark") document.documentElement.dataset.theme = t;
+      } catch (e) {}
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <noscript>ideaproxima needs JavaScript. The archive is also available as an API at /v1.</noscript>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

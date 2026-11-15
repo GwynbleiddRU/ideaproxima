@@ -1,0 +1,77 @@
+# The whole Ideaproxima stack in containers: PostgreSQL → a one-off migration job → the app (web interface + API).
+#
+#   docker compose up --build                   everything: http://localhost:3000 (API at /v1)
+#   docker compose --profile demo up --build    the same, plus the illustrative demo dataset
+#   docker compose down                         stop (data stays in the postgres-data volume; add -v to erase it)
+#
+# Only the database, for development and tests on the host (`npm run dev`, `npm run test:pg`):
+#   npm run db:up                               = docker compose up -d postgres   (host port 5433)
+#
+# Host ports can be moved if they are taken: APP_PORT=3001 POSTGRES_PORT=5434 docker compose up
+# This file is a local, single-machine setup (fixed dev credentials, no TLS). Production guidance:
+# docs/developer/operations.md.
+
+x-app-image: &app-image
+  build:
+    context: .
+    dockerfile: Dockerfile
+  image: ideaproxima:local
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: ideaproxima
+      POSTGRES_PASSWORD: ideaproxima
+      POSTGRES_DB: ideaproxima
+    ports:
+      - "${POSTGRES_PORT:-5433}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ideaproxima -d ideaproxima"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  # Release step: apply migrations and ensure the base topics, then exit. Runs once per `up`, before the app
+  # starts, so app instances never migrate (or race on migrating) by themselves.
+  migrate:
+    <<: *app-image
+    command: ["sh", "-c", "node apps/api/dist/migrate.js && node apps/api/dist/seed.js"]
+    environment:
+      DATABASE_URL: postgres://ideaproxima:ideaproxima@postgres:5432/ideaproxima
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  # The product: the web interface at / and the API at /v1, from one process.
+  app:
+    <<: *app-image
+    environment:
+      DATABASE_URL: postgres://ideaproxima:ideaproxima@postgres:5432/ideaproxima
+      NODE_ENV: production
+      # Plain HTTP on localhost. Behind HTTPS in production, leave this unset (Secure cookies by default).
+      COOKIE_SECURE: "false"
+    ports:
+      - "${APP_PORT:-3000}:3000"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    init: true
+
+  # Optional (`--profile demo`): the clearly-labelled fictional demo dataset. Idempotent.
+  demo-data:
+    <<: *app-image
+    profiles: ["demo"]
+    command: ["node", "apps/api/dist/seed.js", "--demo"]
+    environment:
+      DATABASE_URL: postgres://ideaproxima:ideaproxima@postgres:5432/ideaproxima
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    restart: "no"
+
+volumes:
+  postgres-data:

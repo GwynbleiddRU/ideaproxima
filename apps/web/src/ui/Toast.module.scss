@@ -1,0 +1,64 @@
+@use "mixins" as *;
+
+.viewport {
+  position: fixed;
+  z-index: 100;
+  right: var(--space-4);
+  bottom: var(--space-4);
+  display: grid;
+  gap: var(--space-2);
+  width: min(24rem, calc(100% - 2rem));
+  pointer-events: none;
+}
+
+.toast {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: start;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-raised);
+  box-shadow: var(--shadow-md);
+  font-size: var(--text-sm);
+  pointer-events: auto;
+  animation: slide var(--dur) var(--ease);
+}
+
+@keyframes slide {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+.icon {
+  margin-top: 0.1rem;
+}
+
+.success .icon {
+  color: var(--success);
+}
+
+.error {
+  border-color: color-mix(in oklab, var(--danger) 35%, var(--border));
+
+  .icon {
+    color: var(--danger);
+  }
+}
+
+.info .icon {
+  color: var(--primary);
+}
+
+.dismiss {
+  @include unbutton;
+  color: var(--fg-subtle);
+  padding: 0.2rem;
+
+  &:hover {
+    color: var(--fg);
+  }
+}

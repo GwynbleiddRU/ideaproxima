@@ -1,0 +1,92 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  check:
+    name: Check (Node ${{ matrix.node }}, PGlite)
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node: [22, 24]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+      - run: npm ci
+      # typecheck, lint, formatting, tests (with contract + endpoint-coverage checks), build
+      - run: npm run check
+      - name: Migrations match the schema
+        run: npx drizzle-kit generate 2>&1 | tee /tmp/drizzle.log && grep -q "No schema changes" /tmp/drizzle.log
+        working-directory: apps/api
+
+  postgres:
+    name: Tests on PostgreSQL 17
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: ideaproxima
+          POSTGRES_PASSWORD: ideaproxima
+          POSTGRES_DB: ideaproxima
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U ideaproxima -d ideaproxima"
+          --health-interval 2s
+          --health-timeout 3s
+          --health-retries 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run test:pg
+        env:
+          TEST_DATABASE_URL: postgres://ideaproxima:ideaproxima@localhost:5433/postgres
+
+  browser:
+    name: Browser audit (end-to-end, accessibility, performance)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      # Builds, then runs audit/e2e against an isolated server with a fresh demo database.
+      - run: npm run test:e2e
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-audit
+          path: audit/artifacts
+          retention-days: 7
+
+  stack:
+    name: Docker stack (image, migrations, app)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # postgres → migrate (one-off job) → app; --wait returns once the app's health check passes.
+      - run: docker compose up --build --detach --wait app
+      - name: Smoke test
+        run: |
+          curl -fsS http://localhost:3000/v1/health
+          curl -fsS http://localhost:3000/v1 | grep -q '"apiVersion":"v1"'
+          curl -fsS -H 'accept: text/html' http://localhost:3000/ | grep -q '<div id="root">'
+          docker compose --profile demo run --rm demo-data
+          curl -fsS http://localhost:3000/v1/ideas | grep -q '"items":\[{'
+      - if: failure()
+        run: docker compose --profile demo logs
+      - if: always()
+        run: docker compose --profile demo down -v

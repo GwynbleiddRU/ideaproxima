@@ -1,0 +1,64 @@
+{
+  "name": "ideaproxima",
+  "private": true,
+  "description": "A collective repository of humanity's possible futures",
+  "type": "module",
+  "workspaces": [
+    "packages/domain",
+    "packages/contracts",
+    "apps/api",
+    "apps/web"
+  ],
+  "engines": {
+    "node": ">=22.18"
+  },
+  "scripts": {
+    "dev": "tsx scripts/dev.ts",
+    "build": "npm run build -w @ideaproxima/web && npm run build -w @ideaproxima/api",
+    "start": "npm run start -w @ideaproxima/api",
+    "check": "npm run typecheck && npm run lint && npm run format:check && npm run docs:check && npm run test && npm run build",
+    "test": "tsx scripts/run-tests.ts",
+    "test:pg": "tsx scripts/run-tests.ts --postgres",
+    "test:watch": "vitest",
+    "test:e2e": "npm run build && playwright test -c audit/playwright.config.ts --project=e2e",
+    "audit:screenshots": "npm run build && playwright test -c audit/playwright.config.ts --project=screenshots",
+    "typecheck": "npm run typecheck --workspaces --if-present && tsc --noEmit -p scripts && tsc --noEmit -p audit",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "docs:api": "tsx scripts/generate-api-docs.ts",
+    "docs:check": "tsx scripts/check-doc-links.ts",
+    "db:up": "docker compose up -d postgres",
+    "db:generate": "npm run db:generate -w @ideaproxima/api",
+    "db:migrate": "npm run db:migrate -w @ideaproxima/api",
+    "db:seed": "npm run db:seed -w @ideaproxima/api",
+    "db:seed:demo": "npm run db:seed:demo -w @ideaproxima/api",
+    "metrics:rebuild": "npm run metrics:rebuild -w @ideaproxima/api",
+    "admin:set-role": "npm run admin:set-role -w @ideaproxima/api --"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.14.0",
+    "@eslint/js": "^9.39.0",
+    "@playwright/test": "1.63.0",
+    "@types/node": "^24.0.0",
+    "eslint": "^9.39.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "prettier": "^3.6.0",
+    "tsx": "^4.20.0",
+    "typescript": "~5.9.3",
+    "typescript-eslint": "^8.46.0",
+    "vitest": "^4.1.0"
+  },
+  "overrides": {
+    "@esbuild-kit/core-utils": {
+      "esbuild": "^0.28.2"
+    },
+    "@typescript-eslint/typescript-estree": {
+      "minimatch": "^11.0.8"
+    }
+  },
+  "allowScripts": {
+    "esbuild": false,
+    "@parcel/watcher": false
+  }
+}

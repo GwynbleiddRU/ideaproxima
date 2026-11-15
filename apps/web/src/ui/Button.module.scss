@@ -1,0 +1,114 @@
+.button {
+  --btn-bg: transparent;
+  --btn-fg: var(--fg);
+  --btn-border: transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  border: 1px solid var(--btn-border);
+  border-radius: var(--radius-pill);
+  background: var(--btn-bg);
+  color: var(--btn-fg);
+  font-weight: 540;
+  line-height: 1;
+  white-space: nowrap;
+  text-decoration: none;
+  cursor: pointer;
+  user-select: none;
+  transition:
+    background-color var(--dur-fast) var(--ease),
+    border-color var(--dur-fast) var(--ease),
+    color var(--dur-fast) var(--ease),
+    transform var(--dur-fast) var(--ease);
+
+  &:active:not(:disabled) {
+    transform: translateY(1px);
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+  }
+
+  svg {
+    width: 1.05em;
+    height: 1.05em;
+  }
+}
+
+.sm {
+  height: 2rem;
+  padding-inline: 0.85rem;
+  font-size: var(--text-sm);
+}
+
+.md {
+  height: 2.5rem;
+  padding-inline: 1.15rem;
+  font-size: var(--text-sm);
+}
+
+.lg {
+  height: 3rem;
+  padding-inline: 1.5rem;
+  font-size: var(--text-base);
+}
+
+.iconOnly {
+  padding: 0;
+  aspect-ratio: 1;
+}
+
+.block {
+  width: 100%;
+}
+
+.primary {
+  --btn-bg: var(--primary);
+  --btn-fg: var(--primary-fg);
+
+  &:hover:not(:disabled) {
+    --btn-bg: var(--primary-hover);
+  }
+}
+
+.secondary {
+  --btn-bg: var(--bg-raised);
+  --btn-border: var(--border-strong);
+
+  &:hover:not(:disabled) {
+    --btn-border: var(--fg-muted);
+  }
+}
+
+.ghost {
+  --btn-fg: var(--fg-muted);
+
+  &:hover:not(:disabled) {
+    --btn-bg: var(--bg-sunken);
+    --btn-fg: var(--fg);
+  }
+}
+
+.quiet {
+  --btn-fg: var(--fg-muted);
+  height: auto;
+  padding: 0;
+  border-radius: var(--radius-sm);
+  font-weight: 500;
+
+  &:hover:not(:disabled) {
+    --btn-fg: var(--primary);
+  }
+}
+
+.danger {
+  --btn-bg: var(--danger-soft);
+  --btn-fg: var(--danger);
+  --btn-border: color-mix(in oklab, var(--danger) 30%, transparent);
+
+  &:hover:not(:disabled) {
+    --btn-border: var(--danger);
+  }
+}

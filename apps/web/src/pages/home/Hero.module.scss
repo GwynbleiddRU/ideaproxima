@@ -1,0 +1,408 @@
+@use "mixins" as *;
+
+.hero {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  // Exactly the visible area under the sticky header. Small-viewport units keep it stable on phones, where the
+  // browser's toolbars slide in and out (dynamic units would resize the hero as you scroll); vh is the fallback.
+  min-height: calc(100vh - var(--header-h));
+  min-height: calc(100svh - var(--header-h));
+  overflow: hidden;
+  border-bottom: 1px solid var(--border);
+  background:
+    radial-gradient(
+      44rem 34rem at 80% 44%,
+      color-mix(in oklab, var(--primary) 9%, transparent),
+      transparent 70%
+    ),
+    linear-gradient(to bottom, transparent 55%, color-mix(in oklab, var(--bg-sunken) 70%, transparent));
+}
+
+.inner {
+  flex: 1;
+  display: grid;
+  align-items: center;
+  gap: var(--space-7);
+  padding-block: clamp(1.5rem, 6vh, 4.5rem) clamp(1rem, 3vh, 2rem);
+
+  @include up(lg) {
+    grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+  }
+}
+
+// ---------------------------------------------------------------- text column
+
+.text {
+  display: grid;
+  justify-items: start;
+  // Vertical rhythm follows the viewport's height, so the column compresses gracefully on short screens.
+  gap: clamp(1rem, 3vh, 1.75rem);
+  max-width: 42rem;
+  animation: rise var(--dur-slow) var(--ease) both;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+.eyebrow {
+  @include eyebrow;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+
+  &::before {
+    content: "";
+    width: 1.75rem;
+    height: 1px;
+    background: currentColor;
+  }
+}
+
+.title {
+  @include serif(380);
+  // Bounded by width AND height: the headline never forces the hero taller than a short laptop screen.
+  font-size: clamp(2.5rem, min(5.6vw, 8.5vh) + 0.5rem, 5.5rem);
+  line-height: 1;
+  letter-spacing: -0.028em;
+  text-wrap: balance;
+
+  em {
+    color: var(--primary);
+    font-style: italic;
+    font-weight: 360;
+  }
+}
+
+.lede {
+  max-width: 44ch;
+  color: var(--fg-muted);
+  font-size: clamp(1rem, 0.92rem + 0.3vw, 1.1875rem);
+  line-height: 1.55;
+}
+
+// ---------------------------------------------------------------- search
+
+.search {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  max-width: 34rem;
+  height: 3.5rem;
+  margin-top: clamp(0rem, 1vh, 0.5rem);
+  padding: 0 0.375rem 0 0;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-pill);
+  background: var(--bg-raised);
+  box-shadow: var(--shadow-sm);
+  transition:
+    border-color var(--dur-fast) var(--ease),
+    box-shadow var(--dur) var(--ease);
+
+  &:hover {
+    border-color: var(--fg-subtle);
+  }
+
+  &:focus-within {
+    border-color: var(--focus);
+    box-shadow:
+      0 0 0 4px color-mix(in oklab, var(--focus) 18%, transparent),
+      var(--shadow-md);
+  }
+
+  input {
+    flex: 1 1 0;
+    width: 0;
+    min-width: 0;
+    height: 100%;
+    border: 0;
+    background: transparent;
+    color: var(--fg);
+    font-size: var(--text-md);
+    outline: none;
+
+    &::placeholder {
+      color: var(--fg-subtle);
+    }
+
+    &::-webkit-search-cancel-button {
+      display: none;
+    }
+  }
+}
+
+/// The clickable part of the pill: icon, input and shortcut hint inside one label, so any click focuses the input.
+.field {
+  flex: 1 1 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  height: 100%;
+  padding-left: 1.15rem;
+  cursor: text;
+}
+
+.searchIcon {
+  width: 1.15rem;
+  height: 1.15rem;
+  color: var(--fg-subtle);
+}
+
+.kbd {
+  display: grid;
+  place-items: center;
+  min-width: 1.5rem;
+  height: 1.5rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  color: var(--fg-subtle);
+  font-family: var(--font-sans);
+  font-size: var(--text-xs);
+  line-height: 1;
+
+  // A keyboard hint is noise on touch screens and narrow ones, and pointless once the field is focused or filled.
+  @media (pointer: coarse) {
+    display: none;
+  }
+
+  @include down(sm) {
+    display: none;
+  }
+
+  .search:focus-within &,
+  input:not(:placeholder-shown) ~ & {
+    display: none;
+  }
+}
+
+.searchButton {
+  @include unbutton;
+  height: 2.75rem;
+  padding-inline: 1.3rem;
+  border-radius: var(--radius-pill);
+  background: var(--fg);
+  color: var(--bg);
+  font-size: var(--text-sm);
+  font-weight: 560;
+  transition: background-color var(--dur-fast) var(--ease);
+
+  &:hover {
+    background: var(--primary);
+    color: var(--primary-fg);
+  }
+
+  &:focus-visible {
+    @include focus-ring;
+  }
+}
+
+// ---------------------------------------------------------------- calls to action
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+
+  @include down(sm) {
+    width: 100%;
+
+    > * {
+      flex: 1 1 100%;
+    }
+  }
+}
+
+// ---------------------------------------------------------------- visual
+
+.visual {
+  display: none;
+
+  @include up(lg) {
+    display: grid;
+    place-items: center;
+    animation: rise var(--dur-slow) var(--ease) 120ms both;
+  }
+}
+
+.svg {
+  width: 100%;
+  height: auto;
+  // Never taller than the space the hero has, whatever the window's proportions.
+  max-height: min(34rem, calc(100svh - var(--header-h) - 8rem));
+  overflow: visible;
+}
+
+.orbit {
+  fill: none;
+  stroke: var(--border);
+  stroke-dasharray: 2 7;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.orbitSlow {
+  animation: spin 160s linear infinite;
+}
+
+.orbitFast {
+  stroke: color-mix(in oklab, var(--primary) 35%, var(--border));
+  animation: spin 90s linear infinite reverse;
+}
+
+.edge {
+  fill: none;
+  stroke: var(--border-strong);
+  stroke-width: 1.4;
+}
+
+.flow {
+  fill: none;
+  stroke: var(--primary);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-dasharray: 1 26;
+  animation: flow 3.2s linear infinite;
+}
+
+.lateral {
+  stroke: var(--border-strong);
+  stroke-width: 1.2;
+  stroke-dasharray: 4 5;
+}
+
+.farNode {
+  fill: var(--bg);
+  stroke: var(--border-strong);
+  stroke-width: 1.2;
+}
+
+.needNode {
+  fill: var(--bg-raised);
+  stroke: var(--fg-subtle);
+  stroke-width: 1.5;
+}
+
+.enableNode {
+  fill: var(--primary-soft);
+  stroke: var(--primary);
+  stroke-width: 1.5;
+}
+
+.focus {
+  fill: var(--primary);
+}
+
+.halo {
+  fill: none;
+  stroke: color-mix(in oklab, var(--primary) 30%, transparent);
+  stroke-width: 1;
+}
+
+.pulse {
+  fill: color-mix(in oklab, var(--primary) 22%, transparent);
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: pulse 3.2s var(--ease) infinite;
+}
+
+.focusLabel {
+  font-family: var(--font-serif);
+  font-size: 17px;
+  font-style: italic;
+  text-anchor: middle;
+  fill: var(--fg-muted);
+}
+
+.label {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 560;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  text-anchor: middle;
+  fill: var(--fg-subtle);
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes flow {
+  to {
+    stroke-dashoffset: -27;
+  }
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(0.8);
+    opacity: 0.9;
+  }
+  70%,
+  100% {
+    transform: scale(1.9);
+    opacity: 0;
+  }
+}
+
+@include reduced-motion {
+  .orbitSlow,
+  .orbitFast,
+  .flow,
+  .pulse {
+    animation: none;
+  }
+
+  .flow {
+    display: none;
+  }
+}
+
+// ---------------------------------------------------------------- scroll cue
+
+.cue {
+  align-self: center;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+  padding: var(--space-2) var(--space-4) clamp(0.75rem, 2.5vh, 1.5rem);
+  color: var(--fg-subtle);
+  font-size: var(--text-xs);
+  letter-spacing: 0.04em;
+  transition: color var(--dur-fast) var(--ease);
+
+  svg {
+    width: 1.1rem;
+    height: 1.1rem;
+    animation: nudge 2.4s var(--ease) infinite;
+  }
+
+  &:hover {
+    color: var(--fg);
+  }
+
+  // On very short screens every pixel belongs to the content.
+  @media (max-height: 620px) {
+    display: none;
+  }
+}
+
+@keyframes nudge {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(4px);
+  }
+}

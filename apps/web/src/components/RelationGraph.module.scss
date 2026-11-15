@@ -1,0 +1,118 @@
+@use "mixins" as *;
+
+.scroller {
+  margin: 0;
+  overflow-x: auto;
+  padding-bottom: var(--space-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background:
+    radial-gradient(
+        circle at 1px 1px,
+        color-mix(in oklab, var(--border-strong) 60%, transparent) 1px,
+        transparent 0
+      )
+      0 0 / 22px 22px,
+    var(--bg-raised);
+}
+
+.svg {
+  display: block;
+  max-width: none;
+  margin: 0 auto;
+}
+
+.edge {
+  fill: none;
+  stroke: var(--border-strong);
+  stroke-width: 1.5;
+  transition:
+    stroke var(--dur-fast) var(--ease),
+    stroke-width var(--dur-fast) var(--ease);
+}
+
+.lateral {
+  stroke-dasharray: 5 5;
+}
+
+.conflict {
+  stroke: var(--status-refuted);
+}
+
+.edgeActive {
+  stroke: var(--primary);
+  stroke-width: 2.25;
+}
+
+.node {
+  cursor: pointer;
+
+  rect {
+    fill: var(--bg-raised);
+    stroke: var(--border-strong);
+    stroke-width: 1;
+    transition:
+      stroke var(--dur-fast) var(--ease),
+      fill var(--dur-fast) var(--ease);
+  }
+
+  &:hover rect {
+    stroke: var(--primary);
+  }
+}
+
+a:focus-visible .node rect {
+  stroke: var(--focus);
+  stroke-width: 2.5;
+}
+
+.focus rect {
+  fill: var(--primary-soft);
+  stroke: var(--primary);
+  stroke-width: 1.5;
+}
+
+.nodeTitle {
+  font-family: var(--font-serif);
+  font-size: 14px;
+  font-weight: 500;
+  fill: var(--fg);
+}
+
+.nodeMeta {
+  font-size: 11px;
+  fill: var(--fg-muted);
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-5);
+  padding: var(--space-3) var(--space-4) var(--space-1);
+  font-size: var(--text-xs);
+  color: var(--fg-muted);
+
+  span {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  i {
+    display: inline-block;
+    width: 1.5rem;
+    border-top: 2px solid var(--border-strong);
+  }
+}
+
+.legendDashed {
+  border-top-style: dashed !important;
+}
+
+.legendConflict {
+  border-top-color: var(--status-refuted) !important;
+}
+
+.legendSolid {
+  border-top-style: solid;
+}

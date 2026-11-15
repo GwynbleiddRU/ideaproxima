@@ -1,0 +1,117 @@
+@use "mixins" as *;
+
+.prose {
+  max-width: var(--reading-max);
+  color: color-mix(in oklab, var(--fg) 90%, transparent);
+  font-size: var(--text-md);
+  line-height: 1.75;
+
+  > * + * {
+    margin-top: 1em;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    @include serif(500);
+    margin-top: 1.6em;
+    color: var(--fg);
+  }
+
+  h1,
+  h2 {
+    font-size: var(--text-xl);
+  }
+
+  h3,
+  h4 {
+    font-size: var(--text-lg);
+  }
+
+  ul,
+  ol {
+    padding-left: 1.3em;
+  }
+
+  li + li {
+    margin-top: 0.35em;
+  }
+
+  li::marker {
+    color: var(--fg-subtle);
+  }
+
+  a {
+    color: var(--fg);
+    text-decoration: underline;
+    text-decoration-color: var(--border-strong);
+    text-underline-offset: 0.2em;
+
+    &:hover {
+      color: var(--primary);
+      text-decoration-color: currentColor;
+    }
+  }
+
+  // Claim markers: a status-coloured dotted underline and a small leading dot.
+  a[data-claim] {
+    --claim: var(--status-unassessed);
+    text-decoration: underline dotted;
+    text-decoration-color: var(--claim);
+    text-decoration-thickness: 2px;
+    text-underline-offset: 0.25em;
+
+    &::before {
+      content: "";
+      display: inline-block;
+      width: 0.4em;
+      height: 0.4em;
+      margin: 0 0.3em 0.12em 0.05em;
+      border-radius: 50%;
+      background: var(--claim);
+    }
+
+    @each $status in established, supported, hypothesis, unknown, doubtful, refuted, contested, unassessed {
+      &[data-status="#{$status}"] {
+        --claim: var(--status-#{$status});
+      }
+    }
+  }
+
+  blockquote {
+    padding-left: 1em;
+    border-left: 3px solid var(--border-strong);
+    color: var(--fg-muted);
+    font-style: italic;
+  }
+
+  code {
+    padding: 0.1em 0.35em;
+    border-radius: 4px;
+    background: var(--bg-sunken);
+    font-size: 0.9em;
+  }
+
+  pre {
+    padding: var(--space-4);
+    border-radius: var(--radius);
+    background: var(--bg-sunken);
+    overflow-x: auto;
+
+    code {
+      padding: 0;
+      background: none;
+    }
+  }
+
+  hr {
+    border: 0;
+    border-top: 1px solid var(--border);
+  }
+
+  strong {
+    color: var(--fg);
+    font-weight: 620;
+  }
+}
