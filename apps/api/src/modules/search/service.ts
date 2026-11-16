@@ -24,7 +24,7 @@ export async function search(ctx: Ctx, q: string, limit: number): Promise<Search
       ctx,
       ideaRows.map((r) => r.id),
     ),
-    searchClaims(ctx.db, q, limit),
+    searchClaims(ctx, q, limit),
     searchSources(ctx.db, q, limit),
     searchPeople(ctx.db, q, limit),
   ]);

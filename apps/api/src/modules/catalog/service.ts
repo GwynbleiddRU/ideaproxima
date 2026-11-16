@@ -1,31 +1,65 @@
 import { asc, eq, sql } from "drizzle-orm";
-import type { TopicDto } from "@ideaproxima/contracts";
+import type { IdeaRef, TopicDto } from "@ideaproxima/contracts";
 import * as domain from "@ideaproxima/domain";
-import { DomainError, authorize, notFound, slugify } from "@ideaproxima/domain";
+import { DomainError, authorize, notFound, slugify, type IdeaStage } from "@ideaproxima/domain";
+import { queryRows } from "../../db/client";
 import { topics } from "../../db/schema";
 import { recordActivity } from "../shared/activity";
 import { inTransaction, type Ctx } from "../shared/context";
 
 type TopicRow = typeof topics.$inferSelect;
 
-const ideaCount = sql<number>`(select count(*) from idea_topics it join ideas i on i.id = it.idea_id
-  where i.hidden_at is null and (it.topic_id = ${topics.id} or it.topic_id in (select c.id from topics c where c.parent_id = ${topics.id})))::int`;
+/** How many of a topic's newest ideas the topic list carries (enough for a card, not a listing). */
+const LATEST_PER_TOPIC = 2;
 
-const topicDto = (t: TopicRow & { ideaCount: number }): TopicDto => ({
+const topicDto = (t: TopicRow, ideaCount = 0, latestIdeas: IdeaRef[] = []): TopicDto => ({
   id: t.id,
   slug: t.slug,
   name: t.name,
   description: t.description,
   parentId: t.parentId,
-  ideaCount: t.ideaCount,
+  ideaCount,
+  latestIdeas,
 });
 
+/**
+ * Every topic with the number of visible ideas in it or its direct children (each idea counted once), and its
+ * newest ideas. The SQL names every table explicitly: Drizzle renders a column of a single-table select as a
+ * bare `"id"`, which inside a correlated subquery silently binds to the inner table — that is how topic counts
+ * once read 0 everywhere.
+ */
 export async function listTopics(ctx: Ctx): Promise<TopicDto[]> {
-  const rows = await ctx.db
-    .select({ t: topics, ideaCount })
-    .from(topics)
-    .orderBy(asc(topics.position), asc(topics.name));
-  return rows.map((r) => topicDto({ ...r.t, ideaCount: r.ideaCount }));
+  const [rows, counts, latest] = await Promise.all([
+    ctx.db.select().from(topics).orderBy(asc(topics.position), asc(topics.name)),
+    queryRows<{ topic_id: string; n: number }>(
+      ctx.db,
+      sql`select t.id as topic_id, count(distinct it.idea_id)::int as n
+          from topics t
+          join topics c on c.id = t.id or c.parent_id = t.id
+          join idea_topics it on it.topic_id = c.id
+          join ideas i on i.id = it.idea_id and i.hidden_at is null
+          group by t.id`,
+    ),
+    queryRows<{ topic_id: string; id: string; slug: string; title: string; stage: IdeaStage }>(
+      ctx.db,
+      sql`select t.id as topic_id, x.id, x.slug, x.title, x.stage
+          from topics t
+          cross join lateral (
+            select i.id, i.slug, i.title, i.stage, i.created_at
+            from ideas i
+            where i.hidden_at is null and exists (
+              select 1 from idea_topics it join topics c on c.id = it.topic_id
+              where it.idea_id = i.id and (c.id = t.id or c.parent_id = t.id))
+            order by i.created_at desc
+            limit ${LATEST_PER_TOPIC}
+          ) x
+          order by t.id, x.created_at desc`,
+    ),
+  ]);
+  const count = new Map(counts.map((c) => [c.topic_id, c.n]));
+  const newest = new Map<string, IdeaRef[]>();
+  for (const { topic_id, ...idea } of latest) newest.set(topic_id, [...(newest.get(topic_id) ?? []), idea]);
+  return rows.map((t) => topicDto(t, count.get(t.id) ?? 0, newest.get(t.id) ?? []));
 }
 
 export async function getTopic(ctx: Ctx, slug: string): Promise<TopicDto & { children: TopicDto[] }> {
@@ -59,7 +93,7 @@ export async function createTopic(
       subject: { kind: "topic", id: row!.id },
       payload: { slug },
     });
-    return topicDto({ ...row!, ideaCount: 0 });
+    return topicDto(row!);
   });
 }
 

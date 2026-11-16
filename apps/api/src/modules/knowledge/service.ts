@@ -298,17 +298,22 @@ export async function getClaim(ctx: Ctx, claimId: string): Promise<ClaimDetailDt
   };
 }
 
-export async function searchClaims(db: Database, q: string, limit: number) {
-  return db
-    .select({
-      id: claims.id,
-      statement: claims.statement,
-      ideaCount: sql<number>`(select count(distinct ic.idea_id) from idea_claims ic where ic.claim_id = ${claims.id} and ic.removed_at is null)::int`,
-    })
+/**
+ * Claims matching a full-text query, with their derived status and how many ideas they underpin — computed by
+ * `claimDtos`, the same derivation every other claim view uses.
+ */
+export async function searchClaims(ctx: Ctx, q: string, limit: number) {
+  const rows = await ctx.db
+    .select()
     .from(claims)
     .where(and(isNull(claims.hiddenAt), sql`${claims.search} @@ websearch_to_tsquery('english', ${q})`))
     .orderBy(desc(sql`ts_rank(${claims.search}, websearch_to_tsquery('english', ${q}))`))
     .limit(limit);
+  const dtos = await claimDtos(ctx, rows);
+  return rows.map((r) => {
+    const c = dtos.get(r.id)!;
+    return { id: c.id, statement: c.statement, ideaCount: c.ideaCount, status: c.derived.status };
+  });
 }
 
 // ---------------------------------------------------------------- sources

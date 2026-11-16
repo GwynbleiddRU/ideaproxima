@@ -200,6 +200,9 @@ export const TopicDto = named(
     description: z.string(),
     parentId: id.nullable(),
     ideaCount: int.describe("Visible ideas in this topic or its direct children."),
+    latestIdeas: z
+      .array(IdeaRef)
+      .describe("Up to two newest visible ideas in this topic or its direct children, newest first."),
   }),
 );
 export type TopicDto = z.infer<typeof TopicDto>;
@@ -644,7 +647,7 @@ export const SearchResults = named(
   "SearchResults",
   z.object({
     ideas: z.array(IdeaListItem),
-    claims: z.array(z.object({ id, statement: z.string(), ideaCount: int })),
+    claims: z.array(z.object({ id, statement: z.string(), ideaCount: int, status: z.enum(CLAIM_STATUSES) })),
     sources: z.array(SourceDto),
     people: z.array(PersonRef),
   }),

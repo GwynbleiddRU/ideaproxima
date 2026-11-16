@@ -1909,6 +1909,7 @@ Provide exactly one basis: `sourceId`, `source` (registered or matched by DOI/UR
 | `claims[].id` | string (uuid) | yes |  |
 | `claims[].statement` | string | yes |  |
 | `claims[].ideaCount` | integer | yes |  |
+| `claims[].status` | `unassessed` \| `established` \| `supported` \| `hypothesis` \| `unknown` \| `doubtful` \| `refuted` \| `contested` | yes |  |
 | `sources` | [`Source`](#schema-source)[] | yes |  |
 | `people` | [`PersonRef`](#schema-personref)[] | yes |  |
 
@@ -2041,6 +2042,7 @@ Provide exactly one basis: `sourceId`, `source` (registered or matched by DOI/UR
 | `description` | string | yes |  |
 | `parentId` | string (uuid) \| null | yes (nullable) |  |
 | `ideaCount` | integer | yes | Visible ideas in this topic or its direct children. |
+| `latestIdeas` | [`IdeaRef`](#schema-idearef)[] | yes | Up to two newest visible ideas in this topic or its direct children, newest first. |
 
 ### <a id="schema-topicdetail"></a>TopicDetail
 
@@ -2052,6 +2054,7 @@ Provide exactly one basis: `sourceId`, `source` (registered or matched by DOI/UR
 | `description` | string | yes |  |
 | `parentId` | string (uuid) \| null | yes (nullable) |  |
 | `ideaCount` | integer | yes | Visible ideas in this topic or its direct children. |
+| `latestIdeas` | [`IdeaRef`](#schema-idearef)[] | yes | Up to two newest visible ideas in this topic or its direct children, newest first. |
 | `children` | [`Topic`](#schema-topic)[] | yes |  |
 
 ### <a id="schema-topicref"></a>TopicRef

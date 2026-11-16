@@ -7047,12 +7047,26 @@
                 },
                 "ideaCount": {
                   "type": "integer"
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "unassessed",
+                    "established",
+                    "supported",
+                    "hypothesis",
+                    "unknown",
+                    "doubtful",
+                    "refuted",
+                    "contested"
+                  ]
                 }
               },
               "required": [
                 "id",
                 "statement",
-                "ideaCount"
+                "ideaCount",
+                "status"
               ],
               "additionalProperties": false
             }
@@ -7613,6 +7627,13 @@
           "ideaCount": {
             "type": "integer",
             "description": "Visible ideas in this topic or its direct children."
+          },
+          "latestIdeas": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/IdeaRef"
+            },
+            "description": "Up to two newest visible ideas in this topic or its direct children, newest first."
           }
         },
         "required": [
@@ -7621,7 +7642,8 @@
           "name",
           "description",
           "parentId",
-          "ideaCount"
+          "ideaCount",
+          "latestIdeas"
         ],
         "additionalProperties": false
       },
@@ -7656,6 +7678,13 @@
             "type": "integer",
             "description": "Visible ideas in this topic or its direct children."
           },
+          "latestIdeas": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/IdeaRef"
+            },
+            "description": "Up to two newest visible ideas in this topic or its direct children, newest first."
+          },
           "children": {
             "type": "array",
             "items": {
@@ -7670,6 +7699,7 @@
           "description",
           "parentId",
           "ideaCount",
+          "latestIdeas",
           "children"
         ],
         "additionalProperties": false
