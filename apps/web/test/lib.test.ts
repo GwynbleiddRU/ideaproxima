@@ -2,8 +2,10 @@ import { describe, expect, it } from "vitest";
 import type { GraphDto } from "@ideaproxima/contracts";
 import { ApiError, errorMessage } from "@/api/http";
 import { parseExploreSearch, parseGraphSearch, parseRedirectSearch } from "@/app/search-params";
+import type { ActivityDto } from "@ideaproxima/contracts";
+import { foldActivity } from "@/lib/activity";
 import { diffLines, hasChanges } from "@/lib/diff";
-import { initials, plural, timeAgo } from "@/lib/format";
+import { dayLabel, initials, plural, shortAgo, timeAgo } from "@/lib/format";
 import { layoutGraph } from "@/lib/graph-layout";
 import { renderMarkdown } from "@/lib/markdown";
 
@@ -122,5 +124,62 @@ describe("format", () => {
     const now = Date.parse("2026-11-15T12:00:00Z");
     expect(timeAgo("2026-11-12T12:00:00Z", now)).toBe("3 days ago");
     expect(timeAgo("2026-11-15T11:59:50Z", now)).toBe("just now");
+  });
+});
+
+describe("shortAgo and dayLabel", () => {
+  const now = new Date("2026-11-16T12:00:00").getTime();
+  const ago = (seconds: number) => new Date(now - seconds * 1000).toISOString();
+
+  it("gives compact ages, then the date", () => {
+    expect(shortAgo(ago(20), now)).toBe("now");
+    expect(shortAgo(ago(5 * 60), now)).toBe("5m");
+    expect(shortAgo(ago(2 * 3600), now)).toBe("2h");
+    expect(shortAgo(ago(3 * 86400), now)).toBe("3d");
+    expect(shortAgo(ago(15 * 86400), now)).toBe("2w");
+    expect(shortAgo(ago(60 * 86400), now)).toBe("Sep 17");
+  });
+
+  it("names today and yesterday, and dates the rest", () => {
+    expect(dayLabel(ago(3600), now)).toBe("Today");
+    expect(dayLabel(ago(24 * 3600), now)).toBe("Yesterday");
+    expect(dayLabel(ago(3 * 86400), now)).toBe("Nov 13, 2026");
+  });
+});
+
+describe("foldActivity", () => {
+  const idea = { id: "i1", slug: "water", title: "Water", stage: "imagined" as const };
+  let n = 0;
+  const entry = (action: string, payload: Record<string, unknown>, onIdea = idea): ActivityDto => ({
+    id: `a${++n}`,
+    action,
+    actor: { id: `p${n}`, handle: `p${n}`, displayName: `Person ${n}` },
+    subject: { kind: "idea", id: onIdea.id },
+    payload,
+    occurredAt: "2026-11-16T10:00:00.000Z",
+    ideaId: onIdea.id,
+    idea: onIdea,
+  });
+
+  it("folds consecutive identical stances on one idea, and nothing else", () => {
+    const other = { ...idea, id: "i2", slug: "soil", title: "Soil" };
+    const groups = foldActivity([
+      entry("stance.taken", { kind: "important" }),
+      entry("stance.taken", { kind: "important" }),
+      entry("stance.taken", { kind: "doubtful" }),
+      entry("stance.taken", { kind: "doubtful" }, other),
+      entry("claim.stated", { statement: "A" }),
+      entry("claim.stated", { statement: "B" }),
+    ]);
+    expect(groups.map((g) => g.entries.length)).toEqual([2, 1, 1, 1, 1]);
+  });
+
+  it("only folds neighbours: a repeat after something else starts a new line", () => {
+    const groups = foldActivity([
+      entry("evaluation.submitted", { target: { kind: "idea" } }),
+      entry("comment.posted", { kind: "question" }),
+      entry("evaluation.submitted", { target: { kind: "idea" } }),
+    ]);
+    expect(groups).toHaveLength(3);
   });
 });

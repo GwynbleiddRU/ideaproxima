@@ -9,7 +9,7 @@ import {
   REVISION_STATUS_INFO,
 } from "@ideaproxima/domain";
 import { ideaQueries, useDecideRevision, useWithdrawRevision } from "@/api/ideas";
-import { ActivityItem, ActivityList } from "@/components/ActivityItem";
+import { ActivityFeed } from "@/components/ActivityFeed";
 import forms from "@/components/forms.module.scss";
 import { MetaLine, PersonLink, TimeAgo } from "@/components/meta";
 import { SectionHeading } from "@/components/PageHeader";
@@ -20,6 +20,7 @@ import { Button } from "@/ui/Button";
 import { Dialog } from "@/ui/Dialog";
 import { control, Field } from "@/ui/Field";
 import { EmptyState, FormError, LoadingBlock, Skeleton } from "@/ui/Feedback";
+import { Segmented } from "@/ui/Segmented";
 import { useIdea, usePermissions } from "./use-idea";
 import styles from "./HistoryTab.module.scss";
 import tabs from "./tabs.module.scss";
@@ -309,20 +310,45 @@ function RevisionDiff({ revision, idea }: { revision: RevisionSummaryDto; idea: 
 const listOf = (content: IdeaContentDto | undefined, key: "topics" | "tags") =>
   (content?.[key] ?? []).join("\n");
 
+/** Kinds of recorded action the timeline can be narrowed to (by action prefix). */
+const TIMELINE_FILTERS = {
+  all: { label: "Everything", prefixes: [] },
+  text: { label: "Text & stage", prefixes: ["idea.", "revision.", "stage.", "steward."] },
+  knowledge: {
+    label: "Knowledge & debate",
+    prefixes: ["claim.", "evidence.", "source.", "relation.", "argument.", "comment."],
+  },
+  judgement: { label: "Evaluations & perspectives", prefixes: ["evaluation.", "stance."] },
+  practice: { label: "Practice", prefixes: ["involvement.", "initiative.", "outcome."] },
+} as const;
+type TimelineFilter = keyof typeof TIMELINE_FILTERS;
+
 function Timeline({ idea }: { idea: IdeaDetail }) {
   const timeline = useInfiniteQuery(ideaQueries.timeline(idea.slug));
-  const entries = timeline.data?.pages.flatMap((p) => p.items) ?? [];
+  const [filter, setFilter] = useState<TimelineFilter>("all");
+  const prefixes: readonly string[] = TIMELINE_FILTERS[filter].prefixes;
+  const entries = (timeline.data?.pages.flatMap((p) => p.items) ?? []).filter(
+    (e) => !prefixes.length || prefixes.some((p) => e.action.startsWith(p)),
+  );
   return (
     <section className={tabs.group}>
       <SectionHeading eyebrow="Every recorded action" title="Timeline" />
+      <Segmented<TimelineFilter>
+        label="Show"
+        size="sm"
+        value={filter}
+        onChange={setFilter}
+        options={Object.entries(TIMELINE_FILTERS).map(([value, f]) => ({
+          value: value as TimelineFilter,
+          label: f.label,
+        }))}
+      />
       {timeline.isPending ? (
         <Skeleton lines={6} />
+      ) : entries.length ? (
+        <ActivityFeed entries={entries} showIdea={false} byDay />
       ) : (
-        <ActivityList>
-          {entries.map((e) => (
-            <ActivityItem key={e.id} entry={e} showIdea={false} />
-          ))}
-        </ActivityList>
+        <p className={tabs.muted}>Nothing of this kind is recorded yet.</p>
       )}
       {timeline.hasNextPage && (
         <Button onClick={() => void timeline.fetchNextPage()} loading={timeline.isFetchingNextPage}>

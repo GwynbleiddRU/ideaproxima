@@ -19,7 +19,6 @@ import { control, Field } from "@/ui/Field";
 import { FormError, LoadingBlock } from "@/ui/Feedback";
 import { Segmented } from "@/ui/Segmented";
 import styles from "./EvaluateDialog.module.scss";
-import forms from "./forms.module.scss";
 
 type Draft = Partial<Record<DimensionKey, { value: number | null; confidence: ConfidenceLevel | null }>>;
 
@@ -47,8 +46,8 @@ export function EvaluateDialog({
       open={open}
       onClose={onClose}
       size="lg"
-      title={`Evaluate: ${subject}`}
-      description="Rate only what you can judge. Each dimension is kept separate; nothing is combined into one score."
+      title={`Evaluate “${subject}”`}
+      description="Rate only what you can judge — every dimension is optional and stays separate."
     >
       <EvaluateForm target={target} invalidate={invalidate} onDone={onClose} />
     </Dialog>
@@ -95,17 +94,30 @@ function EvaluateForm({
   };
 
   return (
-    <form onSubmit={onSubmit} className={forms.form}>
+    <form onSubmit={onSubmit} className={styles.form}>
       {dimensions.map((d) => {
         const definition = DIMENSIONS[d];
         const value = values[d]?.value ?? null;
+        const anchors = anchorsOf(d);
         return (
-          <fieldset key={d} className={styles.dimension}>
+          <fieldset key={d} className={cx(styles.dimension, value === null && styles.skipped)}>
             <legend className={styles.legend}>{definition.label}</legend>
-            <p className={styles.question}>{definition.question}</p>
-            <div className={styles.scale} role="radiogroup" aria-label={definition.label}>
-              {anchorsOf(d).map(([n, label]) => (
-                <label key={n} className={cx(styles.point, value === n && styles.selected)}>
+            <div className={styles.head}>
+              <p className={styles.question}>{definition.question}</p>
+              <label className={styles.skip}>
+                <input
+                  type="radio"
+                  name={d}
+                  checked={value === null}
+                  onChange={() => set(d, { value: null })}
+                  className="visually-hidden"
+                />
+                I don't know
+              </label>
+            </div>
+            <div className={styles.scale}>
+              {anchors.map(([n, label]) => (
+                <label key={n} className={styles.point}>
                   <input
                     type="radio"
                     name={d}
@@ -117,20 +129,14 @@ function EvaluateForm({
                   <span className={styles.pointLabel}>{label}</span>
                 </label>
               ))}
-              <label className={cx(styles.point, styles.skip, value === null && styles.selected)}>
-                <input
-                  type="radio"
-                  name={d}
-                  checked={value === null}
-                  onChange={() => set(d, { value: null })}
-                  className="visually-hidden"
-                />
-                <span className={styles.pointLabel}>I don't know</span>
-              </label>
             </div>
             {value !== null && (
               <div className={styles.confidence}>
-                <span>How confident are you?</span>
+                {/* On narrow screens the scale shows numbers only; name the chosen point here. */}
+                <span className={styles.chosen}>
+                  {value} — {anchors.find(([n]) => n === value)?.[1]}
+                </span>
+                <span>How sure are you?</span>
                 <Segmented<ConfidenceLevel | "unset">
                   label={`Confidence in your ${definition.label.toLowerCase()} rating`}
                   size="sm"
@@ -148,9 +154,9 @@ function EvaluateForm({
       })}
 
       <Field
-        label="Rationale"
+        label="Why?"
         optional
-        hint="Why you rated this way. Shown with your ratings; helps others weigh them."
+        hint="What your ratings rest on — a source, an experience, a calculation. Shown with them."
       >
         {(p) => (
           <textarea
@@ -159,27 +165,42 @@ function EvaluateForm({
             value={rationale}
             onChange={(e) => setRationale(e.target.value)}
             maxLength={LIMITS.rationale.max}
-            rows={3}
+            rows={2}
           />
         )}
       </Field>
-
       <FormError error={submit.error} />
-      <div className={cx(forms.actions, forms.actionsSpread)}>
-        {mine.length > 0 ? (
+
+      <div className={styles.footer}>
+        <p className={styles.count}>
+          <b>
+            {ratings.length} of {dimensions.length}
+          </b>{" "}
+          rated{ratings.length < dimensions.length && " · the rest stay “I don't know”"}
+        </p>
+        <div className={styles.buttons}>
+          {mine.length > 0 && (
+            <Button
+              variant="quiet"
+              size="sm"
+              loading={withdraw.isPending}
+              onClick={() =>
+                withdraw.mutate([...new Set(mine.map((e) => e.dimension))], { onSuccess: onDone })
+              }
+            >
+              Withdraw mine
+            </Button>
+          )}
           <Button
-            variant="quiet"
-            loading={withdraw.isPending}
-            onClick={() => withdraw.mutate([...new Set(mine.map((e) => e.dimension))], { onSuccess: onDone })}
+            type="submit"
+            variant="primary"
+            size="sm"
+            loading={submit.isPending}
+            disabled={ratings.length === 0}
           >
-            Withdraw my ratings
+            {mine.length ? "Update evaluation" : "Save evaluation"}
           </Button>
-        ) : (
-          <span className={forms.note}>Your ratings are public and attributed to you.</span>
-        )}
-        <Button type="submit" variant="primary" loading={submit.isPending} disabled={ratings.length === 0}>
-          {mine.length ? "Update ratings" : "Submit ratings"}
-        </Button>
+        </div>
       </div>
     </form>
   );

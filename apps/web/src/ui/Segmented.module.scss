@@ -3,6 +3,8 @@
 .group {
   display: inline-flex;
   flex-wrap: wrap;
+  justify-self: start; // as a grid item, hug the options instead of stretching
+  max-width: 100%;
   gap: 2px;
   padding: 3px;
   border-radius: var(--radius-pill);

@@ -12,31 +12,44 @@ export function nearestAnchor(dimension: DimensionKey, mean: number): string | u
   )?.[1];
 }
 
+/** Whether a summary has enough ratings to be shown as a measure (otherwise it is "too early to tell"). */
+export const isConfident = (summary: RatingSummaryDto | null | undefined): boolean =>
+  !!summary && summary.n >= MIN_RATINGS_FOR_CONFIDENCE;
+
 /**
- * A derived rating summary on one dimension: mean as a bar, dispersion as a whisker, the number of raters, and
- * honest states for "not yet rated" and "too early to tell".
+ * A derived rating summary on one dimension: the nearest scale anchor and the mean, a bar with the spread as a
+ * whisker, the number of raters — and honest "not yet rated" / "too early" states below the threshold.
  */
 export function RatingMeter({
   dimension,
   summary,
   accent,
   size,
+  label,
 }: {
   dimension: DimensionKey;
   summary: RatingSummaryDto | null | undefined;
   accent?: boolean;
   size?: "sm" | "md";
+  /** A shorter label than the dimension's own (e.g. "Potential" in a narrow column). */
+  label?: string;
 }) {
+  const anchor = summary ? nearestAnchor(dimension, summary.mean) : undefined;
   return (
     <Meter
-      label={DIMENSIONS[dimension].label}
+      label={label ?? DIMENSIONS[dimension].label}
       value={summary ? summary.value : null}
       spread={summary?.dispersion}
       n={summary?.n}
       minN={MIN_RATINGS_FOR_CONFIDENCE}
       detail={
-        summary ? `${nearestAnchor(dimension, summary.mean) ?? ""} (${summary.mean.toFixed(1)})` : undefined
+        summary && (
+          <>
+            {anchor && <b>{anchor}</b>} {summary.mean.toFixed(1)}
+          </>
+        )
       }
+      valueText={summary ? `${anchor ?? ""} ${summary.mean.toFixed(1)}, ${summary.n} ratings` : undefined}
       accent={accent}
       size={size}
     />

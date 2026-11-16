@@ -6,22 +6,54 @@ import { layoutGraph } from "@/lib/graph-layout";
 import { cx } from "@/lib/cx";
 import styles from "./RelationGraph.module.scss";
 
-const COL = 280;
-const ROW = 76;
-const NODE_W = 236;
-const NODE_H = 52;
+const COL = 290;
+const ROW = 88;
+const NODE_W = 244;
+const NODE_H = 70;
 const PAD = 24;
+const HEAD = 26;
+const LINE_CHARS = 29;
 
-const truncate = (s: string, n: number) => (s.length > n ? `${s.slice(0, n - 1)}…` : s);
+/** A title in at most two lines, broken at words; the second line ends in "…" when the title is longer. */
+function wrap(title: string): string[] {
+  const lines: string[] = [""];
+  for (const word of title.split(/\s+/)) {
+    const line = lines.at(-1)!;
+    if (!line || line.length + 1 + word.length <= LINE_CHARS)
+      lines[lines.length - 1] = line ? `${line} ${word}` : word;
+    else if (lines.length < 2) lines.push(word);
+    else {
+      lines[1] = `${lines[1]!.slice(0, LINE_CHARS - 1).trimEnd()}…`;
+      return lines;
+    }
+  }
+  return lines.map((l) => (l.length > LINE_CHARS ? `${l.slice(0, LINE_CHARS - 1)}…` : l));
+}
 
-export function RelationGraph({ graph }: { graph: GraphDto }) {
+/** A column's name, relative to the focal idea: what it builds on to the left, what builds on it to the right. */
+function columnLabel(layer: number): string {
+  if (layer === 0) return "This idea";
+  if (layer === -1) return "What it needs";
+  if (layer === 1) return "What it enables";
+  return layer < 0 ? `${-layer} steps back` : `${layer} steps on`;
+}
+
+/**
+ * The connection map: columns by dependency, read left to right as "needs → this idea → enables". When nothing
+ * builds on the idea yet and the view looks downstream, a dashed placeholder says so — an invitation, not a gap.
+ */
+export function RelationGraph({ graph, showEnables = true }: { graph: GraphDto; showEnables?: boolean }) {
   const [hover, setHover] = useState<string | null>(null);
-  const { nodes, columns, rows, minLayer } = useMemo(() => layoutGraph(graph), [graph]);
-  const position = new Map(
-    nodes.map((n) => [n.id, { x: PAD + (n.layer - minLayer) * COL, y: PAD + n.row * ROW }]),
-  );
+  const laid = useMemo(() => layoutGraph(graph), [graph]);
+  const { nodes, rows, minLayer } = laid;
+  const maxLayer = minLayer + laid.columns - 1;
+  const placeholder = showEnables && maxLayer < 1;
+  const columns = laid.columns + (placeholder ? 1 : 0);
+  const x = (layer: number) => PAD + (layer - minLayer) * COL;
+  const position = new Map(nodes.map((n) => [n.id, { x: x(n.layer), y: PAD + HEAD + n.row * ROW }]));
+  const focusY = position.get(graph.focusId)?.y ?? PAD + HEAD;
   const width = PAD * 2 + (columns - 1) * COL + NODE_W;
-  const height = PAD * 2 + (rows - 1) * ROW + NODE_H;
+  const height = PAD * 2 + HEAD + (rows - 1) * ROW + NODE_H;
 
   return (
     <figure
@@ -29,6 +61,11 @@ export function RelationGraph({ graph }: { graph: GraphDto }) {
       aria-label={`Connection map: ${nodes.length} ideas, ${graph.edges.length} connections`}
     >
       <svg viewBox={`0 0 ${width} ${height}`} width={width} height={height} className={styles.svg}>
+        {Array.from({ length: columns }, (_, i) => minLayer + i).map((layer) => (
+          <text key={layer} x={x(layer) + NODE_W / 2} y={PAD + 8} className={styles.columnLabel}>
+            {columnLabel(layer)}
+          </text>
+        ))}
         {graph.edges.map((edge) => {
           const a = position.get(edge.from);
           const b = position.get(edge.to);
@@ -68,10 +105,12 @@ export function RelationGraph({ graph }: { graph: GraphDto }) {
               >
                 <title>{node.title}</title>
                 <rect width={NODE_W} height={NODE_H} rx={10} />
-                <text x={12} y={21} className={styles.nodeTitle}>
-                  {truncate(node.title, 27)}
-                </text>
-                <text x={12} y={39} className={styles.nodeMeta}>
+                {wrap(node.title).map((line, i) => (
+                  <text key={i} x={14} y={24 + i * 18} className={styles.nodeTitle}>
+                    {line}
+                  </text>
+                ))}
+                <text x={14} y={NODE_H - 12} className={styles.nodeMeta}>
                   {IDEA_STAGE_INFO[node.stage].label}
                   {node.topics[0] ? ` · ${node.topics[0]}` : ""}
                 </text>
@@ -79,6 +118,18 @@ export function RelationGraph({ graph }: { graph: GraphDto }) {
             </Link>
           );
         })}
+        {placeholder && (
+          <g transform={`translate(${x(1)} ${focusY})`} className={styles.ghost}>
+            <path d={`M${-COL + NODE_W} ${NODE_H / 2}H0`} className={cx(styles.edge, styles.lateral)} />
+            <rect width={NODE_W} height={NODE_H} rx={10} />
+            <text x={14} y={30} className={styles.nodeMeta}>
+              Nothing recorded builds on it yet.
+            </text>
+            <text x={14} y={48} className={styles.nodeMeta}>
+              Know an idea it would enable? Connect it.
+            </text>
+          </g>
+        )}
       </svg>
       <p className={styles.legend}>
         <span>

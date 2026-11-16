@@ -65,11 +65,17 @@
   gap: var(--space-2);
 }
 
-.primary {
-  padding: 0.05rem 0.4rem;
-  border-radius: var(--radius-pill);
-  background: color-mix(in oklab, var(--bg) 25%, transparent);
-  font-size: var(--text-2xs);
+// The topic's position: 1 is the primary home.
+.order {
+  display: grid;
+  place-items: center;
+  width: 1.15rem;
+  height: 1.15rem;
+  border-radius: 50%;
+  background: var(--bg);
+  color: var(--fg);
+  font-size: 0.65rem;
+  font-weight: 700;
 }
 
 .error {
@@ -153,36 +159,71 @@
 
 .sectionToggle {
   @include unbutton;
-  display: flex;
+  display: grid;
+  grid-template-columns: 1.5rem minmax(0, 1fr) auto;
   align-items: center;
-  justify-content: space-between;
-  gap: var(--space-4);
+  gap: var(--space-3);
   width: 100%;
   padding: var(--space-3) var(--space-4);
 
-  > span {
-    display: grid;
-    gap: 0.1rem;
-
-    strong {
-      font-weight: 580;
-    }
-
-    span {
-      font-size: var(--text-sm);
-      color: var(--fg-muted);
-      @include serif(400);
-      font-style: italic;
-    }
-  }
-
-  svg {
-    color: var(--fg-subtle);
+  &:focus-visible {
+    @include focus-ring(-2px);
   }
 }
 
-.done {
-  color: var(--success) !important;
+// Written: a filled check; not yet: a dashed circle.
+.state {
+  display: grid;
+  place-items: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border: 1.5px dashed var(--border-strong);
+  border-radius: 50%;
+
+  svg {
+    width: 0.8rem;
+    height: 0.8rem;
+    stroke-width: 3;
+  }
+}
+
+.stateDone {
+  border: 0;
+  background: var(--success);
+  color: var(--bg);
+}
+
+.sectionText {
+  display: grid;
+  gap: 0.1rem;
+
+  strong {
+    font-weight: 580;
+  }
+
+  span {
+    font-size: var(--text-sm);
+    color: var(--fg-muted);
+  }
+}
+
+.sectionGo {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: var(--text-sm);
+  color: var(--fg-muted);
+
+  svg {
+    width: 1rem;
+    height: 1rem;
+    color: var(--fg-subtle);
+    transition: transform var(--dur-fast) var(--ease);
+  }
+}
+
+.chevronOpen {
+  transform: rotate(180deg);
 }
 
 .hint {
@@ -191,11 +232,63 @@
 }
 
 .side {
+  display: grid;
+  gap: var(--space-3);
+  align-content: start;
+
   @include up(lg) {
     position: sticky;
     top: calc(var(--header-h) + var(--space-5));
     align-self: start;
   }
+}
+
+.preview {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-5);
+  @include card;
+}
+
+.previewTop {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  min-height: 1.5rem;
+}
+
+.previewTopics {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.15rem 0.85rem;
+
+  span {
+    @include eyebrow;
+  }
+
+  span:first-child {
+    color: var(--primary);
+  }
+}
+
+.previewTitle {
+  @include serif(450);
+  font-size: var(--text-xl);
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.previewSummary {
+  color: var(--fg-muted);
+  font-size: var(--text-sm);
+  @include line-clamp(2);
+}
+
+.placeholder {
+  color: var(--fg-subtle);
+  font-style: italic;
 }
 
 .sideCard {
@@ -220,10 +313,11 @@
     svg {
       width: 1rem;
       height: 1rem;
-      padding: 2px;
-      border-radius: 50%;
-      border: 1px solid var(--border-strong);
-      color: transparent;
+      color: var(--fg-subtle);
+    }
+
+    b {
+      color: var(--fg);
     }
   }
 }
@@ -232,13 +326,17 @@
   color: var(--fg) !important;
 
   svg {
-    border-color: var(--success) !important;
-    background: var(--success);
-    color: var(--bg) !important;
+    color: var(--success) !important;
   }
 }
 
-.progress {
-  font-size: var(--text-sm);
+.optional {
+  color: var(--fg-subtle);
+}
+
+.missing {
+  margin-top: calc(-1 * var(--space-2));
+  font-size: var(--text-xs);
   color: var(--fg-muted);
+  text-align: center;
 }

@@ -72,6 +72,13 @@ select {
   color: inherit;
 }
 
+// The browser's own clear button (a blue "×" in Chromium) ignores the theme; search fields that need one
+// render their own.
+input[type="search"]::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
 h1,
 h2,
 h3,

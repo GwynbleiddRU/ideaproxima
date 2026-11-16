@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { useState } from "react";
-import { ChevronDown, Plus } from "lucide-react";
+import { useState, type CSSProperties } from "react";
+import { ArrowUpRight, ChevronDown, Gauge, Link2, Paperclip } from "lucide-react";
 import type { IdeaClaimDto } from "@ideaproxima/contracts";
 import { CLAIM_ROLE_INFO, CONSEQUENCE_DEPTH_INFO, type ConsequenceDepth } from "@ideaproxima/domain";
 import { knowledgeQueries, useUnlinkClaim } from "@/api/knowledge";
@@ -12,6 +12,7 @@ import { ModerateButton } from "@/components/ModerateButton";
 import { RatingMeter } from "@/components/Ratings";
 import { ClaimStatusBadge } from "@/components/status";
 import { cx } from "@/lib/cx";
+import { plural } from "@/lib/format";
 import { Badge } from "@/ui/Badge";
 import { Button, ButtonLink } from "@/ui/Button";
 import { EmptyState, Skeleton } from "@/ui/Feedback";
@@ -42,6 +43,14 @@ export function ClaimCard({
   const total = (counts.supports ?? 0) + (counts.challenges ?? 0) + (counts.mixed ?? 0);
   const others = claim.ideaCount - 1;
 
+  const balance = (
+    [
+      ["supports", "supporting", "var(--status-established)"],
+      ["challenges", "challenging", "var(--status-refuted)"],
+      ["mixed", "mixed", "var(--status-hypothesis)"],
+    ] as const
+  ).filter(([key]) => (counts[key] ?? 0) > 0);
+
   return (
     <article
       id={`claim-${claim.id}`}
@@ -56,6 +65,11 @@ export function ClaimCard({
             ? ` · ${CONSEQUENCE_DEPTH_INFO[claim.depth as ConsequenceDepth]?.label ?? claim.depth}`
             : ""}
         </Badge>
+        {others > 0 && (
+          <Link to="/claims/$claim" params={{ claim: claim.id }} className={styles.shared}>
+            <Link2 aria-hidden /> Also underpins {plural(others, "other idea")}
+          </Link>
+        )}
         {claim.hidden && <Badge tone="warning">Hidden</Badge>}
       </header>
       <p className={styles.claimStatement}>{claim.statement}</p>
@@ -63,47 +77,41 @@ export function ClaimCard({
         <RatingMeter dimension="support" summary={claim.derived.support} size="sm" accent />
         <RatingMeter dimension="plausibility" summary={claim.derived.plausibility} size="sm" />
       </div>
-      <div className={styles.evidenceCounts}>
-        <span>
-          <b>{counts.supports ?? 0}</b> supporting
-        </span>
-        <span>
-          <b>{counts.challenges ?? 0}</b> challenging
-        </span>
-        <span>
-          <b>{counts.mixed ?? 0}</b> mixed
-        </span>
-        {others > 0 && (
-          <Link to="/claims/$claim" params={{ claim: claim.id }} className={styles.shared}>
-            Also underpins {others} other idea{others === 1 ? "" : "s"}
-          </Link>
-        )}
-      </div>
+      {balance.length > 0 && (
+        <p className={styles.balance}>
+          {balance.map(([key, label, color]) => (
+            <span key={key} style={{ "--dot": color } as CSSProperties}>
+              {counts[key]} {label}
+            </span>
+          ))}
+        </p>
+      )}
       <footer className={styles.footer}>
-        <MetaLine>
-          <span>
-            Added by <PersonLink person={claim.addedBy} />
-          </span>
-          <TimeAgo iso={claim.addedAt} />
-        </MetaLine>
         <div className={styles.footerActions}>
+          {total > 0 && (
+            <Button
+              variant="quiet"
+              size="sm"
+              icon={<ChevronDown className={cx(styles.chevron, open && styles.chevronOpen)} />}
+              aria-expanded={open}
+              onClick={() => setOpen(!open)}
+            >
+              Evidence ({total})
+            </Button>
+          )}
           <Button
             variant="quiet"
             size="sm"
-            icon={<ChevronDown />}
-            aria-expanded={open}
-            onClick={() => setOpen(!open)}
+            icon={<Paperclip />}
+            onClick={() => gate(() => setDialog("evidence"))}
           >
-            {open ? "Hide evidence" : `Evidence (${total})`}
-          </Button>
-          <Button variant="quiet" size="sm" icon={<Plus />} onClick={() => gate(() => setDialog("evidence"))}>
             Attach evidence
           </Button>
-          <Button variant="quiet" size="sm" onClick={() => gate(() => setDialog("assess"))}>
+          <Button variant="quiet" size="sm" icon={<Gauge />} onClick={() => gate(() => setDialog("assess"))}>
             Assess
           </Button>
           <ButtonLink to="/claims/$claim" params={{ claim: claim.id }} variant="quiet" size="sm">
-            Claim page
+            <ArrowUpRight aria-hidden /> Claim page
           </ButtonLink>
           {canUnlink && (
             <Button
@@ -117,6 +125,12 @@ export function ClaimCard({
           )}
           <ModerateButton kind="claim" id={claim.id} hidden={claim.hidden} />
         </div>
+        <MetaLine className={styles.addedBy}>
+          <span>
+            Added by <PersonLink person={claim.addedBy} />
+          </span>
+          <TimeAgo iso={claim.addedAt} />
+        </MetaLine>
       </footer>
       {open && <ClaimEvidence claimId={claim.id} ideaSlug={ideaSlug} />}
       <AddEvidenceDialog

@@ -2,24 +2,26 @@
 
 .overview {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-7);
 
   @include up(lg) {
-    grid-template-columns: minmax(0, 1fr) 21rem;
+    grid-template-columns: minmax(0, 1fr) 22rem;
     gap: var(--space-8);
   }
 }
 
 .narrative {
   display: grid;
-  gap: var(--space-7);
+  gap: var(--space-6);
   align-content: start;
   min-width: 0;
 }
 
 .section {
   display: grid;
-  gap: var(--space-4);
+  gap: var(--space-3);
+  max-width: 68ch;
 }
 
 .sectionTitle {
@@ -29,8 +31,13 @@
   @include eyebrow;
   color: var(--fg);
   font-size: var(--text-xs);
-  padding-top: var(--space-4);
+  padding-top: var(--space-5);
   border-top: 1px solid var(--border);
+}
+
+.section:first-child .sectionTitle {
+  padding-top: 0;
+  border-top: 0;
 }
 
 .sectionNumber {
@@ -42,11 +49,28 @@
   display: grid;
   gap: var(--space-3);
   justify-items: start;
+  max-width: 68ch;
   padding: var(--space-5);
   border: 1px dashed var(--border-strong);
   border-radius: var(--radius-lg);
   color: var(--fg-muted);
   font-size: var(--text-sm);
+}
+
+.missingList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0;
+
+  li {
+    padding: 0.2rem 0.65rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-pill);
+    background: var(--bg-raised);
+    font-size: var(--text-xs);
+    color: var(--fg);
+  }
 }
 
 // ---------------------------------------------------------------- rail
@@ -90,12 +114,103 @@
 .cardLink {
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
-  font-size: var(--text-sm);
+  gap: 0.25rem;
+  color: var(--primary);
   font-weight: 540;
+  white-space: nowrap;
 
   &:hover {
-    color: var(--primary);
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+  }
+}
+
+// "Too early to tell": one quiet note instead of a row of empty meters.
+.early {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border-radius: var(--radius);
+  background: var(--bg-sunken);
+  font-size: var(--text-xs);
+  color: var(--fg-muted);
+
+  > p:first-child {
+    color: var(--fg);
+    font-weight: 560;
+  }
+
+  ul {
+    display: grid;
+    gap: 0.2rem;
+    margin: 0;
+  }
+
+  li {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2);
+  }
+}
+
+.earlyCount {
+  color: var(--fg-subtle);
+}
+
+.quad {
+  display: grid;
+  grid-template-columns: 5.5rem minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-3);
+
+  svg {
+    width: 5.5rem;
+    height: 5.5rem;
+  }
+
+  figcaption {
+    font-size: var(--text-xs);
+    color: var(--fg-muted);
+    line-height: 1.45;
+  }
+
+  b {
+    display: block;
+    @include serif(460);
+    font-size: var(--text-base);
+    color: var(--fg);
+  }
+}
+
+.quadFrame {
+  fill: var(--bg-sunken);
+  stroke: var(--border);
+}
+
+.quadAxis {
+  stroke: var(--border-strong);
+  stroke-dasharray: 2 3;
+}
+
+.quadSpread {
+  stroke: var(--fg-muted);
+  stroke-width: 1.2;
+}
+
+.quadPoint {
+  fill: var(--primary);
+}
+
+.stack {
+  display: flex;
+  gap: 2px;
+  height: 8px;
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+
+  span {
+    flex-basis: 0;
   }
 }
 
@@ -114,22 +229,48 @@
 
 .perspectives {
   display: grid;
+  gap: 0.15rem;
+  margin: 0 calc(-1 * var(--space-2));
+}
+
+.perspective {
+  @include unbutton;
+  display: grid;
+  grid-template-columns: 1.1rem 8rem minmax(0, 1fr) 1.5rem;
+  align-items: center;
   gap: var(--space-2);
-  margin: 0;
+  padding: 0.35rem var(--space-2);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
 
-  li {
-    display: grid;
-    grid-template-columns: 8.5rem 1fr 1.75rem;
-    align-items: center;
-    gap: var(--space-3);
-    font-size: var(--text-sm);
-    color: var(--fg-muted);
-
-    > :last-child {
-      text-align: right;
-      color: var(--fg);
-    }
+  &:hover {
+    background: var(--bg-sunken);
   }
+
+  &:focus-visible {
+    @include focus-ring(0);
+  }
+}
+
+.box {
+  display: grid;
+  place-items: center;
+  width: 1.05rem;
+  height: 1.05rem;
+  border: 1.5px solid var(--border-strong);
+  border-radius: 4px;
+
+  svg {
+    width: 0.75rem;
+    height: 0.75rem;
+    stroke-width: 3;
+  }
+}
+
+.boxOn {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: var(--primary-fg);
 }
 
 .bar {
@@ -142,22 +283,45 @@
     display: block;
     height: 100%;
     border-radius: inherit;
-    background: var(--warning);
+    background: color-mix(in oklab, var(--warning) 75%, var(--bg));
   }
 }
 
-.stewards {
+.perspectiveCount {
+  text-align: right;
+  color: var(--fg-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.people {
   display: grid;
-  gap: var(--space-2);
+  gap: var(--space-3);
   margin: 0;
 
   li {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
     gap: var(--space-2);
     font-size: var(--text-sm);
   }
+}
+
+.role {
+  font-size: var(--text-xs);
+  color: var(--fg-subtle);
+}
+
+.capacities {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.inlineAction {
+  justify-self: start;
+  margin-left: calc(-1 * var(--space-2));
 }
 
 .appoint {
@@ -173,56 +337,4 @@
   > p {
     grid-column: 1 / -1;
   }
-}
-
-.plot {
-  display: grid;
-  gap: var(--space-2);
-
-  svg {
-    width: 100%;
-    max-width: 15rem;
-    margin-inline: auto;
-    overflow: visible;
-  }
-
-  text {
-    font-size: 9px;
-    fill: var(--fg-subtle);
-  }
-
-  figcaption {
-    text-align: center;
-    font-size: var(--text-xs);
-    color: var(--fg-muted);
-  }
-}
-
-.plotFrame {
-  fill: var(--bg-sunken);
-  stroke: var(--border);
-}
-
-.plotAxis {
-  stroke: var(--border-strong);
-  stroke-dasharray: 2 3;
-}
-
-.plotSpread {
-  stroke: var(--primary);
-  stroke-width: 1.5;
-  opacity: 0.5;
-}
-
-.plotPoint {
-  fill: var(--primary);
-  stroke: var(--bg-raised);
-  stroke-width: 3;
-}
-
-.plotEarly {
-  fill: var(--bg-raised);
-  stroke: var(--primary);
-  stroke-width: 2;
-  stroke-dasharray: 3 2;
 }

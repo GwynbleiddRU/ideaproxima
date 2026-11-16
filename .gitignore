@@ -12,5 +12,6 @@ coverage
 # Browser audit output (screenshots, reports, traces): regenerate with npm run test:e2e / audit:screenshots
 audit/artifacts/
 
-# Local reference copies (the archived design exploration); never published
+# Local reference copies (the archived design exploration, UI design previews); never published
 temp-reference-folder/
+designs/

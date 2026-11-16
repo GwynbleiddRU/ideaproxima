@@ -32,6 +32,22 @@ before finishing any item, and update the docs you touch.
   budgets, screenshot set; in CI.
 - **API additions for the UI:** `GET /v1` index, `ActivityDto.idea` (the idea's ref, so feeds need no extra calls).
 
+## Done: production polish of the web app (2026-11-16)
+
+- **Audit-driven redesign** of every main page, each previewed as a mock-up and approved by the owner first: a
+  tabbed lens showcase, domain tiles and a contribution ladder on home; a filter toolbar and a phone filter sheet on
+  Explore; a compact idea header (one primary action, attention set apart, an "at a glance"
+  strip on phones, sticky tabs that keep the title), a half-height sidebar, a claims overview, for/against
+  arguments, a labelled connection map, a day-grouped timeline and a compact evaluation dialog; topics with icons
+  and their newest ideas; typed search results; a grouped activity feed with folded repeats; tabbed profiles; an
+  editor with section states and a live preview.
+- **Shared conventions** (documented in the developer guide): "too early" as ●○○ instead of empty bars, only
+  non-zero facts, one idea component, one activity feed.
+- **Bugs fixed:** topic counts were always 0 and searched claims "underpinned 0 ideas" (a Drizzle column rendered
+  unqualified inside a correlated subquery; regression tests in `apps/api/test/catalog.test.ts`); editor prompts
+  repeated their section titles; the browser's own clear button on search fields.
+- **API additions:** `TopicDto.latestIdeas` (two newest per topic) and each claim's derived `status` in search results.
+
 ## P0 — before anyone outside the team uses it
 
 1. **Auth completion.** Email verification and password reset (an expiring token table plus an email sender

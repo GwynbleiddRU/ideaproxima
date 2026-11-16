@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState, type FormEvent, type KeyboardEvent, type ReactNode } from "react";
-import { Check, ChevronDown, X } from "lucide-react";
+import { Check, ChevronDown, CircleCheck, CircleDashed, X } from "lucide-react";
 import {
   IDEA_SECTION_INFO,
   IDEA_SECTIONS,
@@ -10,6 +10,7 @@ import {
 } from "@ideaproxima/domain";
 import { catalogQueries } from "@/api/catalog";
 import { isApiError } from "@/api/http";
+import { StageBadge } from "@/components/Stage";
 import { cx } from "@/lib/cx";
 import { Button } from "@/ui/Button";
 import { Chip } from "@/ui/Chip";
@@ -100,11 +101,13 @@ export function IdeaEditor({
   };
 
   const written = IDEA_SECTIONS.filter((k) => draft.sections[k]?.trim()).length;
+  const topicNames = new Map(topics.data?.map((t) => [t.slug, t.name]));
   const checks = [
     { label: "A title", done: draft.title.trim().length >= LIMITS.ideaTitle.min },
     { label: "A short summary", done: draft.summary.trim().length >= LIMITS.ideaSummary.min },
     { label: "At least one topic", done: draft.topics.length >= 1 },
   ];
+  const missing = checks.find((c) => !c.done)?.label;
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
@@ -169,10 +172,19 @@ export function IdeaEditor({
               {topics.data?.map((t) => {
                 const index = draft.topics.indexOf(t.slug);
                 return (
-                  <Chip key={t.id} pressed={index >= 0} onClick={() => toggleTopic(t.slug)}>
-                    {index >= 0 && <Check aria-hidden />}
+                  <Chip
+                    key={t.id}
+                    pressed={index >= 0}
+                    onClick={() => toggleTopic(t.slug)}
+                    title={index === 0 ? "Primary topic" : undefined}
+                  >
+                    {index >= 0 && (
+                      <span className={styles.order} aria-hidden>
+                        {index + 1}
+                      </span>
+                    )}
                     {t.name}
-                    {index === 0 && <span className={styles.primary}>primary</span>}
+                    {index === 0 && <span className="visually-hidden"> (primary)</span>}
                   </Chip>
                 );
               })}
@@ -230,16 +242,18 @@ export function IdeaEditor({
                       )
                     }
                   >
-                    <span>
-                      <strong>{info.label}</strong>
-                      {/* The overview's prompt is the title's; show what the section is for instead. */}
-                      <span>{key === "overview" ? info.description : info.prompt}</span>
+                    <span className={cx(styles.state, value.trim() && styles.stateDone)} aria-hidden>
+                      {value.trim() && <Check />}
                     </span>
-                    {value.trim() ? (
-                      <Check className={styles.done} aria-label="Written" />
-                    ) : (
-                      <ChevronDown aria-hidden />
-                    )}
+                    <span className={styles.sectionText}>
+                      <strong>{info.label}</strong>
+                      {/* What the section is for; its prompt (often the label as a question) is the placeholder. */}
+                      <span>{info.description}</span>
+                    </span>
+                    <span className={styles.sectionGo}>
+                      {value.trim() ? "Written" : "Write"}
+                      <ChevronDown className={cx(open && styles.chevronOpen)} aria-hidden />
+                    </span>
                   </button>
                   {open && (
                     <textarea
@@ -247,7 +261,10 @@ export function IdeaEditor({
                       value={value}
                       onChange={(e) => setSection(key, e.target.value)}
                       aria-label={info.label}
-                      placeholder={info.description}
+                      // The overview's prompt is the title's question; ask for the detail instead.
+                      placeholder={
+                        key === "overview" ? "What exactly is proposed, in more detail?" : info.prompt
+                      }
                       maxLength={LIMITS.section.max}
                       rows={7}
                     />
@@ -263,33 +280,56 @@ export function IdeaEditor({
       </div>
 
       <aside className={styles.side}>
+        <p className="eyebrow">How it will appear</p>
+        <PreviewCard draft={draft} topicNames={topicNames} />
         <div className={styles.sideCard}>
-          <p className="eyebrow">Required</p>
           <ul className={styles.checks} role="list">
             {checks.map((c) => (
               <li key={c.label} className={cx(c.done && styles.checkDone)}>
-                <Check aria-hidden /> {c.label}
+                {c.done ? <CircleCheck aria-hidden /> : <CircleDashed aria-hidden />} {c.label}
+                <span className="visually-hidden">{c.done ? " — done" : " — missing"}</span>
               </li>
             ))}
+            <li className={cx(written > 0 && styles.checkDone)}>
+              {written > 0 ? <CircleCheck aria-hidden /> : <CircleDashed aria-hidden />}
+              <span>
+                Sections developed: <b>{written}</b> of {IDEA_SECTIONS.length}{" "}
+                <span className={styles.optional}>(optional)</span>
+              </span>
+            </li>
           </ul>
-          <p className={styles.progress}>
-            {written} of {IDEA_SECTIONS.length} sections developed
-          </p>
           {aside}
           {footer}
           <FormError error={error && !Object.keys(errors).length ? error : null} />
-          <Button
-            type="submit"
-            variant="primary"
-            block
-            loading={pending}
-            disabled={!checks.every((c) => c.done)}
-          >
+          <Button type="submit" variant="primary" block loading={pending} disabled={!!missing}>
             {submitLabel}
           </Button>
+          {missing && <p className={styles.missing}>Add {missing.toLowerCase()} to publish.</p>}
         </div>
       </aside>
     </form>
+  );
+}
+
+/** The idea as a list card will show it — a small reward for a clear title and summary. */
+function PreviewCard({ draft, topicNames }: { draft: IdeaDraft; topicNames: Map<string, string> }) {
+  return (
+    <div className={styles.preview} aria-label="Preview of the idea in lists" role="img">
+      <div className={styles.previewTop}>
+        <span className={styles.previewTopics}>
+          {draft.topics.slice(0, 2).map((slug) => (
+            <span key={slug}>{topicNames.get(slug) ?? slug}</span>
+          ))}
+        </span>
+        <StageBadge stage="imagined" />
+      </div>
+      <p className={cx(styles.previewTitle, !draft.title.trim() && styles.placeholder)}>
+        {draft.title.trim() || "Your title"}
+      </p>
+      <p className={cx(styles.previewSummary, !draft.summary.trim() && styles.placeholder)}>
+        {draft.summary.trim() || "Your summary will appear here."}
+      </p>
+    </div>
   );
 }
 

@@ -59,7 +59,7 @@ export function AboutPage() {
         ))}
       </section>
 
-      <section className={styles.section}>
+      <section id="stages" className={styles.section}>
         <SectionHeading eyebrow="What has been done" title="Six lifecycle stages" />
         <p className={styles.lede}>
           The unit of value is progression. Later stages require proof: a recorded experiment, deployment or

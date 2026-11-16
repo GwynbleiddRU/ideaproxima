@@ -12,6 +12,7 @@ export default tseslint.config(
       "audit/screenshots/**",
       "audit/artifacts/**",
       "temp-reference-folder/**",
+      "designs/**",
     ],
   },
   js.configs.recommended,

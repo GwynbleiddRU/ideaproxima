@@ -60,7 +60,7 @@ test("evaluation dialog", async ({ page }) => {
   await signIn(page);
   await page.goto(`/ideas/${IDEA.slug}`);
   await settle(page);
-  await page.getByRole("button", { name: /evaluation|Evaluate/ }).click();
+  await page.getByRole("button", { name: "Evaluate", exact: true }).click();
   await page.getByRole("dialog").waitFor();
   await page.screenshot({ path: join(OUT, "desktop-light", "21-evaluate-dialog.png") });
 });

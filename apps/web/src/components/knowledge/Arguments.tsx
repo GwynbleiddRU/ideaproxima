@@ -182,14 +182,19 @@ export function ArgumentComposer({
   invalidate,
   onDone,
   compact,
+  initialStance,
 }: {
   target: { kind: "idea" | "claim" | "argument"; id: string };
   invalidate: Keys;
   onDone?: () => void;
   compact?: boolean;
+  /** Preselect a stance, e.g. when opened from the "against" column. */
+  initialStance?: ArgumentStance;
 }) {
   const create = useCreateArgument(invalidate);
-  const [stance, setStance] = useState<ArgumentStance>(target.kind === "argument" ? "opposes" : "supports");
+  const [stance, setStance] = useState<ArgumentStance>(
+    initialStance ?? (target.kind === "argument" ? "opposes" : "supports"),
+  );
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const errors = isApiError(create.error) ? create.error.fieldErrors : {};

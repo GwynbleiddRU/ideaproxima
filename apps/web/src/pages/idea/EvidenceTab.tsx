@@ -2,11 +2,14 @@ import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { FileQuestion, Plus } from "lucide-react";
-import { CLAIM_ROLE_INFO, CLAIM_ROLES } from "@ideaproxima/domain";
+import type { IdeaSignals } from "@ideaproxima/contracts";
+import { CLAIM_ROLE_INFO, CLAIM_ROLES, CLAIM_STATUSES, type ClaimStatus } from "@ideaproxima/domain";
 import { knowledgeQueries } from "@/api/knowledge";
 import { useAuthGate } from "@/components/auth";
 import { ClaimCard } from "@/components/knowledge/ClaimCard";
 import { SectionHeading } from "@/components/PageHeader";
+import { claimStatusColor, ClaimStatusBadge } from "@/components/status";
+import { plural } from "@/lib/format";
 import { Button } from "@/ui/Button";
 import { EmptyState, ErrorState, Skeleton } from "@/ui/Feedback";
 import { AddClaimDialog } from "./AddClaimDialog";
@@ -43,11 +46,6 @@ export function EvidenceTab() {
           </Button>
         }
       />
-      <p className={styles.lede}>
-        Each claim's status is derived from independent assessments, never typed in. Evidence is attached to
-        claims, with what it shows and what it does not establish. A claim can underpin several ideas;
-        evidence added in one place counts everywhere.
-      </p>
       {claims.isPending ? (
         <Skeleton lines={8} />
       ) : claims.isError ? (
@@ -66,35 +64,72 @@ export function EvidenceTab() {
           examinable.
         </EmptyState>
       ) : (
-        CLAIM_ROLES.map((role) => {
-          const group = claims.data
-            .filter((c) => c.role === role)
-            .sort((a, b) => (a.depth ?? 0) - (b.depth ?? 0) || a.position - b.position);
-          if (!group.length) return null;
-          return (
-            <section key={role} className={styles.group} aria-labelledby={`role-${role}`}>
-              <header className={styles.groupHead}>
-                <h3 id={`role-${role}`} className={styles.groupTitle}>
-                  {CLAIM_ROLE_INFO[role].label}s <span>{group.length}</span>
-                </h3>
-                <p>{CLAIM_ROLE_INFO[role].description}</p>
-              </header>
-              <div className={styles.stack}>
-                {group.map((claim) => (
-                  <ClaimCard
-                    key={claim.linkId}
-                    claim={claim}
-                    ideaSlug={idea.slug}
-                    canUnlink={can.canCurate(claim.addedBy.id)}
-                    defaultOpen={claim.id === targetId}
-                  />
-                ))}
-              </div>
-            </section>
-          );
-        })
+        <>
+          <ClaimsOverview statuses={claims.data.map((c) => c.derived.status)} counts={idea.signals.counts} />
+          {CLAIM_ROLES.map((role) => {
+            const group = claims.data
+              .filter((c) => c.role === role)
+              .sort((a, b) => (a.depth ?? 0) - (b.depth ?? 0) || a.position - b.position);
+            if (!group.length) return null;
+            return (
+              <section key={role} className={styles.group} aria-labelledby={`role-${role}`}>
+                <header className={styles.groupHead}>
+                  <h3 id={`role-${role}`} className={styles.groupTitle}>
+                    {CLAIM_ROLE_INFO[role].label}s <span>{group.length}</span>
+                  </h3>
+                  <p>{CLAIM_ROLE_INFO[role].description}</p>
+                </header>
+                <div className={styles.stack}>
+                  {group.map((claim) => (
+                    <ClaimCard
+                      key={claim.linkId}
+                      claim={claim}
+                      ideaSlug={idea.slug}
+                      canUnlink={can.canCurate(claim.addedBy.id)}
+                      defaultOpen={claim.id === targetId}
+                    />
+                  ))}
+                </div>
+              </section>
+            );
+          })}
+        </>
       )}
       <AddClaimDialog open={adding} onClose={() => setAdding(false)} idea={idea} />
     </div>
+  );
+}
+
+/** The whole claim set at a glance: a stacked bar of derived statuses and the balance of evidence. */
+function ClaimsOverview({ statuses, counts }: { statuses: ClaimStatus[]; counts: IdeaSignals["counts"] }) {
+  const byStatus = new Map<ClaimStatus, number>();
+  for (const s of statuses) byStatus.set(s, (byStatus.get(s) ?? 0) + 1);
+  const present = CLAIM_STATUSES.filter((s) => byStatus.has(s));
+  return (
+    <section className={styles.overview} aria-label="Claims at a glance">
+      <div className={styles.stackBar} aria-hidden>
+        {present.map((s) => (
+          <span key={s} style={{ flexGrow: byStatus.get(s), background: claimStatusColor(s) }} />
+        ))}
+      </div>
+      <div className={styles.overviewRow}>
+        <ul className={styles.legend} role="list">
+          {present.map((s) => (
+            <li key={s}>
+              <ClaimStatusBadge status={s} /> <span className="tabular">{byStatus.get(s)}</span>
+            </li>
+          ))}
+        </ul>
+        <p className={styles.muted}>
+          {counts.evidence
+            ? `${plural(counts.evidence, "source")} · ${counts.evidenceSupporting} supporting · ${counts.evidenceChallenging} challenging`
+            : "No evidence attached yet"}
+        </p>
+      </div>
+      <p className={styles.note}>
+        A claim's status is derived from independent assessments, never typed in. Evidence added to a claim
+        counts on every idea that uses it.
+      </p>
+    </section>
   );
 }

@@ -66,19 +66,23 @@ It is built so that:
 Reading never needs an account. Anything that contributes (a stance, a rating, a claim, a comment) asks you to sign in
 first and brings you back to where you were.
 
-| Where                      | What you do there                                                                                                                                         |
-| -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Home**                   | Search, browse topics, see four discovery lenses side by side, the six lifecycle stages, and live activity. "Surprise me" opens a random idea.            |
-| **Explore**                | One lens at a time, each saying what it measures, combined with a topic, a stage or words. Ranked lenses number their results.                            |
-| **An idea → Overview**     | The narrative in numbered sections; beside it the assessed quality (one meter per dimension), what is known, the lifecycle stage, perspectives, stewards. |
-| **Claims & evidence**      | The claims the idea rests on, grouped by role, each with its derived status; open one to see its evidence, attach evidence, or assess it.                 |
-| **Discussion**             | Structured arguments (supports, opposes, qualifies) with responses, and an open comment thread for questions and suggestions.                             |
-| **Connections**            | A map of what the idea builds on (left) and what builds on it (right), and every typed connection; "Connect to another idea" adds one.                    |
-| **In practice**            | Who is involved and in what capacity, and every initiative with its outcomes, failures and lessons included.                                              |
-| **History**                | Stage changes, every revision with its changes highlighted, proposals awaiting a steward, and the idea's full timeline.                                   |
-| **Propose an idea**        | Title, a short summary and a topic are required; each section after that is optional and shows the question it answers. Drafts are kept in your browser.  |
-| **Activity**               | The public ledger of everything that happened, filterable; "Moderation log" shows every moderation action and its reason.                                 |
-| **Your profile / Account** | Your contributions, ideas and involvements; your name, affiliation, capacities, expertise and password.                                                   |
+A measure with fewer than three evaluations reads **"too early" with dots** (●○○ = one of the three it needs)
+instead of a bar: there is nothing wrong with the idea, it simply has not been judged enough yet — which is where an
+evaluation of yours counts most.
+
+| Where                      | What you do there                                                                                                                                                                                                                                                                                          |
+| -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Home**                   | Search; one discovery lens at a time (a featured idea and why it is there, plus runners-up); domains with their counts; four ways to help; newest ideas and the latest progress. "Surprise me" opens a random idea.                                                                                        |
+| **Explore**                | One lens at a time, each saying what it measures, narrowed by words, a topic or a stage (on a phone, under **Filters**). Active filters show as removable chips.                                                                                                                                           |
+| **An idea → Overview**     | The narrative in numbered sections; beside it the assessed quality (a meter per confident dimension, the rest marked "too early"), the lifecycle stage and the next proof it needs, what is known, perspectives you can tick, and the people involved. On a phone the essentials appear under the summary. |
+| **Claims & evidence**      | An overview of all claims by status, then each claim grouped by role with its derived status and evidence balance; open its evidence, attach evidence, or assess it.                                                                                                                                       |
+| **Discussion**             | Arguments for and against side by side (qualifications below), with responses; and an open comment thread for questions and suggestions.                                                                                                                                                                   |
+| **Connections**            | A map of what the idea needs (left) and what it enables (right), and every typed connection; "Connect to another idea" adds one. Phones show the list.                                                                                                                                                     |
+| **In practice**            | Who is involved and in what capacity, and every initiative with its outcomes, failures and lessons included.                                                                                                                                                                                               |
+| **History**                | Stage changes, every revision with its changes highlighted, proposals awaiting a steward, and the timeline by day, filterable by kind of action.                                                                                                                                                           |
+| **Propose an idea**        | Title, a short summary and a topic are required; each optional section says what it is for and shows whether it is written. A preview shows how the idea will appear in lists. Drafts are kept in your browser.                                                                                            |
+| **Activity**               | The public ledger by day, filterable by kind of action; repeated actions ("6 people marked … important") are folded into one line. "Moderation log" shows every moderation action and its reason.                                                                                                          |
+| **Your profile / Account** | What you can help with, your non-zero contribution counts, and tabs for your ideas, involvements and activity; your name, affiliation, capacities, expertise and password.                                                                                                                                 |
 
 The theme follows your system by default; the footer switches between light, dark and system.
 

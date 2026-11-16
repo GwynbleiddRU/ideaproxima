@@ -212,6 +212,7 @@ export function Shell() {
   const { me, loading } = useSession();
   const [menuOpen, setMenuOpen] = useState(false);
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const ownSearch = pathname === "/" || pathname === "/search";
   useEffect(() => setMenuOpen(false), [pathname]);
 
   return (
@@ -231,8 +232,8 @@ export function Shell() {
               </Link>
             ))}
           </nav>
-          {/* On the home page the hero's search is the primary action; a second search box would only compete. */}
-          {pathname === "/" ? <span className={styles.spacer} aria-hidden /> : <HeaderSearch />}
+          {/* Home and Search have their own search box; a second one in the header would only compete. */}
+          {ownSearch ? <span className={styles.spacer} aria-hidden /> : <HeaderSearch />}
           <div className={styles.actions}>
             <ThemeButton />
             {!loading && !me && (
@@ -244,16 +245,18 @@ export function Shell() {
             <ButtonLink to="/new" variant="primary" size="sm" className={styles.propose}>
               <Plus /> Propose an idea
             </ButtonLink>
-            <ButtonLink
-              to="/search"
-              variant="ghost"
-              size="sm"
-              iconOnly
-              aria-label="Search"
-              className={styles.mobileOnly}
-            >
-              <Search />
-            </ButtonLink>
+            {!ownSearch && (
+              <ButtonLink
+                to="/search"
+                variant="ghost"
+                size="sm"
+                iconOnly
+                aria-label="Search"
+                className={styles.mobileOnly}
+              >
+                <Search />
+              </ButtonLink>
+            )}
             <Button
               variant="ghost"
               size="sm"

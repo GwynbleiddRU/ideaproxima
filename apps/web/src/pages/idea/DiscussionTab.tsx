@@ -1,10 +1,9 @@
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
-import { useState, type FormEvent } from "react";
+import { useState, type CSSProperties, type FormEvent } from "react";
 import { MessageSquarePlus, MessagesSquare } from "lucide-react";
 import type { CommentDto, IdeaDetail } from "@ideaproxima/contracts";
 import {
   ARGUMENT_STANCE_INFO,
-  ARGUMENT_STANCES,
   COMMENT_KINDS,
   LIMITS,
   type ArgumentStance,
@@ -14,11 +13,14 @@ import { discussionQueries, usePostComment } from "@/api/discussion";
 import { isApiError } from "@/api/http";
 import { keys } from "@/api/keys";
 import { knowledgeQueries } from "@/api/knowledge";
+import { useSession } from "@/api/session";
 import { useAuthGate } from "@/components/auth";
 import { ArgumentCard, ArgumentComposer, UsefulButton } from "@/components/knowledge/Arguments";
 import { PersonLink, TimeAgo } from "@/components/meta";
 import { ModerateButton } from "@/components/ModerateButton";
 import { SectionHeading } from "@/components/PageHeader";
+import { argumentStanceColor } from "@/components/status";
+import { Avatar } from "@/ui/Avatar";
 import { Badge } from "@/ui/Badge";
 import { Button } from "@/ui/Button";
 import { control } from "@/ui/Field";
@@ -42,18 +44,33 @@ export function DiscussionTab() {
   );
 }
 
+const COLUMNS: { stance: ArgumentStance; title: string; empty: string; invite: string }[] = [
+  { stance: "supports", title: "For it", empty: "No argument for it yet.", invite: "Argue for it" },
+  {
+    stance: "opposes",
+    title: "Against it",
+    empty: "No argument against it yet.",
+    invite: "Argue against it",
+  },
+];
+
+/**
+ * Arguments for and against side by side, so the balance of the debate is visible at a glance; qualifications
+ * (accepting the idea with conditions) follow below both columns.
+ */
 function ArgumentsSection({ idea }: { idea: IdeaDetail }) {
   const gate = useAuthGate();
   const args = useQuery(knowledgeQueries.ideaArguments(idea.slug));
-  const [filter, setFilter] = useState<ArgumentStance | "all">("all");
-  const [composing, setComposing] = useState(false);
+  const [composing, setComposing] = useState<ArgumentStance | null>(null);
   const invalidate = [keys.ideaPart(idea.slug, "arguments"), keys.idea(idea.slug)];
   const all = args.data ?? [];
-  const shown = filter === "all" ? all : all.filter((a) => a.stance === filter);
+  const qualifying = all.filter((a) => a.stance === "qualifies");
+  const compose = (stance: ArgumentStance) => gate(() => setComposing(stance));
 
   return (
-    <section className={tabs.group}>
+    <section className={tabs.group} aria-labelledby="arguments-title">
       <SectionHeading
+        id="arguments-title"
         eyebrow="Structured debate"
         title="Arguments"
         action={
@@ -61,7 +78,7 @@ function ArgumentsSection({ idea }: { idea: IdeaDetail }) {
             variant="primary"
             size="sm"
             icon={<MessageSquarePlus />}
-            onClick={() => gate(() => setComposing(true))}
+            onClick={() => compose("supports")}
           >
             Make an argument
           </Button>
@@ -70,39 +87,55 @@ function ArgumentsSection({ idea }: { idea: IdeaDetail }) {
       {composing && (
         <div className={tabs.panel}>
           <ArgumentComposer
+            key={composing}
             target={{ kind: "idea", id: idea.id }}
             invalidate={invalidate}
-            onDone={() => setComposing(false)}
+            initialStance={composing}
+            onDone={() => setComposing(null)}
           />
         </div>
       )}
-      {all.length > 0 && (
-        <Segmented
-          label="Filter arguments by stance"
-          size="sm"
-          value={filter}
-          onChange={setFilter}
-          options={[
-            { value: "all", label: `All ${all.length}` },
-            ...ARGUMENT_STANCES.map((s) => ({
-              value: s,
-              label: `${ARGUMENT_STANCE_INFO[s].label} ${all.filter((a) => a.stance === s).length}`,
-            })),
-          ]}
-        />
-      )}
       {args.isPending ? (
         <Skeleton lines={5} />
-      ) : shown.length ? (
-        <div className={tabs.stack}>
-          {shown.map((a) => (
-            <ArgumentCard key={a.id} argument={a} invalidate={invalidate} />
-          ))}
-        </div>
       ) : (
-        <EmptyState compact title="No arguments yet">
-          The strongest case against an idea is as valuable as the case for it.
-        </EmptyState>
+        <>
+          <div className={styles.debate}>
+            {COLUMNS.map((col) => {
+              const list = all.filter((a) => a.stance === col.stance);
+              return (
+                <div
+                  key={col.stance}
+                  className={styles.column}
+                  style={{ "--stance": argumentStanceColor(col.stance) } as CSSProperties}
+                >
+                  <h3 className={styles.columnTitle}>
+                    {col.title} <span>{list.length}</span>
+                  </h3>
+                  {list.length ? (
+                    list.map((a) => <ArgumentCard key={a.id} argument={a} invalidate={invalidate} />)
+                  ) : (
+                    <div className={styles.emptyColumn}>
+                      <p>{col.empty}</p>
+                      <Button variant="quiet" size="sm" onClick={() => compose(col.stance)}>
+                        {col.invite}
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          {qualifying.length > 0 && (
+            <div className={styles.qualifications}>
+              <h3 className={styles.columnTitle}>
+                {ARGUMENT_STANCE_INFO.qualifies.label} <span>{qualifying.length}</span>
+              </h3>
+              {qualifying.map((a) => (
+                <ArgumentCard key={a.id} argument={a} invalidate={invalidate} />
+              ))}
+            </div>
+          )}
+        </>
       )}
     </section>
   );
@@ -119,8 +152,11 @@ function CommentsSection({ idea }: { idea: IdeaDetail }) {
 
   return (
     <section className={tabs.group}>
-      <SectionHeading eyebrow="Conversation" title={`Comments${all.length ? ` (${all.length})` : ""}`} />
-      <CommentComposer idea={idea} />
+      <SectionHeading
+        eyebrow="Conversation"
+        title={<>Comments {all.length > 0 && <span className={styles.titleCount}>{all.length}</span>}</>}
+      />
+      <CollapsedComposer idea={idea} />
       {comments.isPending ? (
         <Skeleton lines={4} />
       ) : all.length ? (
@@ -149,14 +185,30 @@ const KIND_LABEL: Record<CommentKind, string> = {
   suggestion: "Suggestion",
 };
 
+/** A one-line invitation that opens the full composer, so an empty thread does not start with a big form. */
+function CollapsedComposer({ idea }: { idea: IdeaDetail }) {
+  const gate = useAuthGate();
+  const { me } = useSession();
+  const [open, setOpen] = useState(false);
+  if (open) return <CommentComposer idea={idea} autoFocus onDone={() => setOpen(false)} />;
+  return (
+    <button type="button" className={styles.invite} onClick={() => gate(() => setOpen(true))}>
+      {me && <Avatar name={me.displayName} seed={me.handle} size={28} />}
+      <span>Add a comment, question or suggestion…</span>
+    </button>
+  );
+}
+
 function CommentComposer({
   idea,
   parentId,
   onDone,
+  autoFocus,
 }: {
   idea: IdeaDetail;
   parentId?: string;
   onDone?: () => void;
+  autoFocus?: boolean;
 }) {
   const gate = useAuthGate();
   const post = usePostComment(idea.slug);
@@ -200,6 +252,7 @@ function CommentComposer({
         minLength={LIMITS.commentBody.min}
         maxLength={LIMITS.commentBody.max}
         rows={parentId ? 2 : 3}
+        autoFocus={autoFocus}
         required
       />
       <FormError error={post.error} />

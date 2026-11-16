@@ -164,11 +164,13 @@ apps/web/src/
                     query options and mutation hooks
   ui/               design-system primitives with no domain knowledge: Button, Chip, Badge, Field, Dialog, Meter,
                     Dropdown, InfoTip, Segmented, Toast, Avatar, Logo, Feedback (skeleton, empty, error)
-  components/       domain components shared by pages: IdeaCard, Stage, Ratings, status badges, Markdown,
-                    RelationGraph, EvaluateDialog, ModerateButton, ActivityItem, knowledge/ (claims, evidence, arguments)
+  components/       domain components shared by pages: IdeaCard (tile and row), Stage (badge, progress), Ratings,
+                    status badges, Markdown, RelationGraph, EvaluateDialog, ModerateButton, ActivityFeed (icons,
+                    day headings, folded repeats), PageHeader, knowledge/ (claims, evidence, arguments)
   pages/<area>/     one folder per route, each a lazy-loaded chunk: home, explore, idea (layout + six tabs), editor,
                     topics, knowledge (claim, source), people, search, activity, about, auth
-  lib/              pure helpers: format, vocabulary, diff, markdown, graph-layout, theme, hooks
+  lib/              pure helpers: format, vocabulary, diff, markdown, graph-layout, activity (folding), topic-icons,
+                    theme, hooks
   styles/           _tokens.scss (palettes, type and spacing scales), _mixins.scss, global.scss
 apps/web/test/      unit tests of the pure helpers (part of npm test)
 ```
@@ -196,6 +198,17 @@ dark palettes tuned separately; `html[data-theme]` overrides the OS preference. 
 `@use "mixins" as *;` for breakpoints (`up(md)`), `focus-ring`, `serif`, `eyebrow` and `card`. Status colours
 (`--status-*`) always come with a label and an icon. Text colours meet WCAG AA in both themes; the browser audit
 checks this.
+
+**UI conventions** (from the audit-driven redesign of 2026-11-16):
+
+- One display size — the home hero and an idea's title. Every other page uses `PageHeader` (the index size), so
+  content starts on the first screen.
+- Below `MIN_RATINGS_FOR_CONFIDENCE` evaluations a measure shows "too early" with dots (`Dots`, ●○○ = 1 of 3), never
+  a bar: absence of data must not look like a low score, and the dots say what would change it.
+- Show only the facts that exist: no "0 claims" or "☆ 0"; empty states say what would fill them and link there.
+- One idea component (`IdeaCard`, `layout="card" | "row"`) everywhere; attention (★) stays apart from quality.
+- Feeds go through `ActivityFeed`: an icon per kind of action, day headings for long feeds, and consecutive
+  identical actions folded (`lib/activity.ts`) — presentation only, the ledger is unchanged.
 
 **What the UI must never do** (from the concept): compute rankings, statuses or scores itself; show a rating without
 its number of raters and its spread; show "too early to tell" as anything else; combine attention (counts) and

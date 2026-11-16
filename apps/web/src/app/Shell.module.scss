@@ -111,10 +111,6 @@
     &::placeholder {
       color: var(--fg-subtle);
     }
-
-    &::-webkit-search-cancel-button {
-      display: none;
-    }
   }
 
   @include up(md) {

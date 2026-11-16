@@ -1,4 +1,4 @@
-import { Check, Circle } from "lucide-react";
+import { CircleCheck, Flag } from "lucide-react";
 import type { IdeaDetail } from "@ideaproxima/contracts";
 import { IDEA_STAGE_INFO, IDEA_STAGES, stageOrdinal, type IdeaStage } from "@ideaproxima/domain";
 import { cx } from "@/lib/cx";
@@ -10,48 +10,76 @@ export function StageBadge({ stage }: { stage: IdeaStage }) {
   const info = IDEA_STAGE_INFO[stage];
   return (
     <Badge tone="outline" title={info.description} className={styles.badge}>
-      <span className={styles.pips} aria-hidden>
-        {IDEA_STAGES.map((s) => (
-          <span key={s} className={cx(styles.pip, stageOrdinal(s) <= stageOrdinal(stage) && styles.pipOn)} />
-        ))}
-      </span>
+      <Pips stage={stage} />
       {info.label}
     </Badge>
   );
 }
 
-/**
- * The six lifecycle stages, the current one marked, and for each stage whether its requirement is met (from
- * the API's `stageRequirements`). Stages are not strictly sequential; the track shows order, not a gate.
- */
-export function StageTrack({ idea }: { idea: Pick<IdeaDetail, "stage" | "stageRequirements"> }) {
-  const current = stageOrdinal(idea.stage);
-  const requirement = new Map(idea.stageRequirements.map((r) => [r.stage, r]));
+function Pips({ stage }: { stage: IdeaStage }) {
   return (
-    <ol className={styles.track} role="list">
-      {IDEA_STAGES.map((stage, i) => {
-        const req = requirement.get(stage);
-        const state = i < current ? "past" : i === current ? "current" : "future";
-        return (
-          <li
-            key={stage}
-            className={cx(styles.step, styles[state])}
-            aria-current={state === "current" ? "step" : undefined}
-          >
-            <span className={styles.marker} aria-hidden>
-              {state === "past" ? <Check size={12} /> : <Circle size={8} fill="currentColor" />}
-            </span>
-            <span className={styles.stepBody}>
-              <span className={styles.stepLabel}>{IDEA_STAGE_INFO[stage].label}</span>
-              {state === "future" && req && (
-                <span className={cx(styles.requirement, req.met && styles.met)}>
-                  {req.met ? "Requirement met" : req.requirement}
-                </span>
-              )}
-            </span>
-          </li>
-        );
-      })}
-    </ol>
+    <span className={styles.pips} aria-hidden>
+      {IDEA_STAGES.map((s) => (
+        <span key={s} className={cx(styles.pip, stageOrdinal(s) <= stageOrdinal(stage) && styles.pipOn)} />
+      ))}
+    </span>
+  );
+}
+
+/**
+ * Where an idea is on the six-stage lifecycle, and what would move it on: later stages whose requirement is
+ * already met (a steward can advance it), then the next proof still needed — from the API's `stageRequirements`.
+ * Stages are not strictly sequential; the track shows order, not a gate.
+ */
+export function StageProgress({ idea }: { idea: Pick<IdeaDetail, "stage" | "stageRequirements"> }) {
+  const current = stageOrdinal(idea.stage);
+  const ahead = idea.stageRequirements.filter((r) => stageOrdinal(r.stage) > current);
+  const ready = ahead.filter((r) => r.met);
+  const next = ahead.find((r) => !r.met);
+  const label = (stage: IdeaStage) => <b key={stage}>{IDEA_STAGE_INFO[stage].label}</b>;
+  return (
+    <div className={styles.progress}>
+      <div
+        className={styles.track}
+        role="img"
+        aria-label={`Stage ${current + 1} of ${IDEA_STAGES.length}: ${IDEA_STAGE_INFO[idea.stage].label}`}
+      >
+        {IDEA_STAGES.map((s, i) => (
+          <span
+            key={s}
+            className={cx(styles.segment, i <= current && styles.segmentOn)}
+            title={IDEA_STAGE_INFO[s].label}
+          />
+        ))}
+      </div>
+      <div className={styles.ends} aria-hidden>
+        <span>{IDEA_STAGE_INFO[IDEA_STAGES[0]].label}</span>
+        <span>{IDEA_STAGE_INFO[IDEA_STAGES[IDEA_STAGES.length - 1]!].label}</span>
+      </div>
+      {ready.length > 0 && (
+        <p className={cx(styles.next, styles.ready)}>
+          <CircleCheck aria-hidden />
+          <span>
+            {ready.map((r, i) => (
+              <span key={r.stage}>
+                {i > 0 && (i === ready.length - 1 ? " and " : ", ")}
+                {label(r.stage)}
+              </span>
+            ))}
+            : requirement{ready.length > 1 ? "s" : ""} met — a steward can move it on.
+          </span>
+        </p>
+      )}
+      {next ? (
+        <p className={styles.next}>
+          <Flag aria-hidden />
+          <span>
+            Next proof, for {label(next.stage)}: {next.requirement.replace(/\.$/, "")}.
+          </span>
+        </p>
+      ) : (
+        ahead.length === 0 && <p className={styles.next}>The last stage: learning recorded from practice.</p>
+      )}
+    </div>
   );
 }

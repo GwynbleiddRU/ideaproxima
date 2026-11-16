@@ -1,54 +1,104 @@
 @use "mixins" as *;
 
+// ---------------------------------------------------------------- profile
+
 .header {
   display: grid;
-  gap: var(--space-5);
-  padding-block: var(--space-7) var(--space-6);
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-areas:
+    "avatar name actions"
+    "avatar handle handle"
+    "avatar bio bio"
+    "avatar tags tags";
+  gap: var(--space-2) var(--space-5);
+  align-items: start;
+  padding-block: var(--space-7) var(--space-5);
 
-  @include up(md) {
-    grid-template-columns: auto 1fr auto;
-    align-items: start;
+  @include down(md) {
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-areas:
+      "avatar name"
+      "handle handle"
+      "bio bio"
+      "tags tags"
+      "actions actions";
+    align-items: center;
   }
 }
 
-.identity {
-  display: grid;
-  gap: var(--space-2);
-  max-width: 44rem;
+.avatar {
+  grid-area: avatar;
 }
 
 .name {
+  grid-area: name;
+  align-self: center;
   @include serif(400);
-  font-size: var(--text-4xl);
-  line-height: 1.05;
-}
-
-.handle {
-  color: var(--fg-muted);
-  font-size: var(--text-sm);
-}
-
-.badges {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-}
-
-.bio {
-  margin-top: var(--space-2);
-  line-height: 1.65;
-  white-space: pre-line;
-}
-
-.capacities {
-  font-size: var(--text-sm);
-  color: var(--fg-muted);
+  font-size: var(--text-3xl);
+  line-height: 1.08;
+  letter-spacing: -0.02em;
 }
 
 .headerActions {
+  grid-area: actions;
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2);
+}
+
+.handle {
+  grid-area: handle;
+  color: var(--fg-muted);
+  font-size: var(--text-sm);
+}
+
+.bio {
+  grid-area: bio;
+  max-width: 60ch;
+  font-size: var(--text-md);
+  line-height: 1.6;
+  white-space: pre-line;
+}
+
+.tags {
+  grid-area: tags;
+  display: grid;
+  gap: var(--space-2);
+  margin-top: var(--space-1);
+
+  p {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2);
+  }
+}
+
+.tagLabel {
+  margin-right: var(--space-1);
+  color: var(--fg-muted);
+  font-size: var(--text-sm);
+}
+
+.expertiseTag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  height: 1.5rem;
+  padding: 0 0.6rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-pill);
+  font-size: var(--text-xs);
+  font-weight: 540;
+
+  span {
+    color: var(--fg-subtle);
+    font-weight: 400;
+  }
+
+  &:hover {
+    border-color: var(--primary);
+  }
 }
 
 .moderation {
@@ -57,61 +107,128 @@
   justify-items: end;
 }
 
-.section {
-  margin-top: var(--space-8);
-}
+// Only the non-zero counts, in one quiet row.
+.stats {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-4) var(--space-7);
+  padding: var(--space-5) 0;
+  border-block: 1px solid var(--border);
 
-.counts {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 1px;
-  margin: 0;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  background: var(--border);
-  overflow: hidden;
-
-  @include up(md) {
-    grid-template-columns: repeat(4, 1fr);
-  }
-
-  div {
-    display: grid;
-    gap: var(--space-1);
-    padding: var(--space-4) var(--space-5);
-    background: var(--bg-raised);
+  dl {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-4) var(--space-7);
+    margin: 0;
   }
 
   dd {
     margin: 0;
-    @include serif(400);
-    font-size: var(--text-3xl);
+    @include serif(420);
+    font-size: var(--text-2xl);
+    line-height: 1.1;
     font-variant-numeric: tabular-nums;
-    line-height: 1;
   }
 
   dt {
     font-size: var(--text-xs);
     color: var(--fg-muted);
   }
+
+  // The number reads first, the label under it.
+  div {
+    display: flex;
+    flex-direction: column-reverse;
+  }
 }
 
-.expertise,
+.statsNote {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  max-width: 24rem;
+  font-size: var(--text-xs);
+  color: var(--fg-subtle);
+}
+
+.tabs {
+  display: flex;
+  gap: var(--space-1);
+  margin-top: var(--space-6);
+  overflow-x: auto;
+  border-bottom: 1px solid var(--border);
+  scrollbar-width: none;
+}
+
+.tab {
+  @include unbutton;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.8rem 0.75rem;
+  font-size: var(--text-sm);
+  color: var(--fg-muted);
+  white-space: nowrap;
+
+  &:hover {
+    color: var(--fg);
+  }
+
+  &[aria-selected="true"] {
+    color: var(--fg);
+    font-weight: 580;
+
+    &::after {
+      content: "";
+      position: absolute;
+      left: 0.75rem;
+      right: 0.75rem;
+      bottom: -1px;
+      height: 2px;
+      border-radius: 2px;
+      background: var(--primary);
+    }
+  }
+
+  &:focus-visible {
+    @include focus-ring(-2px);
+  }
+}
+
+.tabCount {
+  min-width: 1.35rem;
+  padding: 0.05rem 0.4rem;
+  border-radius: var(--radius-pill);
+  background: var(--bg-sunken);
+  font-size: var(--text-2xs);
+  font-weight: 600;
+  text-align: center;
+}
+
+.tabPanel {
+  padding-top: var(--space-5);
+}
+
 .involvements {
   display: grid;
-  gap: var(--space-3);
-  margin: 0 0 var(--space-4);
+  margin: 0;
 
   li {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     gap: var(--space-2) var(--space-3);
+    padding: var(--space-4) 0;
+    border-bottom: 1px solid var(--border);
   }
 }
 
 .ideaLink {
   @include serif(450);
+  font-size: var(--text-lg);
 
   &:hover {
     color: var(--primary);
@@ -125,15 +242,14 @@
 
 .ideas {
   display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 20rem), 1fr));
   gap: var(--space-4);
+}
 
-  @include up(md) {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  @include up(xl) {
-    grid-template-columns: repeat(3, 1fr);
-  }
+.activity {
+  display: grid;
+  gap: var(--space-4);
+  max-width: 46rem;
 }
 
 // ---------------------------------------------------------------- account
@@ -163,4 +279,17 @@
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2);
+}
+
+.expertise {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0 0 var(--space-4);
+
+  li {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-2) var(--space-3);
+  }
 }

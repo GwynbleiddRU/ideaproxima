@@ -1,16 +1,90 @@
-.filters {
+@use "mixins" as *;
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-5);
+  align-items: start;
+
+  @include up(lg) {
+    grid-template-columns: 13.5rem minmax(0, 46rem);
+    gap: var(--space-7);
+  }
+}
+
+.rail {
+  position: sticky;
+  top: calc(var(--header-h) + var(--space-5));
+  display: grid;
+  gap: var(--space-4);
+
+  @include down(lg) {
+    display: none;
+  }
+}
+
+.group {
+  display: grid;
+  gap: 1px;
+}
+
+.groupLabel {
+  @include eyebrow;
+  padding: 0 0.75rem;
+  margin-bottom: var(--space-1);
+  color: var(--fg-subtle);
+}
+
+.filter {
   display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-  margin-bottom: var(--space-6);
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.4rem 0.75rem;
+  border-radius: var(--radius);
+  color: var(--fg-muted);
+  font-size: var(--text-sm);
+
+  svg {
+    width: 0.95rem;
+    height: 0.95rem;
+    color: var(--fg-subtle);
+  }
+
+  &:hover {
+    background: var(--bg-sunken);
+    color: var(--fg);
+  }
+}
+
+.filterActive {
+  background: var(--primary-soft);
+  color: var(--primary-soft-fg);
+  font-weight: 560;
+
+  svg {
+    color: inherit;
+  }
+
+  &:hover {
+    background: var(--primary-soft);
+    color: var(--primary-soft-fg);
+  }
+}
+
+.select {
+  max-width: 18rem;
+
+  @include up(lg) {
+    display: none;
+  }
 }
 
 .feed {
-  max-width: 52rem;
+  min-width: 0;
 }
 
 .more {
   display: flex;
   justify-content: center;
-  margin-top: var(--space-5);
+  margin-top: var(--space-6);
 }

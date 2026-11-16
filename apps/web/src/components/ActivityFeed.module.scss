@@ -1,0 +1,128 @@
+@use "mixins" as *;
+
+.days {
+  display: grid;
+}
+
+.day {
+  padding: var(--space-5) 0 var(--space-1);
+  font-family: var(--font-sans);
+  font-size: var(--text-xs);
+  font-weight: 560;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--fg-subtle);
+}
+
+.days > :first-child .day {
+  padding-top: 0;
+}
+
+.feed {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.entry {
+  display: grid;
+  grid-template-columns: 2rem minmax(0, 1fr) auto;
+  align-items: start;
+  gap: var(--space-3);
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--border);
+  font-size: var(--text-sm);
+
+  &:last-child {
+    border-bottom: 0;
+  }
+}
+
+.icon {
+  --tone: var(--fg-muted);
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  background: color-mix(in oklab, var(--tone) 13%, var(--bg-raised));
+  color: var(--tone);
+
+  svg {
+    width: 0.95rem;
+    height: 0.95rem;
+  }
+}
+
+.idea {
+  --tone: var(--primary);
+}
+.knowledge {
+  --tone: var(--status-supported);
+}
+.judgement {
+  --tone: var(--status-hypothesis);
+}
+.practice {
+  --tone: var(--status-established);
+}
+.debate {
+  --tone: var(--status-contested);
+}
+.moderation {
+  --tone: var(--danger);
+}
+
+.what {
+  min-width: 0;
+  padding-top: 0.3rem;
+  color: var(--fg-muted);
+  line-height: 1.5;
+
+  b {
+    color: var(--fg);
+    font-weight: 560;
+  }
+
+  q {
+    color: var(--fg);
+    font-style: italic;
+    quotes: "“" "”";
+  }
+
+  .ideaLink {
+    @include serif(470);
+    color: var(--fg);
+
+    &:hover {
+      color: var(--primary);
+      text-decoration: underline;
+      text-underline-offset: 0.2em;
+    }
+  }
+}
+
+// Without an actor the sentence starts with the verb: "Proposed …".
+.capital::first-letter {
+  text-transform: uppercase;
+}
+
+.more {
+  @include unbutton;
+  border-bottom: 1px dotted var(--fg-subtle);
+  color: var(--fg);
+  font-weight: 520;
+
+  &:hover {
+    color: var(--primary);
+  }
+}
+
+.time {
+  padding-top: 0.35rem;
+  color: var(--fg-subtle);
+  font-size: var(--text-xs);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}

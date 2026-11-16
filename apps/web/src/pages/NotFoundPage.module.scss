@@ -25,3 +25,42 @@
   gap: var(--space-3);
   margin-top: var(--space-3);
 }
+
+.search {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  max-width: 32rem;
+  height: 3rem;
+  margin-top: var(--space-2);
+  padding: 0 0.3rem 0 1rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-pill);
+  background: var(--bg-raised);
+  color: var(--fg-subtle);
+
+  &:focus-within {
+    border-color: var(--focus);
+    box-shadow: 0 0 0 3px color-mix(in oklab, var(--focus) 18%, transparent);
+  }
+
+  svg {
+    width: 1.05rem;
+    height: 1.05rem;
+  }
+
+  input {
+    flex: 1 1 0;
+    width: 0;
+    min-width: 0;
+    border: 0;
+    background: transparent;
+    color: var(--fg);
+    outline: none;
+
+    &::placeholder {
+      color: var(--fg-subtle);
+    }
+  }
+}

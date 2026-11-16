@@ -39,19 +39,21 @@ test("a newcomer joins, proposes an idea and develops it", async ({ page }) => {
   });
 
   await test.step("take a stance", async () => {
-    const important = page.getByRole("button", { name: /^Important/ });
+    // The header's toggle (the sidebar's "Perspectives" box shares its state).
+    const important = page.getByRole("button", { name: /^Important/ }).first();
     await important.click();
     await expect(important).toHaveAttribute("aria-pressed", "true");
   });
 
   await test.step("evaluate it", async () => {
-    await page.getByRole("button", { name: "Evaluate" }).click();
+    await page.getByRole("button", { name: "Evaluate", exact: true }).click();
     const dialog = page.getByRole("dialog");
     await dialog.getByText("Transformative", { exact: true }).click();
     await dialog.getByText("Plausible within decades", { exact: true }).click();
-    await dialog.getByRole("button", { name: "Submit ratings" }).click();
+    await expect(dialog.getByText("2 of 6")).toBeVisible();
+    await dialog.getByRole("button", { name: "Save evaluation" }).click();
     await expect(dialog).toBeHidden();
-    await expect(page.getByRole("button", { name: "Update evaluation" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Update evaluation", exact: true })).toBeVisible();
   });
 
   await test.step("add a claim and attach evidence", async () => {
@@ -98,13 +100,14 @@ test("a newcomer joins, proposes an idea and develops it", async ({ page }) => {
       page.getByRole("heading", { name: "Biofouling may make maintenance too costly" }),
     ).toBeVisible();
 
+    await page.getByRole("button", { name: /Add a comment/ }).click();
     await page.getByRole("textbox", { name: "Comment" }).fill("Has anyone modelled this for estuaries?");
     await page.getByRole("button", { name: "Post", exact: true }).click();
     await expect(page.getByText("Has anyone modelled this for estuaries?")).toBeVisible();
   });
 
   await test.step("publish a revision as the idea's steward", async () => {
-    await page.getByRole("link", { name: "Edit" }).click();
+    await page.getByRole("link", { name: "Edit", exact: true }).click();
     await page
       .getByLabel("In two or three sentences")
       .fill(
@@ -112,6 +115,7 @@ test("a newcomer joins, proposes an idea and develops it", async ({ page }) => {
       );
     await page.getByLabel("What changed and why").fill("Clarified shared upkeep");
     await page.getByRole("button", { name: "Publish revision" }).click();
+    await expect(page).not.toHaveURL(/\/edit$/);
     await expect(page.getByText(/sharing the water and the upkeep/)).toBeVisible();
     await page
       .getByRole("navigation", { name: "Idea sections" })

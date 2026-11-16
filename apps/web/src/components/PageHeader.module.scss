@@ -6,24 +6,28 @@
   align-items: flex-end;
   justify-content: space-between;
   gap: var(--space-5);
-  padding-block: var(--space-7) var(--space-6);
+  padding-block: var(--space-7) var(--space-5);
 }
 
 .text {
   display: grid;
-  gap: var(--space-3);
+  gap: var(--space-2);
   max-width: 48rem;
 }
 
 .title {
+  // The index-page size: display type is reserved for the home hero and an idea's title, so on every other
+  // page the content starts on the first screen.
   @include serif(400);
-  font-size: var(--text-4xl);
-  line-height: 1.05;
+  font-size: var(--text-3xl);
+  line-height: 1.08;
+  letter-spacing: -0.02em;
 }
 
 .lede {
+  max-width: 62ch;
   color: var(--fg-muted);
-  font-size: var(--text-lg);
+  font-size: var(--text-md);
   line-height: 1.55;
 }
 

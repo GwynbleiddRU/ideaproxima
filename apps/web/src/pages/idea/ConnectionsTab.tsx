@@ -69,6 +69,7 @@ export function ConnectionsTab() {
         Upstream: what this idea builds on and needs first. Downstream: what builds on it, everything that
         becomes reachable once it is realised.
       </p>
+      {/* The view changes in place: keep the reader where they are (the router resets scroll by default). */}
       <div className={tabs.toolbar}>
         <Segmented<GraphDirection>
           label="Direction"
@@ -77,6 +78,7 @@ export function ConnectionsTab() {
             void navigate({
               search: (prev) => ({ ...prev, direction: d === "both" ? undefined : d }),
               replace: true,
+              resetScroll: false,
             })
           }
           options={[
@@ -90,7 +92,11 @@ export function ConnectionsTab() {
           size="sm"
           value={depth}
           onChange={(d) =>
-            void navigate({ search: (prev) => ({ ...prev, depth: d === 2 ? undefined : d }), replace: true })
+            void navigate({
+              search: (prev) => ({ ...prev, depth: d === 2 ? undefined : d }),
+              replace: true,
+              resetScroll: false,
+            })
           }
           options={Array.from({ length: MAX_GRAPH_DEPTH }, (_, i) => ({
             value: i + 1,
@@ -101,7 +107,7 @@ export function ConnectionsTab() {
       {graph.isPending ? (
         <Skeleton lines={6} />
       ) : graph.data && graph.data.nodes.length > 1 ? (
-        <RelationGraph graph={graph.data} />
+        <RelationGraph graph={graph.data} showEnables={direction !== "upstream"} />
       ) : (
         <EmptyState icon={<Network />} title="No connections in this direction yet">
           Does this idea require another? Is it an application of one? Connecting ideas lets someone who

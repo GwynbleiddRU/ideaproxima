@@ -2,6 +2,12 @@
 
 .scroller {
   margin: 0;
+
+  // Phones read the relations as the list below the map.
+  @include down(md) {
+    display: none;
+  }
+
   overflow-x: auto;
   padding-bottom: var(--space-2);
   border: 1px solid var(--border);
@@ -115,4 +121,21 @@ a:focus-visible .node rect {
 
 .legendSolid {
   border-top-style: solid;
+}
+
+.columnLabel {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  text-anchor: middle;
+  fill: var(--fg-subtle);
+}
+
+.ghost {
+  rect {
+    fill: none;
+    stroke: var(--border-strong);
+    stroke-dasharray: 4 4;
+  }
 }

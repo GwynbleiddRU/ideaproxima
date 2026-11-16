@@ -1,12 +1,15 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { useState, type FormEvent } from "react";
-import { Plus } from "lucide-react";
+import { ArrowRight, Plus } from "lucide-react";
 import { catalogQueries, useCreateTopic } from "@/api/catalog";
 import { isApiError } from "@/api/http";
 import { useSession } from "@/api/session";
 import forms from "@/components/forms.module.scss";
 import { PageHeader } from "@/components/PageHeader";
+import { cx } from "@/lib/cx";
+import { plural } from "@/lib/format";
+import { topicIcon } from "@/lib/topic-icons";
 import { Button } from "@/ui/Button";
 import { Dialog } from "@/ui/Dialog";
 import { control, Field } from "@/ui/Field";
@@ -18,14 +21,15 @@ export function TopicsPage() {
   const { isAdmin } = useSession();
   const [creating, setCreating] = useState(false);
   const roots = topics.filter((t) => !t.parentId);
+  // Active domains first; the editorial order breaks ties and orders the empty ones.
+  const sorted = [...roots].sort((a, b) => b.ideaCount - a.ideaCount);
   const childrenOf = (id: string) => topics.filter((t) => t.parentId === id);
 
   return (
     <div className="container">
       <title>Topics · ideaproxima</title>
       <PageHeader
-        eyebrow="Topics"
-        title="Domains of possibility"
+        title="Topics"
         lede="Ideas span domains: each belongs to up to four topics, the first being its primary home."
         actions={
           isAdmin && (
@@ -36,22 +40,54 @@ export function TopicsPage() {
         }
       />
       <ul className={styles.grid} role="list">
-        {roots.map((topic) => (
-          <li key={topic.id}>
-            <Link to="/topics/$slug" params={{ slug: topic.slug }} className={styles.topic}>
-              <span className={styles.count}>{topic.ideaCount}</span>
-              <span className={styles.name}>{topic.name}</span>
-              <span className={styles.description}>{topic.description}</span>
-              {childrenOf(topic.id).length > 0 && (
-                <span className={styles.children}>
-                  {childrenOf(topic.id)
-                    .map((c) => c.name)
-                    .join(" · ")}
+        {sorted.map((topic) => {
+          const Icon = topicIcon(topic.slug);
+          const children = childrenOf(topic.id);
+          const empty = topic.ideaCount === 0;
+          return (
+            <li key={topic.id} className={cx(styles.topic, empty && styles.topicEmpty)}>
+              <div className={styles.topicHead}>
+                <span className={styles.icon} aria-hidden>
+                  <Icon />
                 </span>
+                <h2 className={styles.name}>
+                  <Link to="/topics/$slug" params={{ slug: topic.slug }} className={styles.stretched}>
+                    {topic.name}
+                  </Link>
+                </h2>
+                <span className={styles.count}>{empty ? "—" : plural(topic.ideaCount, "idea")}</span>
+              </div>
+              <p className={styles.description}>{topic.description}</p>
+              {children.length > 0 && (
+                <p className={styles.children}>{children.map((c) => c.name).join(" · ")}</p>
               )}
-            </Link>
-          </li>
-        ))}
+              <div className={styles.latest}>
+                {empty ? (
+                  <>
+                    <span className={styles.latestLabel}>No ideas yet.</span>
+                    <Link to="/new" className={styles.invite}>
+                      Propose the first <ArrowRight aria-hidden />
+                    </Link>
+                  </>
+                ) : (
+                  <>
+                    <span className={styles.latestLabel}>Newest</span>
+                    {topic.latestIdeas.map((idea) => (
+                      <Link
+                        key={idea.id}
+                        to="/ideas/$idea"
+                        params={{ idea: idea.slug }}
+                        className={styles.latestIdea}
+                      >
+                        {idea.title}
+                      </Link>
+                    ))}
+                  </>
+                )}
+              </div>
+            </li>
+          );
+        })}
       </ul>
       {isAdmin && <CreateTopicDialog open={creating} onClose={() => setCreating(false)} parents={roots} />}
     </div>
