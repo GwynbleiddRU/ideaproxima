@@ -16,6 +16,10 @@ audit/artifacts/
 temp-reference-folder/
 designs/
 
+# Prompt sketches for agent sessions: local working files, never published. Anchored to the repository root so
+# that a folder named "prompts" inside the code is not ignored by accident.
+/prompts/
+
 # Local model files for AI moderation: multi-gigabyte, never committed. Only the manifest is tracked
 # (docs/agents/production/08-ai-moderation.md).
 models/*

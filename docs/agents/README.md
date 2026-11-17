@@ -12,8 +12,9 @@ Where the rest lives:
 - [`../developer/`](../developer/README.md): the developer guide (setup, conventions, recipes, testing), the
   operations guide, and the **generated** API reference. Prefer linking there over restating facts here, so
   nothing drifts.
-- [`../../prompts/`](../../prompts/): **prompt sketches**, ready-to-adapt task briefs for the next major pieces of
-  agent work.
+- `prompts/` at the repository root: **prompt sketches**, ready-to-adapt task briefs for the next major pieces of
+  agent work. The folder is local and git-ignored, so documents name its files in code style instead of linking
+  to them.
 
 ## Reading order
 
@@ -25,10 +26,10 @@ Where the rest lives:
    answer historical questions in SQL.
 5. [`api-architecture.md`](api-architecture.md) — API design rules and how the contract is enforced (the endpoint
    list itself is generated: [`../developer/api-reference.md`](../developer/api-reference.md)).
-6. Prompt sketches for the next tasks, in [`../../prompts/`](../../prompts/):
-   - [`front-rebuild-prompt-sketch.md`](../../prompts/front-rebuild-prompt-sketch.md) — for the agent rebuilding the UI.
-   - [`scoring-system-prompt-sketch.md`](../../prompts/scoring-system-prompt-sketch.md) — for the agent designing
-     evaluation scoring and contribution influence.
+6. Prompt sketches for the next tasks, in `prompts/`:
+   - `prompts/front-rebuild-prompt-sketch.md` — for the agent rebuilding the UI.
+   - `prompts/scoring-system-prompt-sketch.md` — for the agent designing evaluation scoring and contribution
+     influence.
 7. [`open-questions.md`](open-questions.md) — known uncertainties, with the current default for each.
 8. [`roadmap.md`](roadmap.md) — the next major tasks, in priority order.
 9. [`production/README.md`](production/README.md) — the production-readiness program: an

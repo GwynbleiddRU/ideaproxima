@@ -5,7 +5,8 @@ limiting, twelve languages, AI-assisted moderation, and everything those depend 
 
 Written 2026-11-17 from a full [audit of the API](api-audit.md). It contains thirteen implementation plans.
 Each plan has a matching prompt sketch in `prompts/api/` (same number and name, ending in
-`-prompt-sketch.md`) that briefs the agent who will implement it.
+`-prompt-sketch.md`) that briefs the agent who will implement it. `prompts/` is a local, git-ignored folder:
+the prompts exist on the owner's machine, not in the published repository.
 
 ## How to use this
 
@@ -55,8 +56,8 @@ status does not mark as done.
    - anything that differs from the plan under a heading `## Implementation notes` at the end of the plan:
      what changed, why, and what the next phase must know.
 3. Give the "Report back" items from the prompt as the final message.
-4. Do not commit unless the owner asks. When asked: on `main`, in logical commits, without pushing, and with
-   `prompts/` left untracked.
+4. Do not commit unless the owner asks. When asked: on `main`, in logical commits unless told otherwise, and
+   without pushing.
 
 **Running sessions in parallel.** The two tracks in [Order](#order) can each have a session at the same time;
 one plan never has two. Both tracks edit `packages/contracts` and the web shell, so their changes are merged
