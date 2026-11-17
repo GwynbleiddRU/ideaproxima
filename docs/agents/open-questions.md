@@ -70,3 +70,8 @@ default is fine; record the decision here and in the relevant document.
     scaling notes).
 25. **Code licence.** The repository has no LICENSE file yet. Choosing one (and the separate licence for
     _contributions_, question 12) is the owner's decision before publishing.
+26. **Decisions the production-readiness program is waiting for.** The program proposes a default for each and
+    keeps the list in one place: [`production/README.md`](production/README.md#decisions-for-the-owner). They
+    include the twelve languages, the content policy and its reason codes, what automated moderation may hide,
+    the registration mode, and the providers. Its plans also say which of the questions above they settle
+    (11, 13, 19, 20, 21, 23, 24).

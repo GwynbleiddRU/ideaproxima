@@ -48,6 +48,28 @@ before finishing any item, and update the docs you touch.
   repeated their section titles; the browser's own clear button on search fields.
 - **API additions:** `TopicDto.latestIdeas` (two newest per topic) and each claim's derived `status` in search results.
 
+## The production-readiness program (planned 2026-11-17)
+
+The path from this foundation to a worldwide, production-ready platform is designed in
+[`production/`](production/README.md): an [audit of the API](production/api-audit.md) (53 findings) and thirteen
+plans with estimates, an order and milestones. Each plan has a prompt sketch in `prompts/api/`. The program
+is the detailed form of the items below that it covers; where they differ, the program is newer.
+
+| Roadmap item                                        | Program plan                                                                                                                                 |
+| --------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| P0-1 Auth completion                                | [04 — Accounts, e-mail and trust](production/04-accounts-and-trust.md)                                                                       |
+| P0-2 Content policy and reporting                   | [07 — Moderation core](production/07-moderation-core.md), [08 — AI moderation](production/08-ai-moderation.md)                               |
+| P0-3 Production deployment, shared rate limiter     | [10 — Deployment and operations](production/10-deployment-and-operations.md), [03 — Rate limiting](production/03-rate-limiting.md)           |
+| P0-4 Licences                                       | Owner decision; the acceptance mechanism is in plan 04                                                                                       |
+| P1-7 Typed API client; P3-17 open data and API keys | [12 — Public API](production/12-public-api.md)                                                                                               |
+| P1-9 Duplicate handling; P3-16 semantic search      | [11 — Semantic search](production/11-semantic-search.md)                                                                                     |
+| P1-10 Idea language and i18n (now twelve languages) | [05 — Localisation](production/05-localization.md), [06 — Multilingual content and search](production/06-multilingual-content-and-search.md) |
+| Scaling notes in the architecture document          | [02 — Background jobs](production/02-background-jobs.md), [09 — Read scalability](production/09-read-scalability.md)                         |
+| New: defects found by the audit                     | [00 — Immediate hardening](production/00-immediate-hardening.md), [01 — Operational foundations](production/01-operational-foundations.md)   |
+
+Start with plan 00. Items not covered by the program (web follow-ups, follows and notifications, lenses for
+funders, scoring, predictions, organisation accounts) keep their place below.
+
 ## P0 — before anyone outside the team uses it
 
 1. **Auth completion.** Email verification and password reset (an expiring token table plus an email sender

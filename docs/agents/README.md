@@ -31,8 +31,12 @@ Where the rest lives:
      evaluation scoring and contribution influence.
 7. [`open-questions.md`](open-questions.md) — known uncertainties, with the current default for each.
 8. [`roadmap.md`](roadmap.md) — the next major tasks, in priority order.
-9. [`source-review.md`](source-review.md) — what was learned from the original prototypes (the seedbank MVP and the
-   Lovable design exploration, both since removed from this repository), what was kept and what was replaced.
+9. [`production/README.md`](production/README.md) — the production-readiness program: an
+   [audit of the API](production/api-audit.md) and thirteen implementation plans (rate limiting, twelve
+   languages, AI-assisted moderation, scaling, deployment). Each plan has a prompt sketch of the same number in
+   `prompts/api/`. Read the program's rules before working on any of its plans.
+10. [`source-review.md`](source-review.md) — what was learned from the original prototypes (the seedbank MVP and the
+    Lovable design exploration, both since removed from this repository), what was kept and what was replaced.
 
 ## Non-negotiables (do not change casually)
 
