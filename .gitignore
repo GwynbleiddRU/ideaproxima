@@ -15,3 +15,8 @@ audit/artifacts/
 # Local reference copies (the archived design exploration, UI design previews); never published
 temp-reference-folder/
 designs/
+
+# Local model files for AI moderation: multi-gigabyte, never committed. Only the manifest is tracked
+# (docs/agents/production/08-ai-moderation.md).
+models/*
+!models/manifest.json
