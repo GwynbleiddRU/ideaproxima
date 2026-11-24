@@ -1,13 +1,13 @@
 # 11 — Semantic and cross-language search, duplicate detection
 
 Part of the [production-readiness program](README.md). Prompt for the implementing agent:
-`prompts/api/11-semantic-search-prompt-sketch.md`.
+`prompts/api/11-semantic-search-prompt.md`.
 
-| Status     | Not started. After launch                                                                                                                                      |
-| ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Depends on | [06](06-multilingual-content-and-search.md) (the search module and languages), [02](02-background-jobs.md), the inference service of [08](08-ai-moderation.md) |
-| Unblocks   | Roadmap P1-9 (duplicates), P3-16 (semantic search); better spam detection                                                                                      |
-| Size       | 2 sessions · 5–8 engineer-days                                                                                                                                 |
+| Status     | Not started. After launch                                                                                                                                                                                            |
+| ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Depends on | [06](06-multilingual-content-and-search.md) (the search module and languages), [02](02-background-jobs.md), [03](03-rate-limiting.md) (`mutates`, `read.search`), the inference service of [08](08-ai-moderation.md) |
+| Unblocks   | Roadmap P1-9 (duplicates), P3-16 (semantic search); better spam detection                                                                                                                                            |
+| Size       | 2 sessions (steps 45–46) · 5–8 engineer-days                                                                                                                                                                         |
 
 ## Outcome
 
@@ -41,8 +41,9 @@ create index search_embeddings_hnsw on search_embeddings using hnsw (embedding v
 - Ideas are embedded as title + summary; claims as their statement. Long narrative sections are not embedded
   in the first version.
 - pgvector is the first PostgreSQL extension this project requires. It is available on every mainstream
-  managed service and as a bundle for PGlite, so tests keep running in process. Confirm both before starting;
-  if PGlite's bundle is unavailable for the pinned version, these tests run only under `npm run test:pg`.
+  managed service, and the pinned PGlite (0.3.16) bundles it (`@electric-sql/pglite/vector`), so tests keep
+  running in process. The official `postgres:17-alpine` image used by the compose file and CI does not include
+  it: both move to an image that does (for example `pgvector/pgvector:pg17`, pinned by digest).
 
 ### The embedding model
 
@@ -82,7 +83,8 @@ interface can say why a result in another language appeared.
 A suggestion is never recorded as a relation, a claim link or an evaluation. Relations stay typed and
 human-made (open question 1); linking an existing claim strengthens the shared-claim graph, which is the
 point. Everything shown is labelled as a machine suggestion with the model's name, as the concept requires of
-AI assistance. These endpoints are rate-limited under `read.search`.
+AI assistance. These endpoints are rate-limited under `read.search`; the two `POST`s declare
+`mutates: false` ([03](03-rate-limiting.md#the-contract-declares-the-policy)), because they change nothing.
 
 ### A signal for moderation
 
@@ -98,8 +100,8 @@ new accounts posting the same pitch in different words). It is a signal for a ca
 
 ## Verification
 
-- The cross-language fixture: recall at 5 of the translated counterpart at or above the chosen target for
-  every tested language pair.
+- The cross-language fixture: recall at 5 of the translated counterpart at least 0.90 for each language paired
+  with English and at least 0.80 for pairs without English (initial targets; below them, the owner decides).
 - Search still answers, with text results only, when the inference service is stopped.
 - Hidden and held subjects never appear in neighbours or suggestions for non-moderators.
 - Rebuild equals incremental for the embeddings table (by content hash).

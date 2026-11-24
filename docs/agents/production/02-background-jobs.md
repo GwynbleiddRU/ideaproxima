@@ -1,13 +1,13 @@
 # 02 — Background jobs and asynchronous derivation
 
 Part of the [production-readiness program](README.md). Prompt for the implementing agent:
-`prompts/api/02-background-jobs-prompt-sketch.md`.
+`prompts/api/02-background-jobs-prompt.md`.
 
 | Status     | Not started                                                                                                                  |
 | ---------- | ---------------------------------------------------------------------------------------------------------------------------- |
 | Depends on | [01](01-operational-foundations.md) (metrics, configuration, graceful shutdown)                                              |
 | Unblocks   | [04](04-accounts-and-trust.md) (e-mail), [07](07-moderation-core.md), [08](08-ai-moderation.md), [11](11-semantic-search.md) |
-| Size       | 2 sessions · 5–7 engineer-days                                                                                               |
+| Size       | 2 sessions (steps 4–5) · 5–7 engineer-days                                                                                   |
 
 ## Outcome
 
@@ -94,6 +94,7 @@ maxAttempts? })` inserts through `ctx.db`, so inside `inTransaction()` it commit
 - **Fail**: below `max_attempts`, back to `pending` with `run_at = now() + min(5 s × 2^attempts, 1 h) ± 20 %`
   and `last_error` (truncated to 2,000 characters). At `max_attempts`: `state = 'failed'`. Failed jobs are the
   dead-letter queue.
+- Fence completion, retry and extension with `id`, the claiming worker, the returned attempt number, running state and an unexpired lease. Zero affected rows means ownership was lost. Reclaim under the same ownership check. If a newer pending refresh already exists for the same dedupe key, atomically retire the superseded refresh and keep the pending one. Reclaiming the final attempt dead-letters it. Test both races on PostgreSQL.
 - **Leases**: a handler that needs longer than the lease (default 60 s) extends it. Each worker tick returns
   `running` jobs whose lease expired to `pending` (the worker died).
 - **Delivery is at least once.** Every handler must be idempotent: check current state before acting, use the
@@ -131,7 +132,7 @@ update job_schedules set last_run_at = now(), next_run_at = $next
 where name = $name and next_run_at <= now() returning name;
 ```
 
-and enqueues the job only if the update returned a row: one winner per slot, however many workers run. Missing
+and, in that same transaction, enqueues the job only if the update returned a row: one winner per slot, however many workers run. Missing
 rows are inserted at start-up with `on conflict do nothing`.
 
 First schedules:
@@ -207,7 +208,8 @@ transaction").
 
 ## Risks
 
-- **A poisoned job blocks nothing but fills the dead-letter queue silently.** The alert on `jobs_failed` is
-  part of the definition of done, not an afterthought.
+- **A poisoned job blocks nothing but fills the dead-letter queue silently.** The `jobs_failed` metric is
+  part of this plan's definition of done; the alert on it is written in [10](10-deployment-and-operations.md)
+  and must not be dropped there.
 - **Handlers that are not idempotent.** Review each new handler for this; add a test that runs it twice.
 - **`inline` mode hides worker-only bugs.** CI's Docker stack job runs with a separate `worker` service.

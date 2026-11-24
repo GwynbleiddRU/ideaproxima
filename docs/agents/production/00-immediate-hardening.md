@@ -1,20 +1,21 @@
 # 00 — Immediate hardening
 
 Part of the [production-readiness program](README.md). Prompt for the implementing agent:
-`prompts/api/00-immediate-hardening-prompt-sketch.md`.
+`prompts/api/00-immediate-hardening-prompt.md`.
 
 | Status     | Not started                                                                       |
 | ---------- | --------------------------------------------------------------------------------- |
 | Depends on | Nothing                                                                           |
 | Unblocks   | Everything else: later plans assume a trustworthy client address and a clean feed |
-| Size       | 1 session · 2–3 engineer-days                                                     |
+| Size       | 1 session (step 1) · 2–3 engineer-days                                            |
 
 ## Outcome
 
-The seven defects that need no design decision are closed: a forgeable client address, account enumeration by
-timing, CPU exhaustion through password hashing, database work for unauthenticated floods, unlimited reads,
-IPv6 evasion, and hidden text leaking through the activity ledger
-([audit](api-audit.md): SEC-1 to SEC-6, SEC-10, MOD-1, MOD-3).
+The nine findings that need no design decision are closed. Seven of them block a public launch: a forgeable
+client address, account enumeration by timing, CPU exhaustion through password hashing, database work for
+unauthenticated floods, unlimited reads, IPv6 evasion, and hidden text leaking through the activity ledger
+(SEC-1 to SEC-6, MOD-1). Two are smaller and touch the same code: hidden evidence still returning three text
+fields (MOD-3) and unbounded offset cursors (SEC-10) ([audit](api-audit.md)).
 
 Nothing here adds a subsystem. The limiter keeps its fixed windows and in-memory store;
 [03 — Rate limiting](03-rate-limiting.md) replaces the algorithm and the policies later, on top of the address
@@ -37,8 +38,9 @@ Rules:
 1. With `TRUST_PROXY_HOPS = n > 0`, split `X-Forwarded-For` on commas and take the entry `n` positions from the
    **right**. Each trusted proxy appends the address it saw, so the right-most `n` entries are the only ones a
    client cannot write. Fewer than `n` entries: fall back to the socket address.
-2. `CLIENT_IP_HEADER` is only safe when the origin cannot be reached except through that edge. Say so in the
-   operations guide.
+2. Both forwarded modes require every ingress path to pass through the configured trusted proxies. Verify
+   origin isolation and consistent hop counts on staging. A trusted edge must overwrite a single-value
+   header. If those conditions cannot be established, use the socket address.
 3. Normalise the result with `node:net`: unwrap IPv4-mapped IPv6 (`::ffff:203.0.113.7`), lower-case, and reduce
    IPv6 to its network (`2001:db8:abcd:12::/64`). The function returns a **network key** (`v4:…` or `v6:…/64`),
    not a raw address. Anything unparsable becomes `unknown`, which is one shared bucket.
@@ -56,8 +58,11 @@ addresses; two addresses in one /64 share a key; garbage input.
    `newSessionToken()` produces). Anything else is an anonymous request with no query.
 3. New middleware order in `createApp()`: security headers → logging → web app files → CORS → body limit →
    **network limiter** → session resolution → auth and write limiters → routes. Update the comment that
-   documents the order.
-4. The test harness disables the new limit by default, like the other two.
+   documents the order. Today `c.set("config", …)` happens inside the session middleware, and
+   `clientAddress()` reads it: move that assignment into an earlier middleware so the network limiter can
+   resolve the address.
+4. The test harness disables the new limit by default, like the other two, and so does the browser audit's
+   server (`audit/server.ts`), which sets the limit variables to `0`.
 
 Tests: the 601st request in a minute from one network answers 429 with `Retry-After`, including `GET`; a
 malformed bearer token triggers no session query (assert through a counting wrapper around `resolveSession`, or
@@ -129,7 +134,7 @@ with keysets, after which the ceiling only guards legacy cursors.
 
 ## Risks
 
-- **A wrong hop count locks everyone into one bucket or trusts forged addresses.** Log the resolved network key
-  at debug level and document how to verify it (`curl` through the proxy with a forged header).
+- **A wrong hop count can group unrelated clients or trust the wrong sender.** Verify the expected bucket in
+  an isolated fixture and check staging ingress rules. Keep raw addresses and limiter keys out of logs.
 - **The dummy hash must use the live parameters,** or timing differs again when parameters are raised. Derive
   it from the same constants.

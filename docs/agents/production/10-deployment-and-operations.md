@@ -1,13 +1,13 @@
 # 10 — Production deployment and operations
 
 Part of the [production-readiness program](README.md). Prompt for the implementing agent:
-`prompts/api/10-deployment-and-operations-prompt-sketch.md`.
+`prompts/api/10-deployment-and-operations-prompt.md`.
 
-| Status     | Not started                                                                                         |
-| ---------- | --------------------------------------------------------------------------------------------------- |
-| Depends on | [01](01-operational-foundations.md), [02](02-background-jobs.md); it deploys what plans 03–09 build |
-| Unblocks   | The launch                                                                                          |
-| Size       | 4 sessions · 13–19 engineer-days                                                                    |
+| Status     | Not started                                                                                                                                              |
+| ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Depends on | Every application step before it (steps 1–32): it deploys, observes and stresses what plans 01–09 and 13 build; phase F also the translations of step 38 |
+| Unblocks   | The launch                                                                                                                                               |
+| Size       | 6 sessions (steps 33–37 and 39) · 13–19 engineer-days                                                                                                    |
 
 ## Outcome
 
@@ -76,6 +76,19 @@ external), a `Caddyfile`, an example environment file listing every secret, and 
   migration. Add this rule to the developer guide and to the migration recipe.
 - The CI stack job runs the production compose file with separate `worker` and inference stand-ins, so
   multi-process behaviour is tested on every change (OPS-8).
+- **Releases must not break open tabs (WEB-5).** Every build replaces the content-hashed chunks under
+  `/assets/`, so a tab opened before a release, or a request that reaches an old instance during a rolling
+  release, can ask for a chunk that no longer exists. Three measures together:
+  1. The image also carries the previous release's `assets/` (the release build copies them from the previous
+     image tag into the new build's `dist/assets/`; hashed names never collide), so both versions' chunks are
+     served during and after a release. Chunks older than two releases are dropped.
+  2. The web app listens for Vite's `vite:preloadError` event and reloads the page once (guarded by a flag in
+     `sessionStorage`, so a real failure cannot loop), which picks up the new `index.html`.
+  3. `index.html` and every server-rendered page stay `no-cache` or short-lived (plan 09's classes), so no
+     cache serves an old shell that points at removed chunks.
+
+  A test builds twice, serves the second build with the first build's chunks present, and loads a lazy route
+  from a page of the first build; another forces a chunk 404 and asserts exactly one reload.
 
 ### B. Observability stack
 
@@ -92,6 +105,8 @@ external), a `Caddyfile`, an example environment file listing every secret, and 
   | Errors                  | 5xx above 1 % for 5 minutes                                                                                        |
   | Readiness               | Any instance not ready for 2 minutes                                                                               |
   | Jobs                    | Oldest pending job above 5 minutes; any failed job                                                                 |
+  | Mail                    | `mail.send` failures above 5 % for 30 minutes (verification and recovery depend on it)                             |
+  | Web                     | Browser error reports for a release above twice the previous release's rate ([13](13-public-web.md))               |
   | Moderation              | A critical case older than 4 hours; assessment queue above 60 s; circuit breaker tripped; overturn rate above 10 % |
   | Abuse                   | `net.requests` rejections or registrations above 5× the weekly norm                                                |
   | Database                | Connections above 80 %; replication lag above 30 s; disk above 75 %                                                |
@@ -109,6 +124,10 @@ external), a `Caddyfile`, an example environment file listing every secret, and 
   `rebuild-metrics` and `rebuild-search`, then verify: migration state, row counts within tolerance of
   production, the history-guard triggers exist, a sample of ideas renders through the API. The drill's success
   is the "backups" metric the alert watches. An unrehearsed backup is not a backup.
+- **A restore never resurrects a deleted account.** Maintain an encrypted, access-controlled erasure journal outside the primary failure domain from each committed erasure, with a verified replication watermark. Before admitting traffic after recovery, reconcile to the last acknowledged erasure, then replay missing erasures idempotently. If continuity cannot be established, keep the restored service isolated. The drill includes one such erasure and
+  checks it. The privacy notice states how long backups keep data of deleted accounts (at most the longest
+  backup retention).
+- On an isolated staging restore with the primary unavailable, recover to a known recent transaction using point-in-time recovery. Record the latest recovered transaction and elapsed time through erasure replay, rebuilds and the smoke test. A nightly dump alone cannot establish a five-minute data-loss objective.
 - Recovery objectives to confirm with the owner: lose at most 5 minutes of data, be back within 4 hours.
 - The archive is meant to outlive the platform (roadmap P3-18): once a year, publish a snapshot of the public
   facts to a long-term archive. Planned with the open-data work in [12](12-public-api.md).
@@ -122,7 +141,11 @@ external), a `Caddyfile`, an example environment file listing every secret, and 
   capabilities, memory and CPU limits, and network rules so that only `api` is reachable from the load
   balancer and the inference and internal ports are reachable from nowhere else.
 - Edge: HSTS (preload once stable), TLS 1.2 or newer, the WAF rules that implement layer L0 of
-  [03](03-rate-limiting.md), `TRUST_PROXY_HOPS` or `CLIENT_IP_HEADER` set to match the edge exactly.
+  [03](03-rate-limiting.md), `TRUST_PROXY_HOPS` or `CLIENT_IP_HEADER` set to match the edge exactly, and the
+  `CachePurger` adapter of [09](09-read-scalability.md) for the chosen CDN's purge API, so content hidden by a
+  moderator is purged. Measure hide-to-purge time on staging with a warmed response. Bypass shared-cache
+  lookup and storage for requests carrying Cookie or Authorization. Do not cache per-identity rate-limit
+  headers or Set-Cookie. Verify with anonymous, member and moderator requests in both cache-fill orders.
 - Secrets live in the platform's secret store; a rotation runbook covers the database password,
   `SECRETS_KEY`, `RATE_LIMIT_KEY_SECRET`, `CHALLENGE_SECRET` and mail credentials.
 - A `security.txt` and a short vulnerability-disclosure policy.
@@ -131,7 +154,13 @@ external), a `Caddyfile`, an example environment file listing every secret, and 
 
 Runbooks in `docs/developer/runbooks/`, each one page, each rehearsed once: deploy and roll back; database
 failover and restore; a spam or abuse wave; the moderation model down or misbehaving; a legal removal or
-erasure request; a suspected account or key compromise; secret rotation.
+erasure request; a suspected account or key compromise; secret rotation; mail delivery failing.
+
+Compliance documents: a **data map** in the operations guide (every table and log that holds personal data,
+what it holds, why, for how long, and which job enforces the period), which plan 14 checks; and the retention
+jobs that are still missing. The terms, privacy notice and contact page already exist as skeletons, written
+by [13](13-public-web.md) at step 32; this phase checks that the privacy skeleton names every item of the data
+map.
 
 Compliance, as far as engineering can take it (the texts and the legal judgement are the owner's):
 
@@ -152,14 +181,14 @@ fresh environment. Each must end with the documented alert firing and the runboo
 
 ## Phases
 
-| Phase | Scope                                                           | Days |
-| ----- | --------------------------------------------------------------- | ---- |
-| A     | `deploy/`, image publishing, release workflow, multi-process CI | 3–4  |
-| B     | Dashboards, alerts, uptime probe                                | 3–4  |
-| C     | Backup jobs and the automated restore drill                     | 2–3  |
-| D     | Supply-chain and runtime hardening, edge configuration          | 2–3  |
-| E     | Runbooks, retention jobs, compliance documents (skeletons)      | 2–3  |
-| F     | Game day and its report                                         | 1–2  |
+| Phase | Scope                                                                                    | Days |
+| ----- | ---------------------------------------------------------------------------------------- | ---- |
+| A     | `deploy/`, image publishing, release workflow, multi-process CI, release-safe web assets | 3–4  |
+| B     | Dashboards, alerts, uptime probe                                                         | 3–4  |
+| C     | Backup jobs and the automated restore drill                                              | 2–3  |
+| D     | Supply-chain and runtime hardening, edge configuration                                   | 2–3  |
+| E     | Runbooks, retention jobs, the data map                                                   | 2–3  |
+| F     | Game day and its report                                                                  | 1–2  |
 
 ## Verification
 

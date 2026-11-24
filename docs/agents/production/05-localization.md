@@ -1,13 +1,13 @@
 # 05 — Localisation: the product in 12 languages
 
 Part of the [production-readiness program](README.md). Prompt for the implementing agent:
-`prompts/api/05-localization-prompt-sketch.md`.
+`prompts/api/05-localization-prompt.md`.
 
-| Status     | Not started                                                                                       |
-| ---------- | ------------------------------------------------------------------------------------------------- |
-| Depends on | [01](01-operational-foundations.md). Independent of the trust-and-safety track (plans 03, 07, 08) |
-| Unblocks   | [06](06-multilingual-content-and-search.md); localised e-mail in [04](04-accounts-and-trust.md)   |
-| Size       | 5 sessions · 15–22 engineer-days, plus about one reviewer-day per language (11 languages)         |
+| Status     | Not started                                                                                                                                   |
+| ---------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| Depends on | [01](01-operational-foundations.md) (configuration, logs); phase D on every interface change before step 38                                   |
+| Unblocks   | Every later plan's strings and error reasons; [06](06-multilingual-content-and-search.md); localised e-mail in [04](04-accounts-and-trust.md) |
+| Size       | 5 sessions (steps 6–9 and 38) · 15–22 engineer-days, plus about one reviewer-day per language                                                 |
 
 ## Outcome
 
@@ -123,7 +123,9 @@ and the fallback, and every existing consumer keeps working).
 `Accept-Language` → `en`. `negotiateLocale()` handles quality values and aliases: `zh`, `zh-CN`, `zh-SG` →
 `zh-Hans` (and, until Traditional Chinese exists, `zh-TW` and `zh-HK` too); `pt`, `pt-PT` → `pt-BR`; `es-*` →
 `es`; `in` → `id`. A middleware stores the result on the request (`c.set("locale", …)`); localised responses
-carry `Content-Language`, plus `Vary: Accept-Language` when the header decided.
+carry `Content-Language`. Whenever this URL can negotiate on `Accept-Language`, include it in `Vary` even on
+the default-language response to a request with no header. Account-specific negotiation is private. Test a
+shared-cache hit in each order with two locales and with the header absent.
 
 **Contract changes** (all additive except the error reasons, which land before the freeze in
 [12](12-public-api.md)):
@@ -212,11 +214,15 @@ idempotent seed; admins translate topics they create through `PUT /v1/topics/:sl
 | ----- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---- |
 | A     | `packages/i18n`; negotiation; error reasons and localised errors; vocabulary extraction and overlay; topics; `/v1/locales`; saved locale                       | 4–6  |
 | B     | Web: spike, i18n runtime, switcher, bootstrap `lang`/`dir`, formats, logical properties, script fonts; shell and auth pages extracted; previews approved first | 4–6  |
-| C     | Extract the remaining interface, area by area: home and explore → idea and its tabs → editor → topics, search, activity → people, account, dialogs             | 5–7  |
+| C1    | Extract the interface, first half: home and explore → the idea layout and its six tabs                                                                         | 3–4  |
+| C2    | Extract the interface, second half: editor → topics, search, activity → people, account, dialogs, toasts and error messages                                    | 2–3  |
 | D     | Glossaries; draft the eleven languages; `i18n:check` in CI; pseudo-locale; end-to-end, accessibility and performance runs in `de`, `ar`, `ja`                  | 2–3  |
 
-Phase C is two sessions. Native review runs in parallel with everything after phase D and gates only the
-`released` flag of each language.
+Phase C is split into two sessions, C1 and C2, because extraction touches every component. Phases A to C2
+are steps 6 to 9 of the sequence, before any other interface work, so every later string goes straight into
+the English catalogue. Phase D is step 38, after the last interface change (plans 13 and 10 included), so
+the eleven drafts cover every string the product has at launch. Native review runs after phase D and gates
+only the `released` flag of each language.
 
 ## Verification
 
@@ -241,7 +247,7 @@ languages": how to add a message, a language, a vocabulary term), `docs/user/use
 
 - **Translation quality.** The mitigation is the glossary plus native review, and shipping languages as `beta`
   honestly labelled rather than pretending.
-- **Extraction churn.** Touching 61 components invites regressions: extract per area, keep each change
+- **Extraction churn.** Touching 61 files invites regressions: extract per area, keep each change
   reviewable, and let the lint rule and the pseudo-locale screenshots catch what was missed.
 - **Bundle growth.** Catalogues are per-locale chunks; verify with the existing performance budget rather than
   by estimate.

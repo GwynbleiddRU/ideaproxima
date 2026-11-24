@@ -1,13 +1,13 @@
 # 03 — Rate limiting and abuse protection
 
 Part of the [production-readiness program](README.md). Prompt for the implementing agent:
-`prompts/api/03-rate-limiting-prompt-sketch.md`.
+`prompts/api/03-rate-limiting-prompt.md`.
 
-| Status     | Not started                                                                                                                                                             |
-| ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Depends on | [00](00-immediate-hardening.md) (network keys), [01](01-operational-foundations.md) (metrics, configuration); phase B's purge schedule uses [02](02-background-jobs.md) |
-| Unblocks   | Open registration; [07](07-moderation-core.md) (report limits); [12](12-public-api.md) (key quotas)                                                                     |
-| Size       | 3 sessions · 8–11 engineer-days (plus 1–2 days for the Redis store when it is needed)                                                                                   |
+| Status     | Not started                                                                                                                                                                       |
+| ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Depends on | [00](00-immediate-hardening.md) (network keys), [01](01-operational-foundations.md) (metrics, configuration), [02](02-background-jobs.md) (the PostgreSQL store's purge schedule) |
+| Unblocks   | Open registration; [07](07-moderation-core.md) (report limits); [12](12-public-api.md) (key quotas)                                                                               |
+| Size       | 3 sessions (steps 10–12) · 8–11 engineer-days, plus 1–2 for the Redis store (step T1) when it is needed                                                                           |
 
 ## Outcome
 
@@ -131,8 +131,13 @@ A pure function in the domain package decides a caller's tier; `Actor` gains `tr
 
 Tiers gate **rate limits and pre-moderation only**. They never weight a vote, an evaluation or a metric: the
 concept reserves influence for demonstrated contribution quality, which is the scoring work, and account age is
-not quality. Keep `TRUST_REQUIRE_VERIFIED_EMAIL=false` until [04](04-accounts-and-trust.md) ships verification;
-`established` is computed by a daily job (plan 02) into `accounts.established_at` and is empty until then.
+not quality. Keep `TRUST_REQUIRE_VERIFIED_EMAIL=false` until [04](04-accounts-and-trust.md) ships verification.
+
+`trustTier()` takes its inputs as plain values (role, account creation time, `emailVerifiedAt`,
+`restrictedUntil`, `establishedAt`), so it is complete in this plan even though two inputs arrive later:
+[04](04-accounts-and-trust.md) adds `accounts.established_at` and the daily job that sets it, and
+[07](07-moderation-core.md) adds `accounts.restricted_until`. Until then `resolveSession()` passes `null` for
+both: nobody is `established` or `restricted`.
 
 ### Policies
 
@@ -175,10 +180,23 @@ removed; `RATE_LIMITS=off` disables everything for tests and local load experime
 
 - the L2 middleware looks up the matched endpoint and enforces its policies;
 - the generated API reference and the OpenAPI document list each endpoint's limits;
-- a test fails if a mutating endpoint declares no policy, or names one that does not exist.
+- a test fails if a mutating endpoint breaks the rules below, or names a policy that does not exist.
 
-Reads default to no L2 policy (L1 still applies); mutating endpoints always declare `write.any` plus one
-specific policy.
+Rules for declarations:
+
+- **Reads** default to no L2 policy (L1 still applies); search and heavy reads declare `read.search` or
+  `read.heavy`.
+- **Member writes** (every mutating endpoint that requires a session) declare `write.any` plus one specific
+  policy (`write.signal`, `write.discussion`, `write.knowledge`, `write.idea`, `moderation.report`).
+- **Public credential endpoints** declare their `auth.*` policy instead: `POST /auth/register` →
+  `auth.register`, `POST /auth/login` → `auth.login`, and the recovery endpoints of
+  [04](04-accounts-and-trust.md) → `auth.recovery`. Anonymous callers cannot reach `write.*` at all, so these
+  must not declare it. `POST /auth/logout` is the one listed exemption: it only ends the caller's own session.
+- **"Mutating" is declared, not guessed from the method.** `EndpointSpec` gains `mutates: boolean`, defaulting
+  to `true` for `POST`, `PUT`, `PATCH` and `DELETE`. A `POST` that changes nothing (the similarity queries of
+  [11](11-semantic-search.md)) sets `mutates: false` and is treated as a read.
+
+Today 37 of the 66 endpoints mutate; three of them are public (`register`, `login`, `logout`).
 
 ### Enforcement order
 
@@ -246,7 +264,11 @@ third-party scripts, which the CSP forbids anyway.
   expires (no replay).
 - Difficulty adapts: `maxNumber` starts near 50,000 (a fraction of a second on a phone) and doubles for a
   network each time it consumes a unit of `auth.register`, up to a ceiling of about 10 s of work.
-- The web app solves the challenge in a Web Worker while the person fills in the form, so nobody waits.
+- The web app solves the challenge in a Web Worker while the person fills in the form, so nobody waits. Load
+  it as a same-origin module worker, which Vite emits as its own file:
+  `new Worker(new URL("./pow.worker.ts", import.meta.url), { type: "module" })`. The CSP built in
+  `apps/api/src/http/web.ts` has no `worker-src`, so workers fall back to `script-src 'self'`, and a `blob:`
+  worker would be refused.
 - A `ChallengeProvider` interface keeps the door open for other providers (for example Turnstile) without
   changing the contract.
 
@@ -270,7 +292,9 @@ verification plus `new`-tier limits plus pre-moderation of new accounts ([08](08
   server): 50 concurrent `consume` calls against a limit of 10 admit exactly 10.
 - Integration: each policy answers 429 with the documented envelope and headers; reads pass L1 only; the
   failure throttle resets on success; a replayed challenge is refused; with `RATE_LIMITS=off` nothing limits.
-- Contract: every mutating endpoint declares limits; the generated reference lists them.
+- Contract: every endpoint's declaration follows the rules in "The contract declares the policy" (member
+  writes, public credential endpoints, the logout exemption, `mutates: false`); the generated reference lists
+  the limits.
 - `npm run check`, `npm run test:pg`, `npm run test:e2e` (registration flow).
 
 ## Documentation to update

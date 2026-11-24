@@ -1,13 +1,13 @@
 # 06 — Multilingual content and search
 
 Part of the [production-readiness program](README.md). Prompt for the implementing agent:
-`prompts/api/06-multilingual-content-and-search-prompt-sketch.md`.
+`prompts/api/06-multilingual-content-and-search-prompt.md`.
 
-| Status     | Not started                                                                                                |
-| ---------- | ---------------------------------------------------------------------------------------------------------- |
-| Depends on | [05](05-localization.md) phase A (the locale list and `packages/i18n`)                                     |
-| Unblocks   | Language routing in [07](07-moderation-core.md) and [08](08-ai-moderation.md); [11](11-semantic-search.md) |
-| Size       | 3 sessions · 11–15 engineer-days                                                                           |
+| Status     | Not started                                                                                                                                       |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Depends on | [05](05-localization.md) A–C2 (the locale list, `packages/i18n`, the web runtime); phase B also [07](07-moderation-core.md) A (`setVisibility()`) |
+| Unblocks   | Language routing in [07](07-moderation-core.md) and [08](08-ai-moderation.md); [11](11-semantic-search.md)                                        |
+| Size       | 3 sessions (steps 15, 17, 18) · 11–15 engineer-days                                                                                               |
 
 ## Outcome
 
@@ -20,7 +20,7 @@ PERF-4; open question 11).
 
 ### 1. Content has a language
 
-Two kinds of language value, both BCP 47 primary subtags (`ru`, `ja`; Chinese keeps its script: `zh-Hans`,
+Record canonical BCP 47 tags (`ru`, `ja`; Chinese can include its script: `zh-Hans`,
 `zh-Hant`), with `und` for "not determined":
 
 | Content                                                      | Where the language comes from                                                                                               | Stored                                                                              |
@@ -34,7 +34,8 @@ Two kinds of language value, both BCP 47 primary subtags (`ru`, `ja`; Chinese ke
 - Any well-formed tag is accepted and stored. The twelve product languages are "first-class" (dedicated search
   analysis, moderation evaluation); every other language is indexed with the generic analyser.
 - **Detection** (`modules/search/language.ts`), in this order: script rules first (Hangul → `ko`; Kana → `ja`;
-  Han without Kana → `zh-Hans`; Devanagari → `hi` unless the detector says otherwise), then a statistical
+  Han alone can be Chinese or Japanese and does not identify Simplified Chinese; Devanagari is shared by
+  multiple languages), then a statistical
   detector restricted to plausible candidates. Below 20 characters or below the confidence threshold, do not
   guess: inherit or return `und`. The detector is a pure JavaScript or WASM library with no native build
   (candidates on npm: `eld`, `tinyld`, `franc`); choose it by accuracy on a fixture of short and long texts in
@@ -119,7 +120,7 @@ folding. It is the cross-language safety net: exact word forms, names, technical
 queries typed without accents (`energia` finds `energía`).
 
 `Intl.Segmenter` was checked on Node 24 with full ICU: it segments Chinese and Japanese into words. The
-production image must have the same data: add a start-up self-test that segments a known Chinese sentence and
+production image (`node:22-alpine` today) was not checked and must have the same data: add a start-up self-test that segments a known Chinese sentence and
 fails readiness if the result is one token.
 
 **Querying.** The language of a short query is unknowable, but its script is not:
@@ -138,7 +139,8 @@ That removes both `ILIKE '%…%'` scans (PERF-4) without needing `pg_trgm`.
 
 **Maintenance.** `search.index(tx, subject)` runs inside the transaction of every write that creates or changes
 searchable text or visibility (propose, publish or accept a revision; state a claim; make an argument; register
-a source; register or update a profile; hide, restore, hold). It is one upsert and microseconds of
+a source; register or update a profile; hide, restore, redact, hold, release — all of which go through
+`setVisibility()` of [07](07-moderation-core.md), in place since step 16). It is one upsert and microseconds of
 segmentation, so it stays synchronous and search reflects a write immediately. `npm run search:rebuild`
 (`dist/rebuild-search.js`) reindexes everything; a nightly job reindexes a sample and reports drift, like
 `metrics.reconcile`.

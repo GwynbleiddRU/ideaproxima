@@ -19,7 +19,7 @@ apps/web             React SPA (Vite, TanStack Router + Query, SCSS modules). Ta
 Around them: `scripts/` (dev runner, test runner with endpoint-coverage enforcement, API docs generator, doc link
 checker), `audit/` (browser audit: Playwright e2e, axe accessibility, performance budgets, screenshots), `docs/` (`user/`, `developer/`
 and `agents/` documentation; `developer/api-reference.md` and `developer/api/openapi.json` are generated from the
-contract), `prompts/` (prompt sketches for upcoming agent tasks), `docker-compose.yml` (the whole stack, or only PostgreSQL), `Dockerfile` (the product image), `.github/workflows/ci.yml`.
+contract), `prompts/` (task briefs for agents), `docker-compose.yml` (the whole stack, or only PostgreSQL), `Dockerfile` (the product image), `.github/workflows/ci.yml`.
 
 Inside `apps/api`:
 

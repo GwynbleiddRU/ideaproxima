@@ -1,13 +1,13 @@
 # 09 — Read scalability and performance
 
 Part of the [production-readiness program](README.md). Prompt for the implementing agent:
-`prompts/api/09-read-scalability-prompt-sketch.md`.
+`prompts/api/09-read-scalability-prompt.md`.
 
-| Status     | Not started                                                                                                                                                                   |
-| ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Depends on | [01](01-operational-foundations.md) (metrics), [02](02-background-jobs.md) (jobs for materialised values); search queries move in [06](06-multilingual-content-and-search.md) |
-| Unblocks   | The contract freeze in [12](12-public-api.md) (this plan changes response shapes); the launch                                                                                 |
-| Size       | 3–4 sessions · 11–15 engineer-days, plus 3–5 for phase D when it is triggered                                                                                                 |
+| Status     | Not started                                                                                                                                                                                                                           |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Depends on | [01](01-operational-foundations.md) (metrics), [02](02-background-jobs.md) (jobs for materialised values), and the shapes of plans 04–08 (it paginates their lists); search queries are [06](06-multilingual-content-and-search.md)'s |
+| Unblocks   | [13](13-public-web.md) (cache classes for pages); the contract freeze in [12](12-public-api.md) (this plan changes response shapes); the launch                                                                                       |
+| Size       | 3 sessions (steps 28–30) · 11–15 engineer-days, plus 3–5 for phase D (step T2) when it is triggered                                                                                                                                   |
 
 ## Outcome
 
@@ -52,10 +52,11 @@ change is justified by a before-and-after number recorded in this document.
 | Profile runs nine counts (PERF-6)                         | Rewrite `usefulReceived` on `target_id`; cache profile counts for 60 s; revisit as `person_metrics` in the scoring work                                                                                              |
 | `ideasForArgument` walks one level per query (PERF-11)    | One recursive CTE                                                                                                                                                                                                    |
 
+**Mutable rankings.** For metric lenses, publish immutable, bounded-lifetime ranking generations. Put the generation, lens/filter fingerprint, sort value and tie-breaking ID in the opaque cursor. Read subsequent pages from that generation and recheck current visibility before returning each item. Reject an expired or mismatched cursor with a documented restart response. Measure storage and rebuild cost at the reference size. Stable chronological lists can use their immutable ordering key directly.
+
 **Viewer state leaves public resources.** `IdeaDetail.viewer` (the caller's stances, ratings, involvements,
 stewardship) is what makes the same URL return different bodies. Move it to `GET /v1/ideas/:idea/viewer`
-(signed-in only, never cached). After that, every public `GET` returns the same bytes for everyone except
-moderators, and can be shared by a cache whether or not the reader is signed in. The web app fetches both in
+(signed-in only, never cached). At the edge, bypass shared-cache lookup and storage for cookies or authorization before serving a hit. Share only expressly public anonymous successes whose locale and representation are part of the cache key. Send private no-store on authenticated requests, errors and any response setting a cookie. The web app fetches both in
 parallel. This and the pagination changes are breaking: they land before the freeze.
 
 ### C. Caching, compression, sessions
@@ -67,11 +68,19 @@ parallel. This and the pagination changes are breaking: they land before the fre
   | Class                                             | `Cache-Control`                                                    |
   | ------------------------------------------------- | ------------------------------------------------------------------ |
   | Vocabulary, locales, OpenAPI                      | `public, max-age=300, s-maxage=3600, stale-while-revalidate=86400` |
-  | Topics, lenses, idea pages, lists, search         | `public, max-age=0, s-maxage=30, stale-while-revalidate=120`       |
+  | Topics, lenses, idea pages, lists, search         | `public, max-age=0, s-maxage=30, stale-while-revalidate=30`        |
   | Anything under `/v1/me`, viewer state, moderation | `private, no-store`                                                |
   | Responses to moderators                           | `private, no-store` (they may contain hidden content)              |
 
-  Thirty seconds of staleness is acceptable for an archive and removes most origin load during a spike.
+  Thirty seconds of staleness is acceptable for an archive and removes most origin load during a spike. The
+  content class is kept short (at most a minute with revalidation) because a shared cache can also keep
+  serving something a moderator has just hidden.
+
+- **Hidden means gone from the edge too.** A `CachePurger` interface (`purge(urls)`) with a no-op default:
+  `setVisibility()` enqueues a `cache.purge` job, in the same transaction, for the subject's own URLs (its API
+  detail URL and web page, affected sitemap shards and the parent idea when applicable). Lists and search results are
+  not purged; they age out within the content class's minute. Plan 10 phase D supplies the adapter for the
+  chosen CDN's purge API. A test asserts the job is enqueued for every visibility change.
 
 - `ETag` on `GET` responses (`hono/etag`) so revalidation costs no bandwidth; `Vary: Accept-Language` only on
   the localised endpoints; no `Vary: Cookie` on public resources once viewer state has moved out.
@@ -80,7 +89,8 @@ parallel. This and the pagination changes are breaking: they land before the fre
 - **Session cache:** a per-process LRU from token hash to actor, 30 s lifetime, 10,000 entries. Revocation,
   deactivation and restriction publish the session ids on a PostgreSQL `NOTIFY` channel that every instance
   listens to on a dedicated connection, so they take effect immediately; the 30 s lifetime is only the
-  fallback.
+  fallback for memory reclamation. Flush and bypass the LRU on listener loss, reconnect or uncertain health, and revalidate privileged actions against current database state. Guard against a stale in-flight lookup repopulating an invalidated entry. Test missed notifications on two instances. PGlite runs in one process, so there the cache is invalidated in process; the cross-instance path
+  is proven under `npm run test:pg`.
 
 ### D. When the numbers ask for it
 

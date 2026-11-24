@@ -11,8 +11,8 @@ Three audiences, three folders:
 Elsewhere in the repository:
 
 - [`../concept.txt`](../concept.txt): the product concept, the highest authority for direction.
-- `prompts/`: **prompt sketches**, task briefs for agent work (the scoring system next; the frontend brief, now
-  implemented, is kept as design guidance). A local, git-ignored folder, so it is named here rather than linked.
+- `prompts/`: task briefs for agent work: the production-readiness prompts in `prompts/api/`, the scoring
+  system sketch, and the frontend brief (now implemented, kept as design guidance). Named here rather than linked, so links never depend on whether the folder is published.
 - [`../audit/`](../audit/README.md): the browser audit (end-to-end flows, accessibility, performance, screenshots).
 
 The API reference (`developer/api-reference.md`) and the OpenAPI document (`developer/api/openapi.json`) are

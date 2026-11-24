@@ -1,13 +1,13 @@
 # 07 — Moderation core: policy, reports, decisions, appeals
 
 Part of the [production-readiness program](README.md). Prompt for the implementing agent:
-`prompts/api/07-moderation-core-prompt-sketch.md`.
+`prompts/api/07-moderation-core-prompt.md`.
 
-| Status     | Not started                                                                                                                |
-| ---------- | -------------------------------------------------------------------------------------------------------------------------- |
-| Depends on | [00](00-immediate-hardening.md), [02](02-background-jobs.md), [03](03-rate-limiting.md) (`moderation.report`, trust tiers) |
-| Unblocks   | [08](08-ai-moderation.md), which writes into the queue and uses the decision records built here                            |
-| Size       | 4 sessions · 18–24 engineer-days                                                                                           |
+| Status     | Not started                                                                                                                                                                                                                                                                                |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Depends on | [00](00-immediate-hardening.md), [02](02-background-jobs.md), [03](03-rate-limiting.md) (`moderation.report`, trust tiers), [04](04-accounts-and-trust.md) A–B (mail for notices), [05](05-localization.md) A (reasons), [06](06-multilingual-content-and-search.md) A (content languages) |
+| Unblocks   | [06](06-multilingual-content-and-search.md) B (indexes visibility through `setVisibility()`); [08](08-ai-moderation.md), which writes into the queue and uses the decision records built here                                                                                              |
+| Size       | 4 sessions (steps 16, 19, 20, 21) · 18–24 engineer-days                                                                                                                                                                                                                                    |
 
 ## Outcome
 
@@ -80,7 +80,7 @@ create table moderation_cases (
   id           uuid primary key,
   subject_kind text not null,  subject_id uuid not null,  field text not null default '',
   state        text not null default 'open',    -- open | in_review | decided
-  origin       text not null,                   -- report | automated | moderator | appeal
+  origin       text not null,                   -- report | automated | moderator | appeal | notice
   severity     text not null,                   -- critical | standard | low (highest among its signals)
   priority     double precision not null,       -- computed; the queue sorts on it
   language     text not null default 'und',
@@ -120,11 +120,17 @@ create table appeals (
 create table content_visibility (
   subject_kind text not null,  subject_id uuid not null,  field text not null default '',
   state        text not null,   -- hidden | held | redacted
-  decision_id  uuid not null references moderation_decisions(id),
+  decision_id  uuid references moderation_decisions(id),  -- FK added in B; null for legacy provenance
   since        timestamptz not null default now(),
   primary key (subject_kind, subject_id, field)
 );
 ```
+
+Phase A creates the visibility projection and backfills every existing hidden row from its existing
+`hidden_at`. Exercise an upgrade from a populated database and preserve the original ledger evidence.
+Use a nullable decision ID without a foreign key in A. Phase B adds the foreign key after creating
+decisions, and the writer requires an actual decision for every new hide or redaction. Phase C adds the
+notice and account-action side effects to that same transaction. The DDL above shows the eventual schema.
 
 `reports`, `moderation_decisions` and `appeals` get history guards in a new custom migration. `internal_note`
 and `reports.note` are never returned to non-moderators.
@@ -149,6 +155,12 @@ Rules: the current revision of an idea cannot be hidden (hide the idea, or publi
 moderator may do either). Redacting an evaluation's rationale does not touch its value: the rating is the
 fact, the sentence is the conduct. DTO builders load redactions with one batched lookup per list, like
 `usefulCounts()`.
+
+**One registry of text surfaces.** `modules/moderation/surfaces.ts` lists every hideable text: subject kind,
+field, how to load the text and its language, and whether it is field-redactable. The table-driven visibility
+test iterates it; [08](08-ai-moderation.md) screens exactly these surfaces; every text field added later
+registers here (program rule 3). A test compares the registry with the text columns of the content tables, so
+a new column cannot be forgotten.
 
 ### The ledger stops carrying text (completes MOD-1)
 
@@ -197,14 +209,28 @@ Rules encoded in the domain policy (`packages/domain/src/rules/permissions.ts` a
   Report count alone never changes visibility.
 - Reporters whose reports are mostly dismissed lose weight and then report budget; reporting is not a weapon.
 - Moderators declare the languages they read (`people.languages`, a public profile field that also helps
-  collaborators find each other); the queue defaults to those.
+  collaborators find each other); the queue defaults to those. Resolve case language through the surface
+  registry, using the field's own language where recorded in [06](06-multilingual-content-and-search.md).
+  For a profile or note without reliable field language use `und`. An interface preference is insufficient.
+- Errors carry stable reasons (`DomainError(code, reason, params?)` from [05](05-localization.md)), for
+  example `already_reported`, `appeal_window_closed`, `own_content`, `case_taken`.
 
-**Notices.** A decision that affects someone enqueues a notice: an entry in `GET /v1/me/moderation`
-immediately, and an e-mail once [04](04-accounts-and-trust.md) provides delivery. It contains the statement of
-reasons, the reason code, whether the decision was automated, and how to appeal. Reporters receive the outcome
-without the internal note. This is also what the EU Digital Services Act expects of a hosting service (notice
-and action, statement of reasons, internal complaint handling). The design supports it; legal review is the
-owner's.
+**Deactivated accounts (MOD-8).** A decision with `account_action = deactivate` also redacts the profile's
+bio and affiliation in the same transaction (the display name falls back to the handle), unless the moderator
+explicitly keeps them; the profile shows that the account is deactivated. Reactivation does not restore
+redactions by itself; an `unredact` decision does.
+
+**Notices from outside.** People without an account, rights holders and authorities send notices to the
+contact address published on the contact page ([13](13-public-web.md)). A moderator records such a notice as
+a case with origin `notice`; `basis` holds the sender's reference, never their personal data beyond what the
+law requires, and the decision follows the same path as any other.
+
+**Notices to people.** A decision that affects someone enqueues a notice: an entry in `GET /v1/me/moderation`
+immediately, and an e-mail through the `mail.send` job of [04](04-accounts-and-trust.md), in the recipient's
+language. It contains the statement of reasons, the reason code, whether the decision was automated, and how
+to appeal, and links the content policy by absolute URL. Reporters receive the outcome without the internal
+note. This is also what the EU Digital Services Act expects of a hosting service (notice and action,
+statement of reasons, internal complaint handling). The design supports it; legal review is the owner's.
 
 **Time targets** (measured from case opening to decision; exported as metrics, alerting in
 [10](10-deployment-and-operations.md)): critical 4 hours, standard 48 hours, low 7 days.
@@ -221,12 +247,15 @@ before implementation.
 
 ## Phases
 
-| Phase | Scope                                                                                                                                                                | Days |
-| ----- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---- |
-| A     | `content_visibility` and `setVisibility`; `hidden_at` for revisions, sources, outcomes; field redaction in every DTO builder; text-free payloads and `subject.label` | 5–6  |
-| B     | Policy draft and reason codes; reports; cases and priority; queue endpoints; decisions; permissions; the kept `POST /v1/moderation`                                  | 5–7  |
-| C     | Notices; appeals with four-eyes; restrictions; bulk clean-up job; public statistics                                                                                  | 4–5  |
-| D     | Web: report dialog, notices and appeals, moderator queue (previews first)                                                                                            | 4–6  |
+| Phase | Scope                                                                                                                                                                                      | Days |
+| ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---- |
+| A     | `content_visibility` and `setVisibility`; `hidden_at` for revisions, sources, outcomes; field redaction in every DTO builder; text-free payloads and `subject.label`; the surface registry | 5–6  |
+| B     | Policy draft and reason codes; reports; cases and priority; queue endpoints; decisions; permissions; the kept `POST /v1/moderation`                                                        | 5–7  |
+| C     | Notices; appeals with four-eyes; restrictions; deactivation redacts the profile (MOD-8); notices from outside; bulk clean-up job; public statistics                                        | 4–5  |
+| D     | Web: report dialog, notices and appeals, moderator queue (previews first)                                                                                                                  | 4–6  |
+
+Phase A is step 16 of the sequence, before the search index (step 17), so the index follows `setVisibility()`
+from the start. Phases B to D are steps 19 to 21.
 
 ## Verification
 

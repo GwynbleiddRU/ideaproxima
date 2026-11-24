@@ -1,13 +1,13 @@
 # 01 — Operational foundations
 
 Part of the [production-readiness program](README.md). Prompt for the implementing agent:
-`prompts/api/01-operational-foundations-prompt-sketch.md`.
+`prompts/api/01-operational-foundations-prompt.md`.
 
 | Status     | Not started                                                                          |
 | ---------- | ------------------------------------------------------------------------------------ |
 | Depends on | [00](00-immediate-hardening.md) (shares the error code `unavailable`)                |
 | Unblocks   | Every later plan: they all emit metrics and logs and rely on validated configuration |
-| Size       | 1–2 sessions · 3–5 engineer-days                                                     |
+| Size       | 2 sessions (steps 2–3) · 3–5 engineer-days                                           |
 
 ## Outcome
 
@@ -49,9 +49,10 @@ misconfigured or half-migrated instance refuses to serve instead of failing requ
 - `src/observability/logger.ts`: a pino root logger. `LOG_LEVEL` (default `info`), `LOG_FORMAT` (`json` in
   production, `pretty` otherwise; `pino-pretty` is a dev dependency).
 - Replace `hono/logger`. One line per request when it finishes: `requestId`, `method`, `route` (the matched
-  pattern, e.g. `/v1/ideas/:idea`), `status`, `durationMs`, `actorId`, `network` (the key from plan 00),
+  pattern, e.g. `/v1/ideas/:idea`), `status`, `durationMs`, `actorId`,
   `bytesOut`. Never log request bodies, `authorization`, `cookie`, e-mail addresses or the value of `q`.
-  Requests for static assets log at `debug`.
+  Omit the limiter's network key from logs. Its IPv4 representation contains the full address. Verify log
+  samples for both address families. Requests for static assets log at `debug`.
 - Request id: accept an inbound `X-Request-Id` only if it matches `^[A-Za-z0-9_-]{8,64}$`; otherwise generate
   a UUIDv7 (`lib/ids.ts`). Echo it on every response.
 - The error envelope gains an optional `requestId` (`ErrorResponse` in `packages/contracts`). The web app's
@@ -116,6 +117,13 @@ serves `GET /metrics`. The compose file and the deployment guide must not publis
 `src/observability/errors.ts`: `report(error, context)`. The default logs. If `SENTRY_DSN` is set, load the
 adapter with a dynamic import so the dependency stays optional. Report only unexpected errors (the 500 path
 and fatal process errors), never `DomainError`s.
+
+## Phases
+
+| Phase | Scope                                                                                     | Days |
+| ----- | ----------------------------------------------------------------------------------------- | ---- |
+| A     | Sections 1–3: validated configuration, structured logs and request ids, metrics           | 2–3  |
+| B     | Sections 4–6: liveness, readiness and drain; database guard rails; error reporter; Docker | 1–2  |
 
 ## Verification
 

@@ -1,13 +1,13 @@
 # 04 — Accounts, e-mail and trust
 
 Part of the [production-readiness program](README.md). Prompt for the implementing agent:
-`prompts/api/04-accounts-and-trust-prompt-sketch.md`.
+`prompts/api/04-accounts-and-trust-prompt.md`.
 
-| Status     | Not started                                                                                                    |
-| ---------- | -------------------------------------------------------------------------------------------------------------- |
-| Depends on | [02](02-background-jobs.md) (e-mail is sent by jobs), [03](03-rate-limiting.md) (`auth.recovery`, trust tiers) |
-| Unblocks   | `TRUST_REQUIRE_VERIFIED_EMAIL`; notices in [07](07-moderation-core.md); the launch                             |
-| Size       | 4 sessions · 12–16 engineer-days                                                                               |
+| Status     | Not started                                                                                                                                                                                                                                              |
+| ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Depends on | [02](02-background-jobs.md) (e-mail is sent by jobs), [03](03-rate-limiting.md) (`auth.recovery`, trust tiers), [05](05-localization.md) A (translator, error reasons); phase D also [07](07-moderation-core.md) (the actions that need a second factor) |
+| Unblocks   | `TRUST_REQUIRE_VERIFIED_EMAIL`; notices in [07](07-moderation-core.md); the launch                                                                                                                                                                       |
+| Size       | 4 sessions (steps 13, 14, 26, 27) · 12–16 engineer-days                                                                                                                                                                                                  |
 
 ## Outcome
 
@@ -36,8 +36,11 @@ PRIV-2; roadmap P0-1).
 - Sending is a job (`mail.send`, queue `mail`) enqueued in the transaction that created the token. Payload:
   template name, recipient account id, parameters; never the rendered body. The job id is the idempotency key.
 - Templates are functions in `modules/mail/templates/` returning subject, text and minimal HTML. They take
-  their strings from the translator introduced by [05](05-localization.md); until that lands they use a
-  one-locale stub with the same interface, so no template is rewritten later.
+  their strings from the translator of [05](05-localization.md) (in place since step 6), in the recipient's
+  saved locale, falling back to the locale of the request that caused the message. English messages go into
+  the `emails` catalogue; step 38 drafts the other languages. The HTML part carries the message's `lang` and,
+  for right-to-left languages, `dir="rtl"`. Every value inserted into the HTML part is escaped (a display name
+  is user text), and a test sends hostile names through each template.
 - Deliverability is an operations concern (SPF, DKIM, DMARC, a provider that reaches every region): see
   [10](10-deployment-and-operations.md).
 
@@ -73,6 +76,10 @@ new token of a purpose invalidates the previous unused one. A purge schedule del
 | `DELETE /v1/me/sessions/:session`      | Ends one session                                                                                      |
 | `POST /v1/me/sessions/revoke-others`   | Ends all but the current one                                                                          |
 
+**Error reasons.** This plan adds reasons such as `email_taken`, `token_expired`, `token_used` and
+`mfa_required`, thrown as `DomainError(code, reason, params?)` with English messages in the domain's error
+catalogue (the mechanism of [05](05-localization.md), in place since step 6).
+
 **Registration.** Verification, reset and e-mail change are non-enumerating by construction. Registration is
 the exception, and it is a real trade-off for the owner:
 
@@ -98,7 +105,12 @@ breached"; default `off` in development and tests.
 **Terms and licence.** `LEGAL_TERMS_VERSION` (unset = not required). When set, `RegisterRequest` requires
 `acceptTerms: true`, and the account stores `terms_version` and `terms_accepted_at`; a later version prompts
 re-acceptance at next sign-in through `MeResponse.termsAcceptanceRequired`. The texts themselves, and the
-licence for contributions (open question 12), are owner decisions; this plan only builds the mechanism.
+licence for contributions (open question 12), are owner decisions; this plan only builds the mechanism. The
+pages that show the texts are built in [13](13-public-web.md).
+
+**Minimum age.** `MINIMUM_AGE` (default `16`, the highest digital-consent age under the GDPR; `0` disables):
+registration requires `confirmAge: true`, a statement that the person is at least that old, stored with the
+terms acceptance. No birth date is collected. The age itself is an owner decision (program decision 15).
 
 ### Trust tiers
 
@@ -136,6 +148,10 @@ create table account_identities (
   profile (`PersonDto.orcid`) and recorded as evidence for verified expertise (roadmap P2-14). The ORCID iD is
   public by design; nothing else from the provider is stored.
 - Accounts created by federation have no password; "set a password" uses the reset flow.
+- **No open redirect.** The page to return to after sign-in travels in the signed cookie, and only a
+  same-origin path (starting with a single `/`, no scheme, no `//`, no backslash) is accepted; anything else
+  returns to the home page. A test covers each rejected form.
+- A federated sign-up still accepts the terms and confirms the minimum age before the account is created.
 
 ### Second factor for staff
 
@@ -145,8 +161,10 @@ create table account_identities (
 - Endpoints: `POST /v1/me/mfa/totp/setup`, `/confirm`, `DELETE /v1/me/mfa/totp` (needs a valid code), and
   `POST /v1/auth/mfa` to complete a sign-in.
 - Enforcement: when `STAFF_MFA_REQUIRED=true` (the production default), `authorize()` callers for
-  `content.moderate`, `person.moderate`, `role.assign`, `topic.manage` and the moderation actions of plan 07
-  additionally require `session.mfa_at` within the last 12 hours; otherwise 403 with reason `mfa_required`.
+  `content.moderate`, `person.moderate`, `role.assign`, `topic.manage` and the moderation actions plan 07 added
+  at steps 19–20 (`moderation.review`, `moderation.decide`, `person.restrict`) additionally require
+  `session.mfa_at` within the last 12 hours; otherwise 403 with reason `mfa_required`. A test walks every
+  staff-only permission action and fails if one is not covered.
   The check lives next to the policy so it is reviewable in one place. Members may enable TOTP voluntarily.
 
 ### Leaving: export and deletion
@@ -154,12 +172,18 @@ create table account_identities (
 - `POST /v1/me/export` enqueues a job that assembles everything the account holds or authored (profile,
   account data, contributions with ids, sessions metadata) as JSON in a zip, stored for 7 days, and e-mails a
   one-time link (`GET /v1/me/exports/:id`). At most one export per 24 hours.
-- `POST /v1/me/delete` `{ currentPassword }` starts a 14-day grace period (the account is deactivated and can
-  be restored by signing in). Then a job performs the documented erasure: delete `accounts`, `sessions`,
+- `POST /v1/me/delete` `{ currentPassword }` starts a 14-day grace period: it sets
+  `accounts.deletion_requested_at`, ends every session, and hides nothing. Signing in during the grace period
+  cancels the deletion. This is deliberately not the moderation deactivation (`people.deactivated_at`), which
+  `login()` refuses today and must keep refusing. Then a job performs the documented erasure: delete `accounts`, `sessions`,
   tokens, identities and TOTP rows; anonymise the `people` row (handle `former-<short id>`, display name
   "Former contributor", empty bio and affiliation). Contributions remain, attributed to the anonymised
   person, exactly as the operations guide already prescribes. The ledger records `person.deleted` without
   personal data.
+- Every erasure (self-service or operator) also writes a row to `erasure_log(person_id, erased_at)`:
+  operational, pseudonymous and access-controlled, retained through the longest restorable backup. Plan 10 keeps a separately recoverable journal and verifies its watermark. After a backup is
+  restored, plan 10's procedure re-runs the erasure for every id logged after the backup was taken, so a
+  restore never brings a deleted account back.
 - Court-ordered removal of specific content stays an operator procedure
   ([10](10-deployment-and-operations.md)).
 
@@ -179,7 +203,9 @@ activity ledger and never contains public contributions.
 | C     | ORCID sign-in and linking, then Google and GitHub; profile ORCID badge                                       | 3–4  |
 | D     | TOTP and staff enforcement; export; deletion with grace period                                               | 3–4  |
 
-New pages in phases A, C and D are previewed in `designs/` and approved before they are implemented.
+Phases A and B are steps 13 and 14 of the sequence; phases C and D are steps 26 and 27, after the moderation
+tools exist. New pages in phases A, C and D are previewed in `designs/` and approved before they are
+implemented. Phase B adds `MINIMUM_AGE` beside the terms mechanism.
 
 ## Verification
 
@@ -187,7 +213,11 @@ New pages in phases A, C and D are previewed in `designs/` and approved before t
   message); expired, reused and wrong-purpose tokens; identical responses and comparable timing for known and
   unknown addresses; reset revokes all sessions; `auth.recovery` limits; staff action without MFA is 403.
 - Federation: a fake provider (an in-process OAuth server in the test harness) for the full flow, including
-  `state` mismatch and the "verified e-mail matches an existing account" branch.
+  `state` mismatch, the "verified e-mail matches an existing account" branch, and every rejected return path
+  (absolute URL, `//host`, backslash, encoded forms).
+- Terms and age: registration without `acceptTerms` or `confirmAge` fails when they are required; a new terms
+  version sets `termsAcceptanceRequired`.
+- Templates: each renders in two locales and escapes a hostile display name.
 - Deletion: after the job, no row in `accounts`, `sessions`, tokens or identities references the person; their
   ideas still resolve; the history guards were not disabled.
 - Every new endpoint is in the catalogue with its limits; `npm run check`, `npm run test:pg`, `npm run test:e2e`.
@@ -204,3 +234,4 @@ New pages in phases A, C and D are previewed in `designs/` and approved before t
 2. The terms, the privacy notice and the contribution licence (and with it `LEGAL_TERMS_VERSION`).
 3. Which providers beyond ORCID to enable at launch.
 4. The mail provider (it must deliver to every target region).
+5. The minimum age for an account (default 16).

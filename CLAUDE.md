@@ -47,6 +47,16 @@ apps/web             React 19 single-page app (Vite, TanStack Router and Query, 
 
 PGlite runs on one connection, so races only show under `npm run test:pg`.
 
+## Code quality
+
+- Make the change easy for the next maintainer to trace from the entry point to the result. Use domain names,
+  explicit control flow and the existing service or helper that owns the behaviour.
+- Keep work proportional to the input. Look for repeated queries, unbounded reads and blocking work on the
+  request path. For a performance claim, record the before-and-after measurement on the same workload.
+- Preserve supported callers and existing data. Test the normal path and the failure most likely to break
+  the invariant, including rollback, retry or concurrency where applicable. Review the final diff for
+  unnecessary complexity and missing checks.
+
 ## Rules the tests and the database enforce
 
 - **Recorded facts are append-only.** Database triggers reject `UPDATE` and `DELETE` on them. Supersede,
@@ -61,25 +71,31 @@ PGlite runs on one connection, so races only show under `npm run test:pg`.
 - **One vocabulary, one permission policy, one error mapping**, all in `packages/domain` and
   `apps/api/src/http/errors.ts`. Services throw `DomainError`; routes never build error responses.
 
-## How work is organised: one phase per session
+## How work is organised: one step per session
 
-The production-readiness program is thirteen plans, each split into phases. **A session implements one phase
-of one plan**, then stops. The full protocol is
+The production-readiness program is fifteen plans (`00`–`14`), each split into phases, and run as **one
+sequence of steps**: one step is one phase of one plan, and steps run strictly one after another. **A session
+implements one step**, then stops. The full protocol is
 [How a session works](docs/agents/production/README.md#how-a-session-works); in short:
 
-1. The owner names a prompt, for example `prompts/api/03-rate-limiting-prompt-sketch.md`, and optionally a
-   phase. Without one, take the first phase the plan does not mark as done.
-2. Read what the prompt lists, check on the
-   [status board](docs/agents/production/README.md#status-board) that the dependencies are done, re-verify the
-   facts the prompt states, and run `npm run check` for a baseline.
-3. Stay inside the phase. Report work that belongs elsewhere instead of doing it.
-4. Hand over in the repository, because the next session starts with no memory of this one: the plan's status
-   line, the status board, measurements in the plan's tables, and deviations under `## Implementation notes`
-   at the end of the plan.
+For Codex, use the [kickoff and model guide](docs/agents/production/codex-handoff.md).
+
+1. "Do the next step" means the first numbered row of the
+   [sequence](docs/agents/production/README.md#sequence-and-status) that is not "Done". Its prompt is
+   `prompts/api/NN-<name>-prompt.md` for its plan `NN`.
+2. Verify the preceding numbered steps (or the documented post-launch trigger for T1/T2), read what the prompt lists (including the plan's
+   `## Implementation notes` left by earlier steps), re-verify the facts the prompt states, and run
+   `npm run check` for a baseline.
+3. Stay inside the step. Report work that belongs elsewhere instead of doing it.
+4. Hand over in the repository, because the next session starts with no memory of this one: the step's row in
+   the sequence, the plan's status line, measurements in the plan's tables, and deviations under
+   `## Implementation notes` at the end of the plan. Commit the step and its evidence together. End the
+   reply with the [next-chat handoff](docs/agents/production/codex-handoff.md#hand-off-to-the-next-chat).
 
 Why a phase and not a whole plan: a phase is sized to fit one context window with room to read the code it
 touches; most phases end at a gate that an agent cannot pass alone (the owner approving a mock-up or a policy,
-a measurement, a soak period); and milestones are built from phases of several plans, not from whole plans.
+a measurement, a soak period); and the sequence interleaves phases of different plans so that each finds what
+it depends on already in place. Never run two steps at once.
 
 ## Working with the owner
 
@@ -89,16 +105,20 @@ a measurement, a soak period); and milestones are built from phases of several p
   the decision ([the open ones](docs/agents/production/README.md#decisions-for-the-owner)).
 - **Keep the documents true.** Update the document that records a decision in the same change. Documentation
   is organised by audience: `docs/user/`, `docs/developer/`, `docs/agents/`.
-- **Commit only when asked.** Then: directly on `main`, in logical commits with conventional messages
-  (`feat(web): …`, `fix(api): …`, `docs(agents): …`), and never push.
-- **Local folders stay local:** `prompts/`, `designs/`, `temp-reference-folder/` and `models/` are git-ignored.
-  Never force-add or delete them. `prompts/` holds only prompt sketches.
+- **Each production-program session has standing approval to commit its own work** locally on `main`. Use
+  a conventional message and preserve unrelated changes, including staged ones. Other tasks require an
+  explicit commit request. Pushing and production actions require separate owner authorization.
+- **Local folders stay local:** `designs/`, `temp-reference-folder/` and `models/` (all but its
+  `manifest.json`) are git-ignored. Never force-add or delete them.
+- **`prompts/` holds only task briefs for agents:** a `*-prompt.md` has been checked against the code and is
+  ready to hand over; a `*-prompt-sketch.md` is still a draft or a record. Whether the folder is published is
+  the owner's choice; do not change its line in `.gitignore`.
 
 ## Things that will surprise you
 
 - `npm run docs:check` verifies every relative link and `#anchor` in every Markdown file, this one included.
-  In tracked documents, name files under `prompts/` as inline code, not as links: the folder is git-ignored and
-  absent from a clean checkout, where a link to it would fail the check.
+  In documents outside `prompts/`, name files under `prompts/` as inline code, not as links, so the check
+  passes whether or not the folder is published.
 - Generated files are never edited by hand: `docs/developer/api-reference.md`, `docs/developer/api/openapi.json`
   and the migrations Drizzle generated. Applied migrations are never edited at all.
 - In raw SQL, qualify every column with its table. Drizzle renders a single-table select's column bare, and

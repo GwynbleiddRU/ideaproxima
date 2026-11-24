@@ -12,9 +12,10 @@ Where the rest lives:
 - [`../developer/`](../developer/README.md): the developer guide (setup, conventions, recipes, testing), the
   operations guide, and the **generated** API reference. Prefer linking there over restating facts here, so
   nothing drifts.
-- `prompts/` at the repository root: **prompt sketches**, ready-to-adapt task briefs for the next major pieces of
-  agent work. The folder is local and git-ignored, so documents name its files in code style instead of linking
-  to them.
+- `prompts/` at the repository root: task briefs for the next major pieces of agent work. A `*-prompt.md` has
+  been checked against the code and is ready to hand over; a `*-prompt-sketch.md` is a draft to adapt.
+  Documents outside the folder name its files in code style instead of linking to them, so links never depend
+  on whether the folder is published.
 
 ## Reading order
 
@@ -26,16 +27,17 @@ Where the rest lives:
    answer historical questions in SQL.
 5. [`api-architecture.md`](api-architecture.md) — API design rules and how the contract is enforced (the endpoint
    list itself is generated: [`../developer/api-reference.md`](../developer/api-reference.md)).
-6. Prompt sketches for the next tasks, in `prompts/`:
-   - `prompts/front-rebuild-prompt-sketch.md` — for the agent rebuilding the UI.
+6. Reference briefs outside the production sequence, in `prompts/`:
+   - `prompts/front-rebuild-prompt-sketch.md` — design history for the implemented web app.
    - `prompts/scoring-system-prompt-sketch.md` — for the agent designing evaluation scoring and contribution
      influence.
 7. [`open-questions.md`](open-questions.md) — known uncertainties, with the current default for each.
 8. [`roadmap.md`](roadmap.md) — the next major tasks, in priority order.
 9. [`production/README.md`](production/README.md) — the production-readiness program: an
-   [audit of the API](production/api-audit.md) and thirteen implementation plans (rate limiting, twelve
-   languages, AI-assisted moderation, scaling, deployment). Each plan has a prompt sketch of the same number in
-   `prompts/api/`. Read the program's rules before working on any of its plans.
+   [audit](production/api-audit.md) and fifteen plans (rate limiting, twelve languages, AI-assisted
+   moderation, scaling, the public web, deployment, launch readiness), run as one numbered sequence of steps.
+   Each plan has a prompt of the same number in `prompts/api/`. Read the program's rules before working on
+   any step.
 10. [`source-review.md`](source-review.md) — what was learned from the original prototypes (the seedbank MVP and the
     Lovable design exploration, both since removed from this repository), what was kept and what was replaced.
 

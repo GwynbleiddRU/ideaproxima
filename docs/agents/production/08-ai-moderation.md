@@ -1,13 +1,13 @@
 # 08 — AI moderation
 
 Part of the [production-readiness program](README.md). Prompt for the implementing agent:
-`prompts/api/08-ai-moderation-prompt-sketch.md`.
+`prompts/api/08-ai-moderation-prompt.md`.
 
-| Status     | Not started                                                                                                                                                                        |
-| ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Depends on | [02](02-background-jobs.md) (jobs), [07](07-moderation-core.md) (cases, decisions, visibility, policy); language routing improves with [06](06-multilingual-content-and-search.md) |
-| Unblocks   | Open registration at scale                                                                                                                                                         |
-| Size       | 5 sessions · 18–25 engineer-days                                                                                                                                                   |
+| Status     | Not started                                                                                                                                                                                         |
+| ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Depends on | [02](02-background-jobs.md) (jobs), [06](06-multilingual-content-and-search.md) A (content languages), [07](07-moderation-core.md) A–D (visibility, cases, decisions, notices, the moderator queue) |
+| Unblocks   | Open registration at scale                                                                                                                                                                          |
+| Size       | 5 sessions (steps 22–25 before the launch, step 47 after it) · 18–25 engineer-days                                                                                                                  |
 
 ## Outcome
 
@@ -58,6 +58,22 @@ Two acceptable ways to obtain the files:
   llama.cpp's `convert_hf_to_gguf.py` and `llama-quantize`, recording the llama.cpp commit and the hashes.
 
 Either way every environment must run byte-identical files: `npm run models:verify` checks the manifest.
+
+**The files in `models/`.** The owner downloaded both recommended files on 2026-11-17. On 2026-11-18 they
+were verified:
+
+| Local file                      | Source (Hugging Face)                                                        | Bytes         | SHA-256                                                            |
+| ------------------------------- | ---------------------------------------------------------------------------- | ------------- | ------------------------------------------------------------------ |
+| `Qwen3Guard-Gen-0.6B.Q8_0.gguf` | `QuantFactory/Qwen3Guard-Gen-0.6B-GGUF`, `Qwen3Guard-Gen-0.6B.Q8_0.gguf`     | 804,753,408   | `a5108bc29824fbe805d4674cf8af438bb7221186c2fa940175a8dfdda4a8d2cc` |
+| `Qwen3Guard-Gen-4B.Q4_K_M.gguf` | `burrowswang/Qwen3Guard-Gen-4B-Q4_K_M-GGUF`, `qwen3guard-gen-4b-q4_k_m.gguf` | 2,716,068,512 | `8e2075466e521717cef974503c44ffe5b6b90a5fb7b3120a1ea3bb6840baaeac` |
+
+Each is byte-identical to the file in its source repository (checked against the repositories' published
+hashes). Both parse as complete GGUF v3 files with the quantisation their names state, and their tensor layout
+and six sampled ranges of weights are identical to the `mradermacher` conversions; only header metadata
+differs. Phase A records them in the manifest with these sources, and compares each file's embedded
+`tokenizer.chat_template` with the template in Qwen's official `tokenizer_config.json`: a difference is a
+blocker, because the template decides what the model sees. Whether production keeps these files or a
+reproducible conversion is program decision 18.
 
 Shieldstral is published the same way: official safetensors with documented llama.cpp conversion, and
 third-party GGUF builds (for example `Metabaron6/Shieldstral-1.0-3B-GGUF`).
@@ -192,7 +208,7 @@ Implementations in `apps/api/src/modules/moderation/classifiers/`: `qwen3guard` 
 - **a score, not only a label**: request token probabilities and turn the three label probabilities at the
   decision position into `scores`. Thresholds on a score are what allow precision to be tuned. If the pinned
   server build cannot return probabilities on the chat endpoint, use its native completion endpoint with the
-  chat template applied by the client. Verify both on the pinned build before writing the client;
+  chat template applied by the client. Verify complete label token sequences and unconstrained label likelihoods on the pinned build. Missing or incomparable scores cap the action at flag. Never assign a default high score;
 - neutralise chat-template control sequences inside user text (for example `<|im_start|>`), and prove it with
   a test.
 
@@ -201,16 +217,15 @@ the subject's result is the most severe chunk, and the assessment records which.
 subject by a `new` author goes to review. For a revision, classify only paragraphs that changed.
 
 **Reuse by content hash.** An assessment stores the SHA-256 of the normalised text. An identical text under
-the same classifier and policy version reuses the stored result. Repeated spam costs nothing after the first
-copy, and unchanged paragraphs of a revised idea are never classified twice.
+the same classifier, template, preprocessing, language, surface and policy version may reuse the text-only inference. Re-evaluate author/context signals and the decision for each subject. Before applying a result, compare the assessed revision or hash with the current field under lock and respect any later human decision. An obsolete or retried assessment cannot hide a replacement or undo a human restoration.
 
 ### What is assessed
 
 Every text surface that plan 07 made hideable: idea title, summary and sections; revision content; claim
 statements; evidence summaries and limitations; argument titles and bodies; comments; initiative and outcome
 text; source titles; profile display name, bio and affiliation; evaluation, relation and stage-transition
-rationales; involvement notes; change, decision and withdrawal notes. Texts under 12 characters are skipped
-unless they contain a link. Moderators' own statements of reasons are not assessed.
+rationales; involvement notes; change, decision and withdrawal notes. Screen short non-empty fields too.
+Include short CJK and Arabic examples in the fixture. Moderators' own statements of reasons are not assessed.
 
 ### Records
 
@@ -248,8 +263,8 @@ context in, one action out. It is unit-tested exhaustively and is the only place
 | ----------------------------------- | ---------------------------------------------- | -------------------------------------- | ----------------------------------------------------------------- |
 | Sexual Content or Sexual Acts       | `sexual_content` (review for `child_safety`)   | flag                                   | **hide pending confirmation** at score ≥ 0.90; critical priority  |
 | Personally Identifiable Information | `privacy`                                      | flag                                   | **hide pending confirmation** at ≥ 0.95                           |
-| Violent                             | `violence_threats` or `dangerous_instructions` | flag                                   | **hide pending confirmation** at ≥ 0.95; otherwise flag, critical |
-| Suicide & Self-Harm                 | `self_harm`                                    | flag                                   | flag, critical; hide when the author is `new` or `restricted`     |
+| Violent                             | `violence_threats` or `dangerous_instructions` | flag                                   | approved threat reason only at ≥ 0.95; otherwise flag, critical   |
+| Suicide & Self-Harm                 | `self_harm`                                    | flag                                   | flag, critical; human review                                      |
 | Non-violent Illegal Acts            | `dangerous_instructions` or `spam_scam`        | flag only if a rule signal also fires  | flag                                                              |
 | Unethical Acts                      | `harassment_hate`                              | no action; raises priority if reported | flag                                                              |
 | Copyright Violation                 | `intellectual_property`                        | no action                              | flag, low                                                         |
@@ -260,7 +275,7 @@ context in, one action out. It is unit-tested exhaustively and is the only place
 domain block-list; contact handles and payment or wallet patterns; calls to invest, buy or join; the same or
 near-identical text posted repeatedly (content hash, then a similarity hash); posting velocity; account age.
 A score above the threshold from a `new` or `restricted` author hides pending confirmation; from anyone else
-it flags.
+it flags. An automated hide always needs judge agreement and an explicitly enabled reason, language and tier. A broad category alone cannot establish a threat or distinguish support-seeking from a violation.
 
 **Actions.**
 
@@ -276,10 +291,18 @@ Thresholds above are starting values. The evaluation phase replaces them with me
 **Safety valves.**
 
 - `MODERATION_AI_MODE`: `off` → `shadow` (assess and record what would have happened; no effect) → `flag`
-  (queue only) → `enforce` (holds and hides allowed). The default is `off`; production moves one step at a
-  time, on evidence.
-- **Per-language permission:** `enforce` applies only to languages that passed the gates; others stay at
-  `flag`.
+  (queue only) → `enforce` (holds and hides allowed). The default in code is `off`; production moves one step
+  at a time, on evidence.
+- **Per-language modes:** `MODERATION_AI_LANGUAGES` maps languages to the highest mode each may use (for
+  example `{"en":"flag","ru":"flag","*":"shadow"}`); the effective mode is the lower of the two. Content whose
+  language is `und` never goes beyond `flag`.
+- **At launch** (program decision 17): `flag` in the languages that passed the flag gate on the golden set,
+  `shadow` in the others. A flag only adds a case to the queue, so the cost of a false flag is a moderator's
+  minute, not hidden content. `enforce` waits for phase E: at least 14 days of real traffic, the hide gate,
+  and the owner's approval per language and reason.
+- **Shadow classifiers:** `MODERATION_SHADOW_CLASSIFIERS` (for example `qwen3guard-4b,shieldstral`) runs
+  further classifiers on the same items with no effect, recording their assessments with mode `shadow`. This
+  is how models are compared on real content while the active ones flag.
 - **Circuit breaker:** more than `MODERATION_MAX_AUTO_HIDES_PER_HOUR` automated hides (default 20), or an
   overturn rate above 10 % over the last 50 confirmed cases, drops the system to `flag` and raises an alert.
   A misbehaving model must not be able to empty the archive.
@@ -312,10 +335,15 @@ Thresholds above are starting values. The evaluation phase replaces them with me
   A language that fails the hide gate runs at `flag`. A model, quantisation, prompt or threshold change
   reruns the gate.
 
-- **The shadow bake-off.** In shadow mode run screen, judge and, if downloaded, Shieldstral on all real
-  traffic for at least two weeks. That answers with data what the papers cannot: how many judge positives the
-  screen would have missed (so whether `cascade` is safe), whether Shieldstral with a written policy beats the
-  4B judge on our content, and which quantisation is enough.
+- Keep calibration and held-out evaluation disjoint by scenario family across translations. Give each language a reviewed original-language sample. Report TP, FP, FN, TN, sample size and uncertainty. An empty denominator is insufficient evidence. At step 47 sample real traffic independently of flagging, including screen negatives. For each proposed language and hide reason require the one-sided 95% exact lower bound on hide precision to reach 0.98 on representative independently adjudicated predictions, plus zero hard-negative hides. Even with zero errors that takes at least 149 independent hide predictions per proposed group. If evidence is sparse, keep the existing mode. Store aggregate counts in the repository and keep private review data in controlled storage.
+
+- **Before the launch, on the golden set** (phase C): screen, judge and, if downloaded, Shieldstral are
+  compared with the runner, per language. That decides the launch configuration of decision 17.
+- **After the launch, on real traffic** (phase E, at least 14 days after the launch): with the active
+  classifiers flagging and the others running as shadow classifiers, the assessments answer with data what
+  the papers cannot: how many judge positives the screen would have missed (so whether `cascade` is safe),
+  whether Shieldstral with a written policy beats the 4B judge on our content, which quantisation is enough,
+  and how often moderators uphold each kind of flag.
 - **In production**, measured continuously: the share of automated hides overturned by moderators (target
   below 5 %), the share of flags that moderators uphold (below ~30 % means thresholds are too loose), time to
   action, and all of it per language.
@@ -357,11 +385,13 @@ a spike only lengthens the queue; alert on the age of the oldest pending assessm
 | ----- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---- |
 | A     | `models/` and manifest; compose profile; benchmark; classifier interface; Qwen3Guard client (grammar, scores, chunking, hashing); `moderation_assessments`; the job on every write path; `shadow` mode; metrics | 5–6  |
 | B     | Golden set in twelve languages; evaluation runner; rules classifier; `decideModeration()` with tests; first measured thresholds                                                                                 | 5–7  |
-| C     | `flag` mode: cases from automated signals, assessment panel in the moderator queue, per-language reporting; shadow bake-off report                                                                              | 2–3  |
-| D     | `enforce` mode: automated hides with confirmation cases and notices, holds with author visibility, circuit breaker, per-language permission                                                                     | 4–5  |
-| E     | Decide routing and judge from the bake-off (4B or Shieldstral); quantisation check; operations runbook and alerts                                                                                               | 2–4  |
+| C     | `flag` mode: cases from automated signals, assessment panel in the moderator queue, per-language modes and reporting, shadow classifiers; golden-set comparison of the models; runbook; alert definitions       | 3–4  |
+| D     | `enforce` mode built and tested, switched off: automated hides with confirmation cases and notices, holds with author visibility, circuit breaker, per-language permission (`und` never enforces)               | 4–5  |
+| E     | After the launch (step 47, at least 14 days in): real-traffic comparison report; routing and judge decision (4B or Shieldstral); quantisation check; per-language `enforce` proposal for the owner              | 1–3  |
 
-Production moves to `flag` after phase C and to `enforce` only after phase D **and** the gates.
+Phases A to D are steps 22 to 25 of the sequence; phase E is step 47. Production launches with `flag` where
+the golden-set gate passed and `shadow` elsewhere; `enforce` is switched on only by the owner, per language
+and reason, after phase E.
 
 ## Verification
 
@@ -369,7 +399,12 @@ Production moves to `flag` after phase C and to `enforce` only after phase D **a
   output parser against malformed and adversarial outputs.
 - Integration with the `fake` classifier: every write path enqueues exactly one assessment; shadow mode has no
   effect; flag opens one case per subject; enforce hides, notifies and opens the confirmation case; an expired
-  hold releases and flags; the circuit breaker trips; the inference service being down blocks nothing.
+  hold releases and flags; the circuit breaker trips; the inference service being down blocks nothing; the
+  per-language mode map caps the mode (and `und` never enforces); shadow classifiers record assessments with
+  no effect.
+- The embedded chat template of each model file equals Qwen's official template (phase A).
+- Every text surface registered by plan 07 enqueues an assessment: a test walks the surface registry, so a
+  surface added later without wiring fails.
 - A contract test that the real client talks to a real `llama-server` runs in a separate, opt-in CI job that
   mounts the 0.6B model (too large for the default pipeline).
 - The gates, recorded in a committed evaluation report.
@@ -397,10 +432,14 @@ a moderation surface").
 
 ## Decisions for the owner
 
-1. Download the two recommended files (and optionally Shieldstral for the bake-off).
-2. The list of reasons that may hide automatically (default: sexual content, privacy, violent threats, and
-   spam from new accounts).
-3. Whether new accounts' content is held for the few seconds an assessment takes (default: yes, in `enforce`).
+1. The production model files: the downloaded conversions pinned by hash (default, after the template check)
+   or a reproducible conversion from Qwen's safetensors; optionally Shieldstral for the comparisons.
+2. The mode at launch per language (default: `flag` where the golden-set flag gate passed, `shadow`
+   elsewhere).
+3. After phase E: the list of reasons that may hide automatically (default proposal: sexual content, privacy,
+   violent threats, and spam from new accounts), and the languages allowed to enforce.
+4. Whether new accounts' content is held for the few seconds an assessment takes once `enforce` is on
+   (default: yes).
 
 ## Sources consulted (2026-11-17)
 

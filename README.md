@@ -44,7 +44,7 @@ locally, against a real PostgreSQL) are in the [developer guide](docs/developer/
 | [docs/user/](docs/user/README.md)           | Users                     | The [user guide](docs/user/user-guide.md): what everything is, the rules it follows, how to read the numbers.                                                                                                      |
 | [docs/developer/](docs/developer/README.md) | Developers and operators  | The [developer guide](docs/developer/developer-guide.md), the [operations guide](docs/developer/operations.md), and the [API reference](docs/developer/api-reference.md) (generated; also `GET /v1/openapi.json`). |
 | [docs/agents/](docs/agents/README.md)       | AI agents and maintainers | Reading order, non-negotiable rules, decision records (_why_ things are as they are), domain and data-model reasoning, open questions, roadmap.                                                                    |
-| `prompts/`                                  | AI agents                 | Prompt sketches: ready-to-adapt briefs for upcoming work (the scoring system) and the brief the web app was built from. A local, git-ignored folder, not part of the published repository.                         |
+| `prompts/`                                  | AI agents                 | Task briefs for agents: the production-readiness prompts, the scoring-system sketch and the brief the web app was built from. Named, not linked, from other documents.                                             |
 | [audit/](audit/README.md)                   | Developers                | The browser audit: end-to-end flows, accessibility scans, performance budgets and a screenshot set.                                                                                                                |
 
 ## Repository layout
@@ -61,7 +61,7 @@ docs/developer/      documentation for developers and operators (api-reference.m
 docs/agents/         documentation for AI agents: decision records, domain reasoning, open questions, roadmap
 Dockerfile           the production image (web app + API, one process)
 docker-compose.yml   the whole stack in containers (or only PostgreSQL: npm run db:up)
-prompts/             prompt sketches: task briefs for agent work (local, git-ignored)
+prompts/             task briefs for agent work
 ```
 
 ## Commands

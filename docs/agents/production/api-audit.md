@@ -2,7 +2,8 @@
 
 A complete read of the API as it stands at commit `85212fa` (2026-11-16): `apps/api`, `packages/domain`,
 `packages/contracts`, the migrations, the tests, the Dockerfile, the compose file and CI. It is the evidence
-base of the [production-readiness program](README.md): every finding names the plan that fixes it.
+base of the [production-readiness program](README.md): every finding names the plan that fixes it. Five
+findings about the web delivery (WEB-1 to WEB-5) were added on 2026-11-18.
 
 Line numbers are hints (they drift); function names are the stable reference.
 
@@ -156,7 +157,7 @@ no way to contest it. → [07](07-moderation-core.md)
 of reasons and model evaluation have nothing to build on. → [07](07-moderation-core.md)
 
 **MOD-8 · S3 · Deactivated accounts keep a fully public profile,** including a bio that may be the reason for
-the deactivation. → [07](07-moderation-core.md)
+the deactivation. → [07](07-moderation-core.md), phase C
 
 ### Localisation
 
@@ -286,16 +287,43 @@ duplicate. → [12](12-public-api.md)
 **PRIV-3 · S3 · No retention schedule** for sessions, logs or security data.
 → [10](10-deployment-and-operations.md)
 
+### Web delivery (added 2026-11-18)
+
+Found in the second review of the program, which looked beyond `/v1` at how the web app reaches readers.
+
+**WEB-1 · S2 · Pages are invisible to link previews and to crawlers that run little JavaScript, and nothing
+is ever a 404.** `webApp()` (`apps/api/src/http/web.ts`) answers every client route with the same
+`index.html` and status 200: a shared idea previews as the generic site title, a missing or hidden idea is a
+"soft 404", and a request whose `Accept` header lacks `text/html` (common among preview bots) receives the
+API's JSON 404 instead of the page. There is no `robots.txt` or sitemap. → [13](13-public-web.md)
+
+**WEB-2 · S1 before launch (owner texts) · No content policy, terms, privacy notice or contact in the
+product.** The footer links the principles page, the API and the OpenAPI document; the user guide exists only
+in the repository. Readers cannot learn the rules they are held to or reach the operator.
+→ [13](13-public-web.md) builds the pages; the owner supplies the texts
+
+**WEB-3 · S2 · Browser errors and real-user performance are invisible.** A script error in one browser or a
+slow page in one region reaches the operators only as a complaint. → [13](13-public-web.md)
+
+**WEB-4 · S2 · The interface is tested in one engine.** The browser audit runs on Chromium only; Firefox and
+WebKit (every browser on iOS) are untested. → [13](13-public-web.md)
+
+**WEB-5 · S2 · A release breaks open tabs.** Every build replaces the content-hashed chunks. A tab opened
+before a release fails when it lazily loads a route whose chunk no longer exists, and during a rolling release
+old and new instances serve different chunk sets. Nothing recovers. → [10](10-deployment-and-operations.md)
+
 ## Summary by severity
 
-53 findings: 19 S1, 22 S2, 12 S3.
+58 findings: 20 S1, 26 S2, 12 S3 (53 from the API audit of 2026-11-16, 5 from the web review of 2026-11-18).
 
-- **S1 (19):** a forgeable client address, account enumeration, CPU exhaustion, unlimited reads, the ledger
+- **S1 (20):** a forgeable client address, account enumeration, CPU exhaustion, unlimited reads, the ledger
   leak, no reports or automated screening, English-only search, slugs and strings, no observability, no
-  background work, unrehearsed backups, no terms or licence.
-- **S2 (22):** coarse limits, lens and list scalability, caching, database guard rails, structured decisions,
-  delivery.
+  background work, unrehearsed backups, no terms or licence, no policy pages in the product.
+- **S2 (26):** coarse limits, lens and list scalability, caching, database guard rails, structured decisions,
+  delivery, crawlability, browser telemetry and coverage, release safety.
 - **S3 (12):** clean-ups and later optimisations.
+
+[14 — Launch readiness](14-launch-readiness.md) requires evidence against the launch candidate for launch findings and records the owner and trigger of each scheduled post-launch item.
 
 Seven S1 findings (SEC-1 to SEC-6 and MOD-1) are small code changes with no design decision attached. They are
 grouped in [00 — Immediate hardening](00-immediate-hardening.md) and should ship first.

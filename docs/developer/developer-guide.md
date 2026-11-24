@@ -104,7 +104,7 @@ scripts/                       repo tooling: dev runner, test runner, API docs g
 docs/user/                     documentation for users
 docs/developer/                documentation for developers (this folder); api-reference.md and api/ are generated
 docs/agents/                   documentation for AI agents: decisions, domain reasoning, open questions, roadmap
-prompts/                       prompt sketches: task briefs for upcoming agent work
+prompts/                       task briefs for agent work
 Dockerfile                     the production image: web app + API in one process
 docker-compose.yml             the whole stack (PostgreSQL → migrate job → app), or only PostgreSQL
 .github/workflows/ci.yml       CI: check on Node 22/24, tests on PostgreSQL 17, browser audit, Docker stack smoke test

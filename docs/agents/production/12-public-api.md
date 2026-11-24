@@ -1,13 +1,13 @@
 # 12 — The public API: contract freeze, keys, open data
 
 Part of the [production-readiness program](README.md). Prompt for the implementing agent:
-`prompts/api/12-public-api-prompt-sketch.md`.
+`prompts/api/12-public-api-prompt.md`.
 
-| Status     | Not started. Phase A before launch; the rest after                                                                                                                                                                                                     |
-| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Depends on | Phase A: plans [05](05-localization.md), [06](06-multilingual-content-and-search.md), [07](07-moderation-core.md), [09](09-read-scalability.md) (they make the breaking changes); later phases: [03](03-rate-limiting.md), [02](02-background-jobs.md) |
-| Unblocks   | The launch (phase A); integrations and research use (phases B–D)                                                                                                                                                                                       |
-| Size       | 2–3 sessions · 8–12 engineer-days (2–3 of them before launch)                                                                                                                                                                                          |
+| Status     | Not started. Phase A before launch; the rest after                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Depends on | Phase A: every step that changes a response shape (steps 1–39, in particular plans [03](03-rate-limiting.md), [04](04-accounts-and-trust.md), [05](05-localization.md), [06](06-multilingual-content-and-search.md), [07](07-moderation-core.md), [08](08-ai-moderation.md), [09](09-read-scalability.md), [13](13-public-web.md)); later phases: [02](02-background-jobs.md), [03](03-rate-limiting.md), [09](09-read-scalability.md) C (session cache for revocation) |
+| Unblocks   | The launch (phase A); integrations and research use (phases B–D)                                                                                                                                                                                                                                                                                                                                                                                                        |
+| Size       | 4 sessions (step 40 before the launch; steps 42–44 after it) · 8–12 engineer-days                                                                                                                                                                                                                                                                                                                                                                                       |
 
 ## Outcome
 
@@ -29,8 +29,9 @@ version maintained for years. Every shape change this program needs must therefo
 | `ActivityDto`: `subject.hidden`, `subject.label`, text-free payloads   | [00](00-immediate-hardening.md), [07](07-moderation-core.md)                        |
 | Error envelope: `requestId`, `details.reason`, coded validation issues | [01](01-operational-foundations.md), [05](05-localization.md)                       |
 | 429 details and rate-limit headers; `limits` in the catalogue          | [03](03-rate-limiting.md)                                                           |
-| Registration: challenge, terms acceptance, locale                      | [03](03-rate-limiting.md), [04](04-accounts-and-trust.md), [05](05-localization.md) |
+| Registration: challenge, terms acceptance, minimum age, locale         | [03](03-rate-limiting.md), [04](04-accounts-and-trust.md), [05](05-localization.md) |
 | `language` on content; `redacted` and `moderation` markers on DTOs     | [06](06-multilingual-content-and-search.md), [07](07-moderation-core.md)            |
+| `limits` and `mutates` in the catalogue; `POST /v1/telemetry`          | [03](03-rate-limiting.md), [13](13-public-web.md)                                   |
 | Pagination of the eleven unbounded lists; graph truncation             | [09](09-read-scalability.md)                                                        |
 | Viewer state moved to `GET /v1/ideas/:idea/viewer`                     | [09](09-read-scalability.md)                                                        |
 | Search: `kind`, `language`, per-kind cursors                           | [06](06-multilingual-content-and-search.md)                                         |
@@ -40,7 +41,11 @@ Work in this phase:
 1. A **compatibility test**: commit the OpenAPI document at the freeze as
    `packages/contracts/baseline/v1.json`; a test compares the current document with it and fails on any
    removal, rename, type change, newly required request field, or response field that stopped being returned.
-   Additions pass. From then on, "additive only" is enforced like the rest of the contract.
+   Compare request and response schemas directionally, resolving references. Existing valid requests stay
+   valid and old clients can still read every new response. Test narrowed request enums, newly nullable
+   responses, widened closed response enums, a removed success status, an added endpoint and an optional
+   request parameter. Test an actual previous client against a new response before classifying a new response
+   property as compatible, especially where the old decoder requires an exact shape.
 2. **Deprecation policy** in the developer guide: a field or endpoint is first marked deprecated in the
    catalogue (`deprecated: { since, sunset, replacement }`), which adds `Deprecation` and `Sunset` response
    headers and a note in the generated reference; removal only happens in `/v2`.
@@ -63,10 +68,10 @@ create table idempotency_keys (                -- operational; purged after 24 h
 );
 ```
 
-- The first request stores the key with the request hash inside its transaction, then the response.
-- A repeat with the same key and the same request returns the stored response with `Idempotent-Replay: true`.
-- The same key with a different request is 422, reason `idempotency_key_reused`.
-- A repeat while the first is still running is 409, reason `request_in_progress`.
+- Authenticate and authorize every attempt. Acquire a nonblocking transaction-scoped lock on actor and key to implement the in-progress response. In the domain-write transaction store the fingerprint (method, canonical resource including path parameters, validated payload), response status and result reference. Replay must apply current visibility and permissions before returning any data. Rollback releases the lock and leaves no reserved key.
+- A repeat with the same key and the same request returns the original result subject to current visibility with `Idempotent-Replay: true`.
+- The same key with a different request is 422 `invariant_violated`, reason `idempotency_key_reused`.
+- A repeat while the first is still running is 409 `conflict`, reason `request_in_progress`.
 
 The web app sends a key per form submission, which removes double-submit duplicates on poor connections.
 State-style writes (stances, involvements, evaluations) are already idempotent and ignore the header.
