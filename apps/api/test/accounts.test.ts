@@ -116,7 +116,9 @@ describe("roles", () => {
 
 describe("abuse protection", () => {
   it("rate-limits authentication attempts per client address", async () => {
-    const limited = await createHarness({ rateLimits: { authPerMinute: 3, writesPerMinute: 0 } });
+    const limited = await createHarness({
+      rateLimits: { requestsPerMinute: 0, authPerMinute: 3, writesPerMinute: 0 },
+    });
     try {
       const attempts = [];
       for (let i = 0; i < 4; i++)
@@ -137,7 +139,7 @@ describe("abuse protection", () => {
 
   it("rate-limits writes per account and rejects oversized bodies", async () => {
     const limited = await createHarness({
-      rateLimits: { authPerMinute: 0, writesPerMinute: 2 },
+      rateLimits: { requestsPerMinute: 0, authPerMinute: 0, writesPerMinute: 2 },
       maxBodyBytes: 2_000,
     });
     try {

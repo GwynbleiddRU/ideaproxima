@@ -168,58 +168,58 @@ The order satisfies every dependency between phases. Its main choices:
 Updated by whoever finishes a step: `Not started`, `In progress`, `Waiting for the owner: …`, or
 `Done YYYY-MM-DD`.
 
-| Step | Plan | Phase | Delivers                                                                                                   | Waits for the owner   | Status      |
-| ---- | ---- | ----- | ---------------------------------------------------------------------------------------------------------- | --------------------- | ----------- |
-| 1    | 00   | —     | Unforgeable client address, constant-time login, hashing guard, flood guard, ledger leak closed            | —                     | Not started |
-| 2    | 01   | A     | Validated configuration, structured logs, request ids, metrics                                             | —                     | Not started |
-| 3    | 01   | B     | Liveness and readiness, drain on shutdown, database guard rails, error reporter                            | —                     | Not started |
-| 4    | 02   | A     | Job queue, worker, schedules, `JOBS_MODE`                                                                  | —                     | Not started |
-| 5    | 02   | B     | Purges, asynchronous metric refresh, compose worker service                                                | —                     | Not started |
-| 6    | 05   | A     | `packages/i18n`, error reasons, localised vocabulary, topics and errors, `/v1/locales`                     | Decision 2            | Not started |
-| 7    | 05   | B     | Web localisation runtime, language switcher, right-to-left, script fonts; shell and auth pages extracted   | Mock-ups              | Not started |
-| 8    | 05   | C1    | Interface extraction: home, explore, the idea page and its tabs                                            | —                     | Not started |
-| 9    | 05   | C2    | Interface extraction: editor, topics, search, activity, people, account, dialogs                           | —                     | Not started |
-| 10   | 03   | A     | GCRA, memory and PostgreSQL stores, trust tiers, the policy catalogue                                      | —                     | Not started |
-| 11   | 03   | B     | Limits declared per endpoint and enforced; rate-limit headers; web handling of 429                         | —                     | Not started |
-| 12   | 03   | C     | Proof of work on registration                                                                              | —                     | Not started |
-| 13   | 04   | A     | Mail, verification, password reset, e-mail change, registration modes                                      | Decision 7; mock-ups  | Not started |
-| 14   | 04   | B     | Session list and revocation, security log, trust inputs, terms and minimum-age mechanism                   | Decision 15           | Not started |
-| 15   | 06   | A     | Content languages, language detection, Unicode slugs                                                       | —                     | Not started |
-| 16   | 07   | A     | Every text can be hidden; one visibility writer; text-free activity payloads                               | —                     | Not started |
-| 17   | 06   | B     | The multilingual search index                                                                              | —                     | Not started |
-| 18   | 06   | C     | Fair minimum lengths, database locale check, language display and filter in the web app                    | Decision 11; mock-ups | Not started |
-| 19   | 07   | B     | Content policy draft, reports, cases, the queue API, decisions                                             | Decisions 4, 10       | Not started |
-| 20   | 07   | C     | Notices, appeals, restrictions, bulk clean-up, statistics, external notices                                | —                     | Not started |
-| 21   | 07   | D     | Web: report dialog, notices and appeals, the moderator queue                                               | Mock-ups              | Not started |
-| 22   | 08   | A     | Model files, inference service, classifier, assessments, `shadow` mode                                     | Decision 18           | Not started |
-| 23   | 08   | B     | Golden set in twelve languages, evaluation runner, rules classifier, decision policy                       | —                     | Not started |
-| 24   | 08   | C     | `flag` mode, the assessment panel, model comparison on the golden set, runbook, alert definitions          | —                     | Not started |
-| 25   | 08   | D     | `enforce` mode built and tested, switched off                                                              | —                     | Not started |
-| 26   | 04   | C     | Sign-in with ORCID, then Google and GitHub                                                                 | Decision 13; mock-ups | Not started |
-| 27   | 04   | D     | Staff second factor, export, deletion with grace period                                                    | Mock-ups              | Not started |
-| 28   | 09   | A     | Load dataset, k6 scenarios, baseline report                                                                | —                     | Not started |
-| 29   | 09   | B     | Keyset lenses, bounded lists, the viewer split, materialised lens inputs                                   | —                     | Not started |
-| 30   | 09   | C     | Cache rules, ETag, compression, session cache                                                              | —                     | Not started |
-| 31   | 13   | A     | Crawlable pages: real status codes, metadata, link previews, sitemap, robots                               | Decision 19; mock-up  | Not started |
-| 32   | 13   | B     | Policy, help and contact pages; browser telemetry; Firefox and WebKit tests                                | Decision 16; mock-ups | Not started |
-| 33   | 10   | A     | Production compose file, image publishing, release workflow, release-safe web assets                       | Decision 12           | Not started |
-| 34   | 10   | B     | Dashboards, alerts, uptime probe                                                                           | —                     | Not started |
-| 35   | 10   | C     | Backups and the weekly automated restore drill                                                             | —                     | Not started |
-| 36   | 10   | D     | Supply-chain and runtime hardening, edge settings                                                          | —                     | Not started |
-| 37   | 10   | E     | Runbooks, retention jobs, compliance documents                                                             | —                     | Not started |
-| 38   | 05   | D     | Glossaries, drafts in eleven languages, `i18n:check`, pseudo-locale, audits in `de`, `ar`, `ja`            | Decision 3            | Not started |
-| 39   | 10   | F     | Game day on the production layout                                                                          | —                     | Not started |
-| 40   | 12   | A     | Contract freeze: checklist, baseline, compatibility test, deprecation mechanism                            | Decision 14           | Not started |
-| 41   | 14   | —     | Launch-readiness review and report                                                                         | The launch decision   | Not started |
-|      |      |       | **Launch** (the owner's decision, on the report of step 41)                                                |                       |             |
-| 42   | 12   | B     | Idempotency keys                                                                                           | —                     | Not started |
-| 43   | 12   | C     | API keys, the generated typed client                                                                       | Decision 20           | Not started |
-| 44   | 12   | D     | Open-data exports                                                                                          | Decision 8 (licence)  | Not started |
-| 45   | 11   | A     | Embeddings and hybrid search                                                                               | —                     | Not started |
-| 46   | 11   | B     | Similar-idea and similar-claim suggestions                                                                 | Mock-ups              | Not started |
-| 47   | 08   | E     | Comparison on real traffic (at least 14 days after launch); routing, judge, quantisation; enforce proposal | Decisions 5, 6, 17    | Not started |
-| T1   | 03   | D     | Redis store for rate limits, when its trigger is reached                                                   | —                     | Not started |
-| T2   | 09   | D     | Pooler, read replica, ledger partitioning, as triggered                                                    | —                     | Not started |
+| Step | Plan | Phase | Delivers                                                                                                   | Waits for the owner   | Status          |
+| ---- | ---- | ----- | ---------------------------------------------------------------------------------------------------------- | --------------------- | --------------- |
+| 1    | 00   | —     | Trusted network keys, bounded hashing, pre-session limits, redacted activity and evidence, capped offsets  | —                     | Done 2026-11-25 |
+| 2    | 01   | A     | Validated configuration, structured logs, request ids, metrics                                             | —                     | Not started     |
+| 3    | 01   | B     | Liveness and readiness, drain on shutdown, database guard rails, error reporter                            | —                     | Not started     |
+| 4    | 02   | A     | Job queue, worker, schedules, `JOBS_MODE`                                                                  | —                     | Not started     |
+| 5    | 02   | B     | Purges, asynchronous metric refresh, compose worker service                                                | —                     | Not started     |
+| 6    | 05   | A     | `packages/i18n`, error reasons, localised vocabulary, topics and errors, `/v1/locales`                     | Decision 2            | Not started     |
+| 7    | 05   | B     | Web localisation runtime, language switcher, right-to-left, script fonts; shell and auth pages extracted   | Mock-ups              | Not started     |
+| 8    | 05   | C1    | Interface extraction: home, explore, the idea page and its tabs                                            | —                     | Not started     |
+| 9    | 05   | C2    | Interface extraction: editor, topics, search, activity, people, account, dialogs                           | —                     | Not started     |
+| 10   | 03   | A     | GCRA, memory and PostgreSQL stores, trust tiers, the policy catalogue                                      | —                     | Not started     |
+| 11   | 03   | B     | Limits declared per endpoint and enforced; rate-limit headers; web handling of 429                         | —                     | Not started     |
+| 12   | 03   | C     | Proof of work on registration                                                                              | —                     | Not started     |
+| 13   | 04   | A     | Mail, verification, password reset, e-mail change, registration modes                                      | Decision 7; mock-ups  | Not started     |
+| 14   | 04   | B     | Session list and revocation, security log, trust inputs, terms and minimum-age mechanism                   | Decision 15           | Not started     |
+| 15   | 06   | A     | Content languages, language detection, Unicode slugs                                                       | —                     | Not started     |
+| 16   | 07   | A     | Every text can be hidden; one visibility writer; text-free activity payloads                               | —                     | Not started     |
+| 17   | 06   | B     | The multilingual search index                                                                              | —                     | Not started     |
+| 18   | 06   | C     | Fair minimum lengths, database locale check, language display and filter in the web app                    | Decision 11; mock-ups | Not started     |
+| 19   | 07   | B     | Content policy draft, reports, cases, the queue API, decisions                                             | Decisions 4, 10       | Not started     |
+| 20   | 07   | C     | Notices, appeals, restrictions, bulk clean-up, statistics, external notices                                | —                     | Not started     |
+| 21   | 07   | D     | Web: report dialog, notices and appeals, the moderator queue                                               | Mock-ups              | Not started     |
+| 22   | 08   | A     | Model files, inference service, classifier, assessments, `shadow` mode                                     | Decision 18           | Not started     |
+| 23   | 08   | B     | Golden set in twelve languages, evaluation runner, rules classifier, decision policy                       | —                     | Not started     |
+| 24   | 08   | C     | `flag` mode, the assessment panel, model comparison on the golden set, runbook, alert definitions          | —                     | Not started     |
+| 25   | 08   | D     | `enforce` mode built and tested, switched off                                                              | —                     | Not started     |
+| 26   | 04   | C     | Sign-in with ORCID, then Google and GitHub                                                                 | Decision 13; mock-ups | Not started     |
+| 27   | 04   | D     | Staff second factor, export, deletion with grace period                                                    | Mock-ups              | Not started     |
+| 28   | 09   | A     | Load dataset, k6 scenarios, baseline report                                                                | —                     | Not started     |
+| 29   | 09   | B     | Keyset lenses, bounded lists, the viewer split, materialised lens inputs                                   | —                     | Not started     |
+| 30   | 09   | C     | Cache rules, ETag, compression, session cache                                                              | —                     | Not started     |
+| 31   | 13   | A     | Crawlable pages: real status codes, metadata, link previews, sitemap, robots                               | Decision 19; mock-up  | Not started     |
+| 32   | 13   | B     | Policy, help and contact pages; browser telemetry; Firefox and WebKit tests                                | Decision 16; mock-ups | Not started     |
+| 33   | 10   | A     | Production compose file, image publishing, release workflow, release-safe web assets                       | Decision 12           | Not started     |
+| 34   | 10   | B     | Dashboards, alerts, uptime probe                                                                           | —                     | Not started     |
+| 35   | 10   | C     | Backups and the weekly automated restore drill                                                             | —                     | Not started     |
+| 36   | 10   | D     | Supply-chain and runtime hardening, edge settings                                                          | —                     | Not started     |
+| 37   | 10   | E     | Runbooks, retention jobs, compliance documents                                                             | —                     | Not started     |
+| 38   | 05   | D     | Glossaries, drafts in eleven languages, `i18n:check`, pseudo-locale, audits in `de`, `ar`, `ja`            | Decision 3            | Not started     |
+| 39   | 10   | F     | Game day on the production layout                                                                          | —                     | Not started     |
+| 40   | 12   | A     | Contract freeze: checklist, baseline, compatibility test, deprecation mechanism                            | Decision 14           | Not started     |
+| 41   | 14   | —     | Launch-readiness review and report                                                                         | The launch decision   | Not started     |
+|      |      |       | **Launch** (the owner's decision, on the report of step 41)                                                |                       |                 |
+| 42   | 12   | B     | Idempotency keys                                                                                           | —                     | Not started     |
+| 43   | 12   | C     | API keys, the generated typed client                                                                       | Decision 20           | Not started     |
+| 44   | 12   | D     | Open-data exports                                                                                          | Decision 8 (licence)  | Not started     |
+| 45   | 11   | A     | Embeddings and hybrid search                                                                               | —                     | Not started     |
+| 46   | 11   | B     | Similar-idea and similar-claim suggestions                                                                 | Mock-ups              | Not started     |
+| 47   | 08   | E     | Comparison on real traffic (at least 14 days after launch); routing, judge, quantisation; enforce proposal | Decisions 5, 6, 17    | Not started     |
+| T1   | 03   | D     | Redis store for rate limits, when its trigger is reached                                                   | —                     | Not started     |
+| T2   | 09   | D     | Pooler, read replica, ledger partitioning, as triggered                                                    | —                     | Not started     |
 
 Steps 42–47 also need the owner's recorded launch and date. After launch, T1 and T2 may be selected at a session boundary when their own measured trigger is documented. Neither optional row is a prerequisite for the other or for numbered work. Record which sub-trigger fired and leave other conditional changes deferred.
 

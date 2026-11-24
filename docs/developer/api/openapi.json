@@ -67,7 +67,7 @@
             }
           },
           "default": {
-            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, internal_error.",
+            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
               "application/json": {
                 "schema": {
@@ -111,7 +111,7 @@
             }
           },
           "default": {
-            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, internal_error.",
+            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
               "application/json": {
                 "schema": {
@@ -153,7 +153,7 @@
             }
           },
           "default": {
-            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, internal_error.",
+            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
               "application/json": {
                 "schema": {
@@ -187,7 +187,7 @@
             }
           },
           "default": {
-            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, internal_error.",
+            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
               "application/json": {
                 "schema": {
@@ -223,7 +223,7 @@
             }
           },
           "default": {
-            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, internal_error.",
+            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
               "application/json": {
                 "schema": {
@@ -272,7 +272,7 @@
             }
           },
           "default": {
-            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, internal_error.",
+            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
               "application/json": {
                 "schema": {
@@ -315,7 +315,7 @@
             }
           },
           "default": {
-            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, internal_error.",
+            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
               "application/json": {
                 "schema": {
@@ -380,7 +380,7 @@
             }
           },
           "default": {
-            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, internal_error.",
+            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
               "application/json": {
                 "schema": {
@@ -399,7 +399,7 @@
           "Catalog"
         ],
         "summary": "The global activity feed",
-        "description": "Newest first. `action=moderation.` returns the public moderation log. Activity about hidden ideas is omitted except moderation entries.",
+        "description": "Newest first. `action=moderation.` returns the public moderation log. For public readers, activity about hidden ideas is omitted and other hidden subjects have an empty payload and subject.hidden=true. Moderation entries stay public.",
         "security": [],
         "parameters": [
           {
@@ -444,7 +444,7 @@
             }
           },
           "default": {
-            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, internal_error.",
+            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
               "application/json": {
                 "schema": {
@@ -463,7 +463,7 @@
           "Identity"
         ],
         "summary": "Create an account",
-        "description": "Returns a session token and sets the `ip_session` cookie. Rate-limited per client address.\n\n**Notable errors:**\n- `conflict`: email or handle already taken\n- `rate_limited`: too many attempts",
+        "description": "Returns a session token and sets the `ip_session` cookie. Rate-limited per client address.\n\n**Notable errors:**\n- `conflict`: email or handle already taken\n- `rate_limited`: too many attempts\n- `unavailable`: password service busy",
         "security": [],
         "parameters": [],
         "requestBody": {
@@ -488,7 +488,7 @@
             }
           },
           "default": {
-            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, internal_error.",
+            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
               "application/json": {
                 "schema": {
@@ -507,7 +507,7 @@
           "Identity"
         ],
         "summary": "Sign in",
-        "description": "Returns a session token and sets the `ip_session` cookie. Rate-limited per client address.\n\n**Notable errors:**\n- `unauthenticated`: wrong email or password\n- `rate_limited`: too many attempts",
+        "description": "Returns a session token and sets the `ip_session` cookie. Rate-limited per client address.\n\n**Notable errors:**\n- `unauthenticated`: wrong email or password\n- `rate_limited`: too many attempts\n- `unavailable`: password service busy",
         "security": [],
         "parameters": [],
         "requestBody": {
@@ -532,7 +532,7 @@
             }
           },
           "default": {
-            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, internal_error.",
+            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
               "application/json": {
                 "schema": {
@@ -565,7 +565,7 @@
             }
           },
           "default": {
-            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, internal_error.",
+            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
               "application/json": {
                 "schema": {
@@ -605,7 +605,7 @@
             }
           },
           "default": {
-            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, internal_error.",
+            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
               "application/json": {
                 "schema": {
@@ -653,7 +653,7 @@
             }
           },
           "default": {
-            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, internal_error.",
+            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
               "application/json": {
                 "schema": {
@@ -672,7 +672,7 @@
           "Identity"
         ],
         "summary": "Change your password",
-        "description": "Signs out every other session.\n\n**Notable errors:**\n- `forbidden`: the current password is not correct",
+        "description": "Signs out every other session.\n\n**Notable errors:**\n- `forbidden`: the current password is not correct\n- `unavailable`: password service busy",
         "security": [
           {
             "bearerAuth": []
@@ -704,7 +704,7 @@
             }
           },
           "default": {
-            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, internal_error.",
+            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
               "application/json": {
                 "schema": {
@@ -758,7 +758,7 @@
             }
           },
           "default": {
-            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, internal_error.",
+            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
               "application/json": {
                 "schema": {
@@ -811,7 +811,7 @@
             }
           },
           "default": {
-            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, internal_error.",
+            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
               "application/json": {
                 "schema": {
@@ -854,7 +854,7 @@
             }
           },
           "default": {
-            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, internal_error.",
+            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
               "application/json": {
                 "schema": {
@@ -917,7 +917,7 @@
             }
           },
           "default": {
-            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, internal_error.",
+            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
               "application/json": {
                 "schema": {
@@ -978,7 +978,7 @@
             }
           },
           "default": {
-            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, internal_error.",
+            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1039,7 +1039,7 @@
             }
           },
           "default": {
-            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, internal_error.",
+            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1100,7 +1100,7 @@
             }
           },
           "default": {
-            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, internal_error.",
+            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1220,7 +1220,7 @@
             }
           },
           "default": {
-            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, internal_error.",
+            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1269,7 +1269,7 @@
             }
           },
           "default": {
-            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, internal_error.",
+            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1313,7 +1313,7 @@
             }
           },
           "default": {
-            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, internal_error.",
+            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1373,7 +1373,7 @@
             }
           },
           "default": {
-            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, internal_error.",
+            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1432,7 +1432,7 @@
             }
           },
           "default": {
-            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, internal_error.",
+            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1484,7 +1484,7 @@
             }
           },
           "default": {
-            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, internal_error.",
+            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1554,7 +1554,7 @@
             }
           },
           "default": {
-            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, internal_error.",
+            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1614,7 +1614,7 @@
             }
           },
           "default": {
-            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, internal_error.",
+            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1678,7 +1678,7 @@
             }
           },
           "default": {
-            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, internal_error.",
+            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1724,7 +1724,7 @@
             }
           },
           "default": {
-            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, internal_error.",
+            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1783,7 +1783,7 @@
             }
           },
           "default": {
-            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, internal_error.",
+            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1846,7 +1846,7 @@
             }
           },
           "default": {
-            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, internal_error.",
+            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1892,7 +1892,7 @@
             }
           },
           "default": {
-            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, internal_error.",
+            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
               "application/json": {
                 "schema": {
@@ -1951,7 +1951,7 @@
             }
           },
           "default": {
-            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, internal_error.",
+            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2011,7 +2011,7 @@
             }
           },
           "default": {
-            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, internal_error.",
+            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2057,7 +2057,7 @@
             }
           },
           "default": {
-            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, internal_error.",
+            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2100,7 +2100,7 @@
             }
           },
           "default": {
-            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, internal_error.",
+            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2161,7 +2161,7 @@
             }
           },
           "default": {
-            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, internal_error.",
+            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2222,7 +2222,7 @@
             }
           },
           "default": {
-            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, internal_error.",
+            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2283,7 +2283,7 @@
             }
           },
           "default": {
-            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, internal_error.",
+            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2326,7 +2326,7 @@
             }
           },
           "default": {
-            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, internal_error.",
+            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2376,7 +2376,7 @@
             }
           },
           "default": {
-            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, internal_error.",
+            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2419,7 +2419,7 @@
             }
           },
           "default": {
-            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, internal_error.",
+            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2470,7 +2470,7 @@
             }
           },
           "default": {
-            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, internal_error.",
+            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2563,7 +2563,7 @@
             }
           },
           "default": {
-            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, internal_error.",
+            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2612,7 +2612,7 @@
             }
           },
           "default": {
-            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, internal_error.",
+            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2662,7 +2662,7 @@
             }
           },
           "default": {
-            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, internal_error.",
+            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2722,7 +2722,7 @@
             }
           },
           "default": {
-            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, internal_error.",
+            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2779,7 +2779,7 @@
             }
           },
           "default": {
-            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, internal_error.",
+            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2825,7 +2825,7 @@
             }
           },
           "default": {
-            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, internal_error.",
+            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2897,7 +2897,7 @@
             }
           },
           "default": {
-            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, internal_error.",
+            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
               "application/json": {
                 "schema": {
@@ -2957,7 +2957,7 @@
             }
           },
           "default": {
-            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, internal_error.",
+            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
               "application/json": {
                 "schema": {
@@ -3003,7 +3003,7 @@
             }
           },
           "default": {
-            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, internal_error.",
+            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
               "application/json": {
                 "schema": {
@@ -3072,7 +3072,7 @@
             }
           },
           "default": {
-            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, internal_error.",
+            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
               "application/json": {
                 "schema": {
@@ -3123,7 +3123,7 @@
             }
           },
           "default": {
-            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, internal_error.",
+            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
               "application/json": {
                 "schema": {
@@ -3174,7 +3174,7 @@
             }
           },
           "default": {
-            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, internal_error.",
+            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
               "application/json": {
                 "schema": {
@@ -3220,7 +3220,7 @@
             }
           },
           "default": {
-            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, internal_error.",
+            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
               "application/json": {
                 "schema": {
@@ -3278,7 +3278,7 @@
             }
           },
           "default": {
-            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, internal_error.",
+            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
               "application/json": {
                 "schema": {
@@ -3321,7 +3321,7 @@
             }
           },
           "default": {
-            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, internal_error.",
+            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
               "application/json": {
                 "schema": {
@@ -3382,7 +3382,7 @@
             }
           },
           "default": {
-            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, internal_error.",
+            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
               "application/json": {
                 "schema": {
@@ -3443,7 +3443,7 @@
             }
           },
           "default": {
-            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, internal_error.",
+            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
               "application/json": {
                 "schema": {
@@ -3506,7 +3506,7 @@
             }
           },
           "default": {
-            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, internal_error.",
+            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
               "application/json": {
                 "schema": {
@@ -3564,7 +3564,7 @@
             }
           },
           "default": {
-            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, internal_error.",
+            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
               "application/json": {
                 "schema": {
@@ -3615,7 +3615,7 @@
             }
           },
           "default": {
-            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, internal_error.",
+            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
               "application/json": {
                 "schema": {
@@ -3699,11 +3699,15 @@
               "id": {
                 "type": "string",
                 "format": "uuid"
+              },
+              "hidden": {
+                "type": "boolean"
               }
             },
             "required": [
               "kind",
-              "id"
+              "id",
+              "hidden"
             ],
             "additionalProperties": false
           },

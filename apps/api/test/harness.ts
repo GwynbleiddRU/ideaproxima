@@ -23,7 +23,7 @@ export interface Harness {
     method: string,
     path: string,
     opts?: { body?: unknown; token?: string },
-  ): Promise<{ status: number; body: T }>;
+  ): Promise<{ status: number; headers: Headers; body: T }>;
   user(handle: string, role?: PersonRole): Promise<{ token: string; id: string; handle: string }>;
   idea(
     token: string,
@@ -86,7 +86,7 @@ export async function createHarness(overrides: Partial<AppConfig> = {}): Promise
       sessionTtlDays: 1,
       logRequests: false,
       // The suite makes many requests from one "address"; rate limits get their own test.
-      rateLimits: { authPerMinute: 0, writesPerMinute: 0 },
+      rateLimits: { requestsPerMinute: 0, authPerMinute: 0, writesPerMinute: 0 },
       ...overrides,
     },
   });
@@ -103,7 +103,7 @@ export async function createHarness(overrides: Partial<AppConfig> = {}): Promise
     const text = await res.text();
     const body = text ? JSON.parse(text) : null;
     assertContract(method, `/v1${path}`, res.status, body);
-    return { status: res.status, body };
+    return { status: res.status, headers: res.headers, body };
   };
 
   let n = 0;

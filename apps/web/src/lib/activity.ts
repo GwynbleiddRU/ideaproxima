@@ -26,7 +26,7 @@ export interface ActivityGroup {
 export function foldActivity(entries: ActivityDto[]): ActivityGroup[] {
   const groups: ActivityGroup[] = [];
   for (const e of entries) {
-    const detail = FOLD[e.action];
+    const detail = e.subject.hidden ? undefined : FOLD[e.action];
     const key = detail ? `${e.action}|${e.idea?.id ?? ""}|${detail(e.payload)}` : e.id;
     const last = groups.at(-1);
     if (detail && last?.key === key) last.entries.push(e);

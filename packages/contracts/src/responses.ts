@@ -634,7 +634,7 @@ export const ActivityDto = named(
     action: z.string().describe('Dotted verb, e.g. "evidence.attached", "moderation.hidden".'),
     ideaId: id.nullable(),
     idea: IdeaRef.nullable().describe("The idea `ideaId` refers to, for display; null when none or hidden."),
-    subject: z.object({ kind: z.string(), id }),
+    subject: z.object({ kind: z.string(), id, hidden: z.boolean() }),
     payload: z.record(z.string(), z.unknown()),
   }),
   "One entry of the append-only activity ledger.",

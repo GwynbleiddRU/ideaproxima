@@ -87,6 +87,7 @@ function kindOf(action: string): [LucideIcon, Tone] {
  * Past-tense phrases read the same with one actor or several, which is what makes folding possible.
  */
 function describe(e: ActivityDto, idea: ReactNode | null, count: number): ReactNode {
+  if (e.subject.hidden) return "contributed content hidden by moderation";
   const p: Payload = e.payload;
   const subject = idea ?? "an idea";
   const on = (prep: string) =>

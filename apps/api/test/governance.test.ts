@@ -82,6 +82,80 @@ describe("authentication", () => {
 });
 
 describe("moderation hides, never deletes, and is publicly logged", () => {
+  it("keeps hidden subjects in all three feeds with role-appropriate payloads", async () => {
+    const author = await h.user("ledger-author");
+    const mod = await h.user("ledger-mod", "moderator");
+    const idea = await h.idea(author.token);
+    const statement = "The archive can preserve a dated observation.";
+    const title = "An independent observation is needed";
+    const claim = await h.call("POST", `/ideas/${idea.id}/claims`, {
+      token: author.token,
+      body: { role: "premise", statement },
+    });
+    const argument = await h.call("POST", "/arguments", {
+      token: author.token,
+      body: {
+        target: { kind: "idea", id: idea.id },
+        stance: "opposes",
+        title,
+        body: "One observation alone gives limited evidence.",
+      },
+    });
+    expect([claim.status, argument.status]).toEqual([201, 201]);
+    for (const target of [
+      { kind: "claim", id: claim.body.id },
+      { kind: "argument", id: argument.body.id },
+    ]) {
+      expect(
+        (
+          await h.call("POST", "/moderation", {
+            token: mod.token,
+            body: { target, action: "hide", reason: "Review pending" },
+          })
+        ).status,
+      ).toBe(200);
+    }
+    expect((await h.call("GET", `/claims/${claim.body.id}`)).status).toBe(404);
+    for (const path of ["/activity", `/ideas/${idea.id}/timeline`, "/people/ledger-author/activity"]) {
+      const read = (token?: string) => h.call<Page<ActivityDto>>("GET", `${path}?limit=100`, { token });
+      const publicPage = (await read()).body;
+      const modPage = (await read(mod.token)).body;
+      expect(JSON.stringify(publicPage)).not.toContain(statement);
+      expect(JSON.stringify(publicPage)).not.toContain(title);
+      for (const [id, action, payload] of [
+        [claim.body.id, "claim.stated", { statement }],
+        [claim.body.linkId, "claim.linked", { role: "premise" }],
+        [argument.body.id, "argument.made", { title }],
+      ] as const) {
+        const entry = publicPage.items.find((e) => e.subject.id === id && e.action === action);
+        expect(entry?.subject.hidden).toBe(true);
+        expect(entry?.payload).toEqual({});
+        expect(modPage.items.find((e) => e.id === entry!.id)).toMatchObject({
+          subject: { hidden: false },
+          payload,
+        });
+      }
+    }
+    const log = await h.call<Page<ActivityDto>>("GET", `/ideas/${idea.id}/timeline`);
+    expect(
+      log.body.items.filter((e) => e.action === "moderation.hidden").map((e) => e.payload.reason),
+    ).toEqual(["Review pending", "Review pending"]);
+    const restored = await h.call("POST", "/moderation", {
+      token: mod.token,
+      body: {
+        target: { kind: "claim", id: claim.body.id },
+        action: "restore",
+        reason: "Review complete",
+      },
+    });
+    expect(restored.status).toBe(200);
+    const timeline = await h.call<Page<ActivityDto>>("GET", `/ideas/${idea.id}/timeline`);
+    expect(timeline.body.items.find((e) => e.action === "claim.stated")).toMatchObject({
+      subject: { hidden: false },
+      payload: { statement },
+    });
+  });
+
   it("restricts moderation to moderators and keeps the record", async () => {
     const author = await h.user("frank");
     const mod = await h.user("mod", "moderator");

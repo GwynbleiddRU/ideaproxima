@@ -150,7 +150,7 @@ export const ENDPOINTS = {
     auth: "public",
     summary: "The global activity feed",
     description:
-      "Newest first. `action=moderation.` returns the public moderation log. Activity about hidden ideas is omitted except moderation entries.",
+      "Newest first. `action=moderation.` returns the public moderation log. For public readers, activity about hidden ideas is omitted and other hidden subjects have an empty payload and subject.hidden=true. Moderation entries stay public.",
     query: Req.ActivityQuery,
     response: Res.ActivityPage,
   },
@@ -166,7 +166,11 @@ export const ENDPOINTS = {
     body: Req.RegisterRequest,
     response: Res.AuthResponse,
     status: 201,
-    errors: ["conflict: email or handle already taken", "rate_limited: too many attempts"],
+    errors: [
+      "conflict: email or handle already taken",
+      "rate_limited: too many attempts",
+      "unavailable: password service busy",
+    ],
   },
   login: {
     method: "POST",
@@ -177,7 +181,11 @@ export const ENDPOINTS = {
     description: "Returns a session token and sets the `ip_session` cookie. Rate-limited per client address.",
     body: Req.LoginRequest,
     response: Res.AuthResponse,
-    errors: ["unauthenticated: wrong email or password", "rate_limited: too many attempts"],
+    errors: [
+      "unauthenticated: wrong email or password",
+      "rate_limited: too many attempts",
+      "unavailable: password service busy",
+    ],
   },
   logout: {
     method: "POST",
@@ -213,7 +221,7 @@ export const ENDPOINTS = {
     description: "Signs out every other session.",
     body: Req.ChangePasswordRequest,
     response: Res.OkResponse,
-    errors: ["forbidden: the current password is not correct"],
+    errors: ["forbidden: the current password is not correct", "unavailable: password service busy"],
   },
   declareExpertise: {
     method: "POST",

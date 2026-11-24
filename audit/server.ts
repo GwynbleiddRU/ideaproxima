@@ -19,6 +19,7 @@ const env = {
   COOKIE_SECURE: "false",
   LOG_REQUESTS: "false",
   RATE_LIMIT_AUTH_PER_MINUTE: "0",
+  RATE_LIMIT_REQUESTS_PER_MINUTE: "0",
   RATE_LIMIT_WRITES_PER_MINUTE: "0",
   WEB_ROOT: join(root, "apps/web/dist"),
 };

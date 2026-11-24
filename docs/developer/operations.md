@@ -33,20 +33,26 @@ All configuration comes from environment variables. The server and the operator 
 `apps/api/.env` when it exists; variables already set in the environment take precedence. The Docker image never
 contains that file.
 
-| Variable                       | Default                                         | Meaning                                                                                                                    |
-| ------------------------------ | ----------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| `DATABASE_URL`                 | `pglite:./.data/pglite`                         | `postgres://user:pass@host:5432/db` in production. `pglite:memory` or `pglite:<dir>` for development.                      |
-| `PORT`                         | `3000`                                          | HTTP port.                                                                                                                 |
-| `NODE_ENV`                     | —                                               | Set `production` in production (makes cookies Secure by default).                                                          |
-| `SESSION_TTL_DAYS`             | `30`                                            | Session lifetime.                                                                                                          |
-| `COOKIE_SECURE`                | `true` when `NODE_ENV=production`, else `false` | Mark the session cookie Secure (HTTPS only).                                                                               |
-| `CORS_ORIGINS`                 | empty (same-origin only)                        | Comma-separated browser origins allowed to call the API with credentials.                                                  |
-| `TRUST_PROXY`                  | `false`                                         | Use the first `X-Forwarded-For` address as the client address (rate limiting). Enable **only** behind a proxy you control. |
-| `MAX_BODY_BYTES`               | `1048576`                                       | Maximum request body size.                                                                                                 |
-| `RATE_LIMIT_AUTH_PER_MINUTE`   | `10`                                            | Login + registration attempts per client address per minute. `0` disables.                                                 |
-| `RATE_LIMIT_WRITES_PER_MINUTE` | `120`                                           | Writes per account (or per address when anonymous) per minute. `0` disables.                                               |
-| `LOG_REQUESTS`                 | `true` (unless `NODE_ENV=test`)                 | One log line per request.                                                                                                  |
-| `WEB_ROOT`                     | `apps/web/dist`, when it has been built         | Directory of the built web app to serve at `/`. `off` serves the API only (`GET /` then redirects to the `/v1` index).     |
+| Variable                         | Default                                         | Meaning                                                                                                                                                                          |
+| -------------------------------- | ----------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `DATABASE_URL`                   | `pglite:./.data/pglite`                         | `postgres://user:pass@host:5432/db` in production. `pglite:memory` or `pglite:<dir>` for development.                                                                            |
+| `PORT`                           | `3000`                                          | HTTP port.                                                                                                                                                                       |
+| `NODE_ENV`                       | —                                               | Set `production` in production (makes cookies Secure by default).                                                                                                                |
+| `SESSION_TTL_DAYS`               | `30`                                            | Session lifetime.                                                                                                                                                                |
+| `COOKIE_SECURE`                  | `true` when `NODE_ENV=production`, else `false` | Mark the session cookie Secure (HTTPS only).                                                                                                                                     |
+| `CORS_ORIGINS`                   | empty (same-origin only)                        | Comma-separated browser origins allowed to call the API with credentials.                                                                                                        |
+| `TRUST_PROXY_HOPS`               | `0`                                             | Trusted reverse proxies on every ingress path. Count from the right of `X-Forwarded-For`. Zero or a short chain uses the socket peer.                                            |
+| `CLIENT_IP_HEADER`               | unset                                           | Single-value header overwritten by the edge, e.g. `cf-connecting-ip`, `fly-client-ip` or `x-real-ip`. Takes precedence over hop counting. A missing header uses the socket peer. |
+| `TRUST_PROXY`                    | `false`                                         | Deprecated for one release. `true` warns at startup and defaults `TRUST_PROXY_HOPS` to one (the last entry).                                                                     |
+| `RATE_LIMIT_IPV6_PREFIX`         | `64`                                            | IPv6 network prefix length (0–128). IPv4-mapped addresses share their IPv4 bucket. Invalid addresses share one unknown bucket.                                                   |
+| `RATE_LIMIT_REQUESTS_PER_MINUTE` | `600`                                           | Requests per network per minute, including reads, before session lookup. Zero disables this limit.                                                                               |
+| `PASSWORD_HASH_CONCURRENCY`      | `3`                                             | Maximum simultaneous scrypt operations per process. Minimum one.                                                                                                                 |
+| `PASSWORD_HASH_QUEUE`            | `32`                                            | Maximum waiting scrypt operations. Zero allows only active slots. Overflow returns 503 `unavailable` with `Retry-After: 1`.                                                      |
+| `MAX_BODY_BYTES`                 | `1048576`                                       | Maximum request body size.                                                                                                                                                       |
+| `RATE_LIMIT_AUTH_PER_MINUTE`     | `10`                                            | Login + registration attempts per client address per minute. `0` disables.                                                                                                       |
+| `RATE_LIMIT_WRITES_PER_MINUTE`   | `120`                                           | Writes per account (or per address when anonymous) per minute. `0` disables.                                                                                                     |
+| `LOG_REQUESTS`                   | `true` (unless `NODE_ENV=test`)                 | One log line per request.                                                                                                                                                        |
+| `WEB_ROOT`                       | `apps/web/dist`, when it has been built         | Directory of the built web app to serve at `/`. `off` serves the API only (`GET /` then redirects to the `/v1` index).                                                           |
 
 ## Deploying with Docker
 
@@ -69,7 +75,7 @@ docker run --rm -e DATABASE_URL="$DATABASE_URL" ideaproxima node apps/api/dist/s
 
 ```bash
 docker run -d -p 3000:3000 \
-  -e DATABASE_URL="$DATABASE_URL" -e NODE_ENV=production -e TRUST_PROXY=true \
+  -e DATABASE_URL="$DATABASE_URL" -e NODE_ENV=production \
   ideaproxima
 ```
 
@@ -125,8 +131,10 @@ with no actor.
 ## Security checklist
 
 - [ ] `NODE_ENV=production` and HTTPS in front of the API (cookies are then `Secure`, `HttpOnly`, `SameSite=Lax`).
-- [ ] `TRUST_PROXY=true` **only** when a reverse proxy you control sets `X-Forwarded-For`. Otherwise clients can
-      spoof their address and evade rate limits.
+- [ ] Before enabling forwarded addresses, verify on staging that the origin is reachable only through your
+      trusted proxies. For hop counting, check that every ingress path has the same configured hop count and
+      that each proxy appends its peer. For a single-value header, check that the edge overwrites it.
+      Keep the socket default until you verify the topology. Keep addresses and network keys out of logs.
 - [ ] `CORS_ORIGINS` lists exactly your frontend origins, or is empty when the frontend is served from the same
       origin.
 - [ ] The database user has only the privileges the API needs. Keep `DATABASE_URL` in a secret store.

@@ -28,6 +28,7 @@ export function offsetFrom(raw: string | undefined): number {
   const c = decodeCursor(raw);
   if (!c) return 0;
   if (!("o" in c)) throw new DomainError("validation_failed", "Invalid cursor for this list.");
+  if (c.o > 10_000) throw new DomainError("validation_failed", "Narrow the list with a filter.");
   return c.o;
 }
 

@@ -179,6 +179,51 @@ describe("claims", () => {
     expect(claimView.body.evidenceCounts.challenges).toBe(0); // but no longer counted
   });
 
+  it("redacts all four evidence text fields in the contributor's withdrawal response", async () => {
+    const mod = await h.user("evidence-mod", "moderator");
+    const idea = await h.idea(alice.token);
+    const claim = await addClaim(alice.token, idea.id, {
+      statement: "A claim with a dated source.",
+      role: "premise",
+    });
+    const text = { summary: "Initial observation.", limitations: "Small sample.", locator: "Page 8" };
+    const ev = await h.call<EvidenceDto>("POST", `/claims/${claim.body.id}/evidence`, {
+      token: bob.token,
+      body: {
+        ...text,
+        source: { kind: "web_page", title: "Example record", url: "https://example.org/record" },
+        stance: "mixed",
+      },
+    });
+    expect(ev.status).toBe(201);
+    expect(
+      (
+        await h.call("POST", "/moderation", {
+          token: mod.token,
+          body: {
+            target: { kind: "evidence", id: ev.body.id },
+            action: "hide",
+            reason: "Review pending",
+          },
+        })
+      ).status,
+    ).toBe(200);
+    const withdrawnReason = "Source corrected.";
+    const withdrawal = await h.call<EvidenceDto>("POST", `/evidence/${ev.body.id}/withdraw`, {
+      token: bob.token,
+      body: { reason: withdrawnReason },
+    });
+    expect(withdrawal.body).toMatchObject({
+      hidden: true,
+      summary: "",
+      limitations: "",
+      locator: "",
+      withdrawnReason: "",
+    });
+    const review = await h.call<ClaimDetailDto>("GET", `/claims/${claim.body.id}`, { token: mod.token });
+    expect(review.body.evidence[0]).toMatchObject({ ...text, withdrawnReason });
+  });
+
   it("validates depth and unlinks (records removal) by curators only", async () => {
     const idea = await h.idea(alice.token);
     expect(

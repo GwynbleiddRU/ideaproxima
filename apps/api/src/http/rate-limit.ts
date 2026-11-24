@@ -46,17 +46,3 @@ export function rateLimit(options: {
     await next();
   };
 }
-
-/**
- * The client address: X-Forwarded-For when the deployment declares a trusted proxy, otherwise the socket
- * address from the Node server. Falls back to "unknown" (e.g. in-process tests), which still limits correctly
- * as one shared bucket.
- */
-export function clientAddress(c: Context<AppEnv>): string {
-  if (c.get("config").trustProxy) {
-    const forwarded = c.req.header("x-forwarded-for")?.split(",")[0]?.trim();
-    if (forwarded) return forwarded;
-  }
-  const incoming = (c.env as { incoming?: { socket?: { remoteAddress?: string } } } | undefined)?.incoming;
-  return incoming?.socket?.remoteAddress ?? "unknown";
-}

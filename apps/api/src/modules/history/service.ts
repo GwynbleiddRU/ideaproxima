@@ -1,11 +1,58 @@
-import { and, desc, eq, like, lt, or, sql, type SQL } from "drizzle-orm";
+import { and, desc, eq, inArray, isNotNull, like, lt, or, sql, type SQL } from "drizzle-orm";
 import type { ActivityDto, Page } from "@ideaproxima/contracts";
-import { activities } from "../../db/schema";
+import {
+  activities,
+  argumentsTable,
+  claims,
+  comments,
+  evidence,
+  ideaClaims,
+  initiatives,
+} from "../../db/schema";
 import { findIdea } from "../ideas/queries";
 import { personIdByHandle } from "../identity/service";
 import { isModerator, type Ctx } from "../shared/context";
 import { encodeCursor, keysetFrom, splitPage } from "../shared/pagination";
 import { ideaRefs, iso, personRefs } from "../shared/refs";
+
+const subjectTables = {
+  claim: claims,
+  evidence,
+  argument: argumentsTable,
+  comment: comments,
+  initiative: initiatives,
+};
+
+async function hiddenSubjects(ctx: Ctx, items: (typeof activities.$inferSelect)[]) {
+  const hidden = new Map<string, Set<string>>();
+  if (isModerator(ctx)) return hidden;
+  const idsFor = (kind: string) =>
+    items
+      .filter((item) => item.subjectKind === kind && !item.action.startsWith("moderation."))
+      .map((item) => item.subjectId);
+
+  await Promise.all(
+    Object.entries(subjectTables).map(async ([kind, table]) => {
+      const ids = idsFor(kind);
+      if (!ids.length) return;
+      const rows = await ctx.db
+        .select({ id: table.id })
+        .from(table)
+        .where(and(inArray(table.id, ids), isNotNull(table.hiddenAt)));
+      hidden.set(kind, new Set(rows.map((row) => row.id)));
+    }),
+  );
+  const links = idsFor("idea_claim");
+  if (links.length) {
+    const rows = await ctx.db
+      .select({ id: ideaClaims.id })
+      .from(ideaClaims)
+      .innerJoin(claims, eq(ideaClaims.claimId, claims.id))
+      .where(and(inArray(ideaClaims.id, links), isNotNull(claims.hiddenAt)));
+    hidden.set("idea_claim", new Set(rows.map((row) => row.id)));
+  }
+  return hidden;
+}
 
 /**
  * Read access to the activity ledger: idea timelines ("how did this idea evolve?"), personal contribution
@@ -43,7 +90,8 @@ async function page(
     .orderBy(desc(activities.occurredAt), desc(activities.id))
     .limit(limit + 1);
   const { items, hasMore } = splitPage(rows, limit);
-  const [refs, ideasById] = await Promise.all([
+  const [hidden, refs, ideasById] = await Promise.all([
+    hiddenSubjects(ctx, items),
     personRefs(
       ctx.db,
       items.map((r) => r.actorId),
@@ -56,16 +104,20 @@ async function page(
   ]);
   const last = items.at(-1);
   return {
-    items: items.map((r) => ({
-      id: r.id,
-      occurredAt: iso(r.occurredAt),
-      actor: r.actorId ? (refs.get(r.actorId) ?? null) : null,
-      action: r.action,
-      ideaId: r.ideaIds[0] ?? null,
-      idea: (r.ideaIds[0] && ideasById.get(r.ideaIds[0])) || null,
-      subject: { kind: r.subjectKind, id: r.subjectId },
-      payload: r.payload,
-    })),
+    items: items.map((r) => {
+      const redact =
+        !r.action.startsWith("moderation.") && (hidden.get(r.subjectKind)?.has(r.subjectId) ?? false);
+      return {
+        id: r.id,
+        occurredAt: iso(r.occurredAt),
+        actor: r.actorId ? (refs.get(r.actorId) ?? null) : null,
+        action: r.action,
+        ideaId: r.ideaIds[0] ?? null,
+        idea: (r.ideaIds[0] && ideasById.get(r.ideaIds[0])) || null,
+        subject: { kind: r.subjectKind, id: r.subjectId, hidden: redact },
+        payload: redact ? {} : r.payload,
+      };
+    }),
     nextCursor: hasMore && last ? encodeCursor({ t: iso(last.occurredAt), id: last.id }) : null,
   };
 }

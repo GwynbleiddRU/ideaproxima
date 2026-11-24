@@ -434,19 +434,20 @@ export async function evidenceDtos(ctx: Ctx, rows: EvidenceRow[]): Promise<Evide
   const outcomeMap = new Map(outcomeRows.map((o) => [o.id, o]));
   return rows.map((r) => {
     const s = summaries.get(r.id) ?? {};
+    const redact = !!r.hiddenAt && !isModerator(ctx);
     return {
       id: r.id,
       claimId: r.claimId,
       stance: r.stance,
-      summary: r.hiddenAt && !isModerator(ctx) ? "" : r.summary,
-      limitations: r.limitations,
-      locator: r.locator,
+      summary: redact ? "" : r.summary,
+      limitations: redact ? "" : r.limitations,
+      locator: redact ? "" : r.locator,
       source: r.sourceId ? (sourceMap.get(r.sourceId) ?? null) : null,
       outcome: r.outcomeId ? (outcomeMap.get(r.outcomeId) ?? null) : null,
       contributedBy: refOrUnknown(refs, r.contributedBy),
       createdAt: iso(r.createdAt),
       withdrawnAt: isoOrNull(r.withdrawnAt),
-      withdrawnReason: r.withdrawnReason,
+      withdrawnReason: redact ? "" : r.withdrawnReason,
       hidden: !!r.hiddenAt,
       derived: {
         algorithm: BASELINE_ALGORITHM,

@@ -10,7 +10,8 @@ import type { AppConfig } from "./config";
 import type { Database } from "./db/client";
 import { SESSION_COOKIE, type AppEnv } from "./http/env";
 import { handleError } from "./http/errors";
-import { clientAddress, rateLimit } from "./http/rate-limit";
+import { clientAddress } from "./http/client-address";
+import { rateLimit } from "./http/rate-limit";
 import { catalogRoutes } from "./http/routes/catalog";
 import { identityRoutes } from "./http/routes/identity";
 import { ideaRoutes } from "./http/routes/ideas";
@@ -34,8 +35,9 @@ const WRITE_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
  * standalone Node server (src/main.ts), inside a frontend framework's route handler, or in tests via
  * `app.request()` without opening a port.
  *
- * Middleware order matters: security headers → (logging) → web app files → CORS → body size limit → session
- * resolution → rate limits → routes. Static files come before session resolution so they cost no database work. Versioning: everything lives under /v1. Additive changes (new fields, endpoints) stay in
+ * Middleware order matters: security headers → (logging) → web app files → CORS → body size limit → network
+ * limit → session resolution → auth and write limits → routes. API middleware only runs under /v1.
+ * Versioning: additive changes (new fields, endpoints) stay in
  * v1; breaking changes get /v2 alongside, sharing the same services.
  */
 export function createApp(deps: AppDeps) {
@@ -73,16 +75,28 @@ export function createApp(deps: AppDeps) {
     }),
   );
 
-  // Resolve the actor once per request: Bearer token (API clients) or HttpOnly session cookie (browsers).
-  app.use("*", async (c, next) => {
+  app.use("/v1/*", async (c, next) => {
+    c.set("config", config);
+    await next();
+  });
+  app.use(
+    "/v1/*",
+    rateLimit({
+      name: "requests",
+      perMinute: config.rateLimits.requestsPerMinute,
+      key: clientAddress,
+    }),
+  );
+
+  // Resolve the actor once per API request: Bearer token (API clients) or HttpOnly cookie (browsers).
+  app.use("/v1/*", async (c, next) => {
     const header = c.req.header("authorization");
     const token = header?.toLowerCase().startsWith("bearer ")
       ? header.slice(7).trim()
       : getCookie(c, SESSION_COOKIE);
-    const session = token ? await resolveSession(deps.db, token) : null;
+    const session = token && /^[A-Za-z0-9_-]{43}$/.test(token) ? await resolveSession(deps.db, token) : null;
     c.set("ctx", { db: deps.db, actor: session?.actor ?? null, weights });
     c.set("sessionId", session?.sessionId ?? null);
-    c.set("config", config);
     await next();
   });
 

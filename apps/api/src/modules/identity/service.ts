@@ -229,8 +229,9 @@ export async function login(ctx: Ctx, input: LoginRequest, ttlDays: number): Pro
     .innerJoin(people, eq(people.id, accounts.personId))
     .where(eq(accounts.email, input.email))
     .limit(1);
-  // Same error for unknown email and wrong password: do not reveal which accounts exist.
-  if (!row || row.person.deactivatedAt || !(await verifyPassword(input.password, row.passwordHash))) {
+  const active = row && !row.person.deactivatedAt;
+  const matches = await verifyPassword(input.password, active ? row.passwordHash : undefined);
+  if (!active || !matches) {
     throw new DomainError("unauthenticated", "Wrong email or password.");
   }
   const session = await createSession(ctx.db, row.person.id, ttlDays);

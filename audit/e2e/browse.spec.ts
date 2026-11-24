@@ -2,6 +2,32 @@ import { expect, test } from "@playwright/test";
 import { IDEA, watchErrors } from "./helpers";
 
 test.describe("reading the archive (anonymous)", () => {
+  test("a redacted activity keeps its place with a moderation notice", async ({ page }) => {
+    await page.route("**/v1/activity?*", (route) =>
+      route.fulfill({
+        json: {
+          items: [
+            {
+              id: "c8b6b0e9-42b6-4916-905a-b21b81a69a69",
+              occurredAt: "2026-11-25T12:00:00Z",
+              actor: null,
+              action: "argument.made",
+              ideaId: null,
+              idea: null,
+              subject: { kind: "argument", id: "b34a70a8-b617-410f-ab43-366b919092b8", hidden: true },
+              payload: {},
+            },
+          ],
+          nextCursor: null,
+        },
+      }),
+    );
+    await page.goto("/activity");
+    await expect(page.getByRole("region", { name: "The record" }).getByRole("listitem")).toContainText(
+      "content hidden by moderation",
+    );
+  });
+
   test("home presents the lenses, the domains, ways to help and live progress", async ({ page }) => {
     const errors = watchErrors(page);
     await page.goto("/");

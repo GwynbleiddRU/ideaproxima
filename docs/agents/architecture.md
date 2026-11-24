@@ -196,9 +196,16 @@ Fixed-window, in-memory rate limits:
 - authentication attempts per client address (default 10/min);
 - writes per account, or per address when anonymous (default 120/min).
 
-Also a request body limit (1 MiB) and JSON-only writes. The client address comes from the socket, or from
-`X-Forwarded-For` only with `TRUST_PROXY=true`. In-memory limits are per process: fine for one instance; with
-several, add a shared limiter (proxy/WAF/Redis). The middleware interface stays the same.
+Also a request body limit (1 MiB) and JSON-only writes. Limits are per process. Multiple instances need a
+shared limiter (proxy/WAF/Redis).
+
+**2026-11-25 addendum.** After body validation and before session resolution, a network budget covers reads
+and writes (600/min). Only tokens with the issued 43-character base64url shape trigger a lookup. Auth and
+write budgets run next. Network keys use IPv4 addresses or IPv6 prefixes (default /64), with one fallback
+bucket for invalid addresses. The socket peer is the default. Isolated origins may use a fixed trusted hop
+count from the right or a single header their edge overwrites. Login verifies one hash even for missing or
+deactivated accounts. Registration, login and password changes share three active scrypt slots and 32 waiting
+slots by default. See the [configuration and proxy checklist](../developer/operations.md#configuration).
 
 ### ADR-18 Operator commands and explicit migrations
 

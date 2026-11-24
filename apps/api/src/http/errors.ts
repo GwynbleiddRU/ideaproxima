@@ -10,6 +10,7 @@ const STATUS: Record<DomainErrorCode, ContentfulStatusCode> = {
   unauthenticated: 401,
   forbidden: 403,
   not_found: 404,
+  unavailable: 503,
   conflict: 409,
   invariant_violated: 422,
 };
@@ -27,7 +28,10 @@ const body = (code: string, message: string, details?: unknown): ErrorResponse =
 });
 
 export function handleError(err: Error, c: Context) {
-  if (err instanceof DomainError) return c.json(body(err.code, err.message, err.details), STATUS[err.code]);
+  if (err instanceof DomainError) {
+    if (err.code === "unavailable") c.header("Retry-After", "1");
+    return c.json(body(err.code, err.message, err.details), STATUS[err.code]);
+  }
   if (err instanceof HTTPException) return c.json(body("http_error", err.message), err.status);
   switch (pgCode(err)) {
     // Unique violations reach here only on races the services did not pre-check (e.g. concurrent inserts).

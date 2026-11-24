@@ -154,7 +154,7 @@ describe("foldActivity", () => {
     id: `a${++n}`,
     action,
     actor: { id: `p${n}`, handle: `p${n}`, displayName: `Person ${n}` },
-    subject: { kind: "idea", id: onIdea.id },
+    subject: { kind: "idea", id: onIdea.id, hidden: false },
     payload,
     occurredAt: "2026-11-16T10:00:00.000Z",
     ideaId: onIdea.id,

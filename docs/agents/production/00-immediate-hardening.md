@@ -3,7 +3,7 @@
 Part of the [production-readiness program](README.md). Prompt for the implementing agent:
 `prompts/api/00-immediate-hardening-prompt.md`.
 
-| Status     | Not started                                                                       |
+| Status     | Done 2026-11-25 · H1–H6 verified                                                  |
 | ---------- | --------------------------------------------------------------------------------- |
 | Depends on | Nothing                                                                           |
 | Unblocks   | Everything else: later plans assume a trustworthy client address and a clean feed |
@@ -138,3 +138,36 @@ with keysets, after which the ceiling only guards legacy cursors.
   an isolated fixture and check staging ingress rules. Keep raw addresses and limiter keys out of logs.
 - **The dummy hash must use the live parameters,** or timing differs again when parameters are raised. Derive
   it from the same constants.
+
+## Implementation notes
+
+Step 1 began on clean `main` at `be5eb61`. The sequence had no preceding row or owner gate. Baseline
+`npm run check` passed (133 tests, all 66 endpoints). The Windows sandbox prevented tsx from reading the
+current user, so the baseline and verification commands using tsx ran with host access.
+
+| Change            | Local regression evidence                                                                                                                                                                                                                                                                                                     |
+| ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| H1 · SEC-1, SEC-6 | `http/client-address.ts` supplies network keys to all three limiters. `client-address.test.ts` checks hop selection, short chains, the legacy alias, edge-header precedence, mapped IPv4, IPv6 masking and invalid input. Origin isolation and hop counts are deployment-specific checks in the operations guide.             |
+| H2 · SEC-4, SEC-5 | In `app.ts`, the network budget precedes session resolution. `request-guards.test.ts` admits 600 reads from one network and rejects the next with 429 and a retry header, before the session resolver runs. Malformed bearer and cookie values produce zero lookups.                                                          |
+| H3 · SEC-2, SEC-3 | The identity service verifies once for active, missing and deactivated accounts. Its crypto module computes the dummy hash at startup and bounds all scrypt work. `request-guards.test.ts` verifies the call counts, one active and one waiting login, overflow with 503 and a one-second retry, and subsequent recovery.     |
+| H4 · MOD-1        | The history service batches visibility by subject kind, including claim links. `governance.test.ts` checks public redaction and moderator access in all three feeds, public moderation reasons and restoration. The Activity DTO and feed carry the visibility result. `audit/e2e/browse.spec.ts` checks the rendered notice. |
+| H5 · MOD-3        | `knowledge.test.ts` covers the contributor withdrawing hidden evidence. This HTTP response uses `evidenceDtos()` and blanks all four text fields. A moderator's claim detail retains their original values. Public claim detail already omits hidden evidence.                                                                |
+| H6 · SEC-10       | `shared/pagination.ts` checks the decoded offset before the list query. `ideas.test.ts` accepts 10,000 and returns 400 `validation_failed` at 10,001.                                                                                                                                                                         |
+
+**Login timings.** Node 24.16.0, fresh PGlite harness, one registered fixture, identical wrong password.
+Each run alternated the two e-mails for eight rounds through in-process `POST /v1/auth/login`.
+All calls returned 401. Medians use the mean of the two middle observations.
+
+| Account    | Before (ms) | After (ms) |
+| ---------- | ----------: | ---------: |
+| Unknown    |        1.29 |      51.01 |
+| Registered |       50.10 |      51.50 |
+
+**Verification.** `npm run docs:api` regenerated the reference and OpenAPI. `npm run check` passed
+with 144 tests and all 66 endpoints covered. `npm run test:pg` passed the same 144 tests and contract
+coverage on isolated PostgreSQL 17.12. `npm run test:e2e` passed all 53 browser checks, including the
+moderation notice and accessibility in both themes.
+
+**Handoff.** No owner decision is pending for this step. The next eligible row is step 2, plan 01 phase A,
+using `prompts/api/01-operational-foundations-prompt.md`. Keep the network limiter ahead of session lookup
+when adding request logs and metrics.

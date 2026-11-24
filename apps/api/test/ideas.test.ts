@@ -256,6 +256,16 @@ describe("stewardship", () => {
 });
 
 describe("listing", () => {
+  it("accepts offset 10,000 and asks for a narrower filter beyond it", async () => {
+    const read = (o: number) =>
+      h.call("GET", `/ideas?cursor=${Buffer.from(JSON.stringify({ o })).toString("base64url")}`);
+    expect((await read(10_000)).status).toBe(200);
+    expect(await read(10_001)).toMatchObject({
+      status: 400,
+      body: { error: { code: "validation_failed", message: "Narrow the list with a filter." } },
+    });
+  });
+
   it("lists newest first with opaque cursor pagination and filters", async () => {
     const page1 = await h.call<Page<IdeaListItem>>("GET", "/ideas?limit=2");
     expect(page1.body.items).toHaveLength(2);

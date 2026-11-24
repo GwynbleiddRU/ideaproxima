@@ -93,7 +93,7 @@ function operation(name: string, spec: EndpointSpec): Json {
   }
   responses.default = {
     description:
-      "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, internal_error.",
+      "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
     content: { "application/json": { schema: ref("Error") } },
   };
   const description = [

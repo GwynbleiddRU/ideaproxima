@@ -237,21 +237,23 @@ is [`api/openapi.json`](api/openapi.json) and is also served live at `GET /v1/op
   `:capacity`).
 - **Errors** always use `{ "error": { "code", "message", "details"? } }`:
 
-  | Status | `code`               | Meaning                                                                                   |
-  | ------ | -------------------- | ----------------------------------------------------------------------------------------- |
-  | 400    | `validation_failed`  | Malformed input. `details.issues[{ path, message }]` lists problems.                      |
-  | 401    | `unauthenticated`    | No valid session (or wrong credentials on login).                                         |
-  | 403    | `forbidden`          | Signed in, but not allowed.                                                               |
-  | 404    | `not_found`          | No such resource, or hidden by moderation.                                                |
-  | 409    | `conflict`           | Duplicate, or concurrent modification (revisions return `details.currentRevisionId`).     |
-  | 413    | `payload_too_large`  | Request body over the limit.                                                              |
-  | 422    | `invariant_violated` | Well-formed but breaks a domain rule (e.g. a stage without proof; `details.requirement`). |
-  | 429    | `rate_limited`       | Too many requests. `Retry-After` header and `details.retryAfterSeconds`.                  |
-  | 500    | `internal_error`     | A bug. Logged server-side.                                                                |
+  | Status | `code`               | Meaning                                                                                     |
+  | ------ | -------------------- | ------------------------------------------------------------------------------------------- |
+  | 400    | `validation_failed`  | Malformed input. `details.issues[{ path, message }]` lists problems.                        |
+  | 401    | `unauthenticated`    | No valid session (or wrong credentials on login).                                           |
+  | 403    | `forbidden`          | Signed in, but not allowed.                                                                 |
+  | 404    | `not_found`          | No such resource, or hidden by moderation.                                                  |
+  | 409    | `conflict`           | Duplicate, or concurrent modification (revisions return `details.currentRevisionId`).       |
+  | 413    | `payload_too_large`  | Request body over the limit.                                                                |
+  | 422    | `invariant_violated` | Well-formed but breaks a domain rule (e.g. a stage without proof; `details.requirement`).   |
+  | 429    | `rate_limited`       | Too many requests. `Retry-After` header and `details.retryAfterSeconds`.                    |
+  | 500    | `internal_error`     | A bug. Logged server-side.                                                                  |
+  | 503    | `unavailable`        | The password hashing queue is full. Retry after the interval in `Retry-After` (one second). |
 
 - **Pagination.** Lists return `{ items, nextCursor }`. Pass `cursor` back unchanged; `limit` is 1–100 (default
   20). Cursors are opaque: metric-sorted lists use offsets internally, chronological streams use keysets, and
-  this can change per endpoint without breaking clients.
+  this can change per endpoint without breaking clients. Offsets above 10,000 return 400
+  `validation_failed`. Narrow the list with a filter and start a new page sequence.
 - **Idempotency.** `PUT`/`DELETE` of stances and involvements are idempotent, even under concurrent double
   submission. Repeating an identical evaluation is a no-op (`changed: []`). Registering a source whose DOI/URL
   already exists returns it (200 rather than 201).

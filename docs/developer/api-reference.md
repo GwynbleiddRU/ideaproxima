@@ -191,7 +191,7 @@ Response `200`: [`SearchResults`](#schema-searchresults)
 
 **Access:** public
 
-Newest first. `action=moderation.` returns the public moderation log. Activity about hidden ideas is omitted except moderation entries.
+Newest first. `action=moderation.` returns the public moderation log. For public readers, activity about hidden ideas is omitted and other hidden subjects have an empty payload and subject.hidden=true. Moderation entries stay public.
 
 Query parameters:
 
@@ -223,6 +223,7 @@ Notable errors:
 
 - `conflict` — email or handle already taken
 - `rate_limited` — too many attempts
+- `unavailable` — password service busy
 
 ### `POST /v1/auth/login`
 
@@ -240,6 +241,7 @@ Notable errors:
 
 - `unauthenticated` — wrong email or password
 - `rate_limited` — too many attempts
+- `unavailable` — password service busy
 
 ### `POST /v1/auth/logout`
 
@@ -282,6 +284,7 @@ Response `200`: [`Ok`](#schema-ok)
 Notable errors:
 
 - `forbidden` — the current password is not correct
+- `unavailable` — password service busy
 
 ### `POST /v1/me/expertise`
 
@@ -1168,6 +1171,7 @@ Named request and response shapes. Nested inline objects are listed with dotted 
 | `subject` | object | yes |  |
 | `subject.kind` | string | yes |  |
 | `subject.id` | string (uuid) | yes |  |
+| `subject.hidden` | boolean | yes |  |
 | `payload` | map (string → any) | yes |  |
 
 ### <a id="schema-activitypage"></a>ActivityPage

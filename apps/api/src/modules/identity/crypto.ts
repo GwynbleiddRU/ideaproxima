@@ -1,4 +1,6 @@
 import { createHash, randomBytes, scrypt, timingSafeEqual } from "node:crypto";
+import { DomainError } from "@ideaproxima/domain";
+import { loadPasswordHashLimits } from "../../config";
 
 /**
  * Password hashing with Node's built-in scrypt (memory-hard, no native dependency).
@@ -10,13 +12,29 @@ const R = 8;
 const P = 1;
 const KEYLEN = 64;
 const MAXMEM = 128 * N * R * 2;
+const limits = loadPasswordHashLimits();
+let active = 0;
+const waiting: Array<() => void> = [];
 
-function derive(password: string, salt: Buffer, n: number, r: number, p: number): Promise<Buffer> {
-  return new Promise((resolve, reject) =>
-    scrypt(password.normalize("NFKC"), salt, KEYLEN, { N: n, r, p, maxmem: MAXMEM }, (err, key) =>
-      err ? reject(err) : resolve(key),
-    ),
-  );
+async function derive(password: string, salt: Buffer, n: number, r: number, p: number): Promise<Buffer> {
+  if (active < limits.concurrency) {
+    active++;
+  } else {
+    if (waiting.length >= limits.queue) throw new DomainError("unavailable", "Password service is busy.");
+    await new Promise<void>((resolve) => waiting.push(resolve));
+  }
+  try {
+    return await new Promise<Buffer>((resolve, reject) =>
+      scrypt(password.normalize("NFKC"), salt, KEYLEN, { N: n, r, p, maxmem: MAXMEM }, (err, key) =>
+        err ? reject(err) : resolve(key),
+      ),
+    );
+  } finally {
+    // Hand the occupied slot directly to the oldest waiter, including when scrypt fails.
+    const next = waiting.shift();
+    if (next) next();
+    else active--;
+  }
 }
 
 export async function hashPassword(password: string): Promise<string> {
@@ -25,7 +43,9 @@ export async function hashPassword(password: string): Promise<string> {
   return ["scrypt", N, R, P, salt.toString("base64url"), key.toString("base64url")].join("$");
 }
 
-export async function verifyPassword(password: string, stored: string): Promise<boolean> {
+const dummyPasswordHash = await hashPassword(randomBytes(32).toString("base64url"));
+
+export async function verifyPassword(password: string, stored: string = dummyPasswordHash): Promise<boolean> {
   const [alg, n, r, p, salt, hash] = stored.split("$");
   if (alg !== "scrypt" || !n || !r || !p || !salt || !hash) return false;
   const expected = Buffer.from(hash, "base64url");
