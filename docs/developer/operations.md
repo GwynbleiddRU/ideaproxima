@@ -18,7 +18,7 @@ How to configure, deploy, run and maintain the Ideaproxima API.
 ## What runs in production
 
 - **One stateless process** (Node.js ≥ 22.18): `apps/api/dist/main.js`. On `PORT` it serves the API at `/v1` and the
-  built web app (`apps/web/dist`) at every other path. The web app's files are read once at startup and served from
+  built web app (`apps/web/dist`) outside `/v1`. The web app's files are read once at startup and served from
   memory, brotli- or gzip-compressed: hashed assets (`/assets/*`) with `Cache-Control: immutable` for a year, the
   HTML shell with `no-cache` and a Content-Security-Policy. A CDN or reverse proxy in front may cache `/assets/*`
   indefinitely.
@@ -33,13 +33,19 @@ All configuration comes from environment variables. The server and the operator 
 `apps/api/.env` when it exists; variables already set in the environment take precedence. The Docker image never
 contains that file.
 
+Invalid settings stop startup with one error listing the affected variables. Boolean settings accept
+`true`, `false`, `1` or `0`. Omit settings to use their defaults.
+
 | Variable                         | Default                                         | Meaning                                                                                                                                                                          |
 | -------------------------------- | ----------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `DATABASE_URL`                   | `pglite:./.data/pglite`                         | `postgres://user:pass@host:5432/db` in production. `pglite:memory` or `pglite:<dir>` for development.                                                                            |
+| `ALLOW_PGLITE_IN_PRODUCTION`     | `false`                                         | Explicit exception for isolated local runs with PGlite and production defaults.                                                                                                  |
 | `PORT`                           | `3000`                                          | HTTP port.                                                                                                                                                                       |
+| `INTERNAL_PORT`                  | unset                                           | Enables the private Prometheus listener on a port distinct from `PORT`.                                                                                                          |
 | `NODE_ENV`                       | —                                               | Set `production` in production (makes cookies Secure by default).                                                                                                                |
 | `SESSION_TTL_DAYS`               | `30`                                            | Session lifetime.                                                                                                                                                                |
 | `COOKIE_SECURE`                  | `true` when `NODE_ENV=production`, else `false` | Mark the session cookie Secure (HTTPS only).                                                                                                                                     |
+| `ALLOW_INSECURE_COOKIES`         | `false`                                         | Explicit exception for local HTTP runs with production defaults and `COOKIE_SECURE=false`.                                                                                       |
 | `CORS_ORIGINS`                   | empty (same-origin only)                        | Comma-separated browser origins allowed to call the API with credentials.                                                                                                        |
 | `TRUST_PROXY_HOPS`               | `0`                                             | Trusted reverse proxies on every ingress path. Count from the right of `X-Forwarded-For`. Zero or a short chain uses the socket peer.                                            |
 | `CLIENT_IP_HEADER`               | unset                                           | Single-value header overwritten by the edge, e.g. `cf-connecting-ip`, `fly-client-ip` or `x-real-ip`. Takes precedence over hop counting. A missing header uses the socket peer. |
@@ -52,6 +58,8 @@ contains that file.
 | `RATE_LIMIT_AUTH_PER_MINUTE`     | `10`                                            | Login + registration attempts per client address per minute. `0` disables.                                                                                                       |
 | `RATE_LIMIT_WRITES_PER_MINUTE`   | `120`                                           | Writes per account (or per address when anonymous) per minute. `0` disables.                                                                                                     |
 | `LOG_REQUESTS`                   | `true` (unless `NODE_ENV=test`)                 | One log line per request.                                                                                                                                                        |
+| `LOG_LEVEL`                      | `info`                                          | Minimum log level. Values are `fatal`, `error`, `warn`, `info`, `debug`, `trace` and `silent`.                                                                                   |
+| `LOG_FORMAT`                     | `json` in production, else `pretty`             | Log format on stdout. Pretty formatting requires the development dependency; production-only installations emit JSON.                                                            |
 | `WEB_ROOT`                       | `apps/web/dist`, when it has been built         | Directory of the built web app to serve at `/`. `off` serves the API only (`GET /` then redirects to the `/v1` index).                                                           |
 
 ## Deploying with Docker
@@ -85,7 +93,7 @@ The image declares a `HEALTHCHECK` against `GET /v1/health`, runs as the unprivi
 **The same layout locally:** `docker compose up --build` runs PostgreSQL, then a one-off `migrate` service (the release
 steps above), then the app once the migrations succeed. `--profile demo` adds the demo dataset. For production, the
 compose file is a template rather than a deployment: replace the fixed credentials, drop the published PostgreSQL
-port, put HTTPS in front of the API and remove `COOKIE_SECURE: "false"`.
+port, put HTTPS in front of the API and remove the local `COOKIE_SECURE` and `ALLOW_INSECURE_COOKIES` overrides.
 
 ## Deploying without Docker
 
@@ -147,10 +155,30 @@ with no actor.
 
 - **Health:** `GET /v1/health` returns `200 {"ok":true,"database":"up"}`, or `503` when the database is
   unreachable. Use it for load balancers and container orchestration.
-- **Logs:** one line per request (`LOG_REQUESTS=true`) and stack traces for unexpected errors (`internal_error`
-  responses) on stderr.
+- **Logs:** stdout carries one completion event per request when `LOG_REQUESTS=true`. The event records
+  `requestId`, `method`, `route`, `status`, `durationMs`, `actorId` and `bytesOut` (`null` when the
+  response length is unavailable at dispatch). Static files log at `debug`. Unexpected errors emit a separate
+  event with the same request ID and the SQLSTATE when available.
+- **Metrics:** scrape `GET /metrics` on `INTERNAL_PORT`. The listener binds to all container interfaces.
+  Keep it on the monitoring network. The Compose file publishes only the app's public HTTP port for that
+  service. Leave the internal port out of host port mappings and public proxy routes.
 - **Moderation and governance:** the public activity feed (`/v1/activity?action=moderation.`) shows every
   moderation action with its reason.
+
+| Metric                          | Type      | Labels                                                                                                      |
+| ------------------------------- | --------- | ----------------------------------------------------------------------------------------------------------- |
+| `http_requests_total`           | Counter   | `method`, `route`, `status`                                                                                 |
+| `http_request_duration_seconds` | Histogram | `method`, `route`, `status_class`                                                                           |
+| `http_requests_in_flight`       | Gauge     | None                                                                                                        |
+| `db_errors_total`               | Counter   | `code` (two-character SQLSTATE class observed at the HTTP boundary)                                         |
+| `rate_limit_decisions_total`    | Counter   | `policy` (`requests`, `authentication`, `writes`), `outcome` (`allowed`, `denied`)                          |
+| `password_hash_queue_depth`     | Gauge     | None                                                                                                        |
+| Node process defaults           | Various   | Runtime metrics from `prom-client`, including event-loop lag, heap, GC and file descriptors where supported |
+
+HTTP metrics describe public requests. Route labels come from registered patterns and use `unmatched` for
+requests without a registered route, including web files served by middleware. The duration buckets are
+5, 10, 25, 50, 100, 250 and 500 ms,
+then 1, 2.5, 5 and 10 seconds.
 
 ## Maintenance tasks
 

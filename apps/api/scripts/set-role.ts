@@ -18,7 +18,7 @@ if (!handle || !role || !(PERSON_ROLES as readonly string[]).includes(role)) {
   process.exit(2);
 }
 
-const database = await openDatabase(loadConfig().databaseUrl);
+const database = await openDatabase(loadConfig().db.url);
 try {
   await database.migrate();
   const person = await assignRoleAsOperator(database.db, handle, role as PersonRole);

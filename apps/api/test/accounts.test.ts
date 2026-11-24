@@ -117,7 +117,7 @@ describe("roles", () => {
 describe("abuse protection", () => {
   it("rate-limits authentication attempts per client address", async () => {
     const limited = await createHarness({
-      rateLimits: { requestsPerMinute: 0, authPerMinute: 3, writesPerMinute: 0 },
+      RATE_LIMIT_AUTH_PER_MINUTE: "3",
     });
     try {
       const attempts = [];
@@ -139,8 +139,8 @@ describe("abuse protection", () => {
 
   it("rate-limits writes per account and rejects oversized bodies", async () => {
     const limited = await createHarness({
-      rateLimits: { requestsPerMinute: 0, authPerMinute: 0, writesPerMinute: 2 },
-      maxBodyBytes: 2_000,
+      RATE_LIMIT_WRITES_PER_MINUTE: "2",
+      MAX_BODY_BYTES: "2000",
     });
     try {
       const u = await limited.user("tessa"); // registration is the first write from this address

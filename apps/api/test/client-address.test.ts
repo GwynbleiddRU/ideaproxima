@@ -27,9 +27,9 @@ describe("client network keys", () => {
   it("warns on the deprecated one-hop alias and honours an explicit hop count", () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
     try {
-      expect(loadConfig({ TRUST_PROXY: "true" }).trustProxyHops).toBe(1);
+      expect(loadConfig({ TRUST_PROXY: "true" }).http.trustProxyHops).toBe(1);
       expect(warn).toHaveBeenCalledWith(expect.stringContaining("deprecated"));
-      expect(loadConfig({ TRUST_PROXY: "true", TRUST_PROXY_HOPS: "0" }).trustProxyHops).toBe(0);
+      expect(loadConfig({ TRUST_PROXY: "true", TRUST_PROXY_HOPS: "0" }).http.trustProxyHops).toBe(0);
     } finally {
       warn.mockRestore();
     }

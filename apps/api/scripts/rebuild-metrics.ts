@@ -6,7 +6,7 @@ import { loadConfig } from "../src/config";
 import { openDatabase } from "../src/db/client";
 import { rebuildAllIdeaMetrics } from "../src/modules/metrics/service";
 
-const database = await openDatabase(loadConfig().databaseUrl);
+const database = await openDatabase(loadConfig().db.url);
 await database.migrate();
 const n = await rebuildAllIdeaMetrics({ db: database.db, actor: null, weights: uniformWeights });
 await database.close();

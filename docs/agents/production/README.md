@@ -171,7 +171,7 @@ Updated by whoever finishes a step: `Not started`, `In progress`, `Waiting for t
 | Step | Plan | Phase | Delivers                                                                                                   | Waits for the owner   | Status          |
 | ---- | ---- | ----- | ---------------------------------------------------------------------------------------------------------- | --------------------- | --------------- |
 | 1    | 00   | —     | Trusted network keys, bounded hashing, pre-session limits, redacted activity and evidence, capped offsets  | —                     | Done 2026-11-25 |
-| 2    | 01   | A     | Validated configuration, structured logs, request ids, metrics                                             | —                     | Not started     |
+| 2    | 01   | A     | Validated configuration, structured logs, request ids, metrics                                             | —                     | Done 2026-11-25 |
 | 3    | 01   | B     | Liveness and readiness, drain on shutdown, database guard rails, error reporter                            | —                     | Not started     |
 | 4    | 02   | A     | Job queue, worker, schedules, `JOBS_MODE`                                                                  | —                     | Not started     |
 | 5    | 02   | B     | Purges, asynchronous metric refresh, compose worker service                                                | —                     | Not started     |

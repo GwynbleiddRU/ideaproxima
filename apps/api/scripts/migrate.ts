@@ -3,8 +3,7 @@ import "../src/load-env";
 import { loadConfig } from "../src/config";
 import { openDatabase } from "../src/db/client";
 
-const { databaseUrl } = loadConfig();
-const database = await openDatabase(databaseUrl);
+const database = await openDatabase(loadConfig().db.url);
 await database.migrate();
 await database.close();
 console.info(`Migrations applied (${database.driver}).`);

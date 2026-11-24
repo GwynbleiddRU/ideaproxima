@@ -17,6 +17,8 @@ const env = {
   PORT: process.env.AUDIT_PORT ?? "3100",
   NODE_ENV: "production",
   COOKIE_SECURE: "false",
+  ALLOW_INSECURE_COOKIES: "true",
+  ALLOW_PGLITE_IN_PRODUCTION: "true",
   LOG_REQUESTS: "false",
   RATE_LIMIT_AUTH_PER_MINUTE: "0",
   RATE_LIMIT_REQUESTS_PER_MINUTE: "0",

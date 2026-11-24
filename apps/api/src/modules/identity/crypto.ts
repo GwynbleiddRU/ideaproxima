@@ -1,6 +1,7 @@
 import { createHash, randomBytes, scrypt, timingSafeEqual } from "node:crypto";
 import { DomainError } from "@ideaproxima/domain";
 import { loadPasswordHashLimits } from "../../config";
+import { passwordHashQueueDepth } from "../../observability/metrics";
 
 /**
  * Password hashing with Node's built-in scrypt (memory-hard, no native dependency).
@@ -12,16 +13,20 @@ const R = 8;
 const P = 1;
 const KEYLEN = 64;
 const MAXMEM = 128 * N * R * 2;
-const limits = loadPasswordHashLimits();
+let limits: ReturnType<typeof loadPasswordHashLimits> | undefined;
 let active = 0;
 const waiting: Array<() => void> = [];
 
 async function derive(password: string, salt: Buffer, n: number, r: number, p: number): Promise<Buffer> {
+  limits ??= loadPasswordHashLimits();
   if (active < limits.concurrency) {
     active++;
   } else {
     if (waiting.length >= limits.queue) throw new DomainError("unavailable", "Password service is busy.");
-    await new Promise<void>((resolve) => waiting.push(resolve));
+    await new Promise<void>((resolve) => {
+      waiting.push(resolve);
+      passwordHashQueueDepth.set(waiting.length);
+    });
   }
   try {
     return await new Promise<Buffer>((resolve, reject) =>
@@ -32,8 +37,10 @@ async function derive(password: string, salt: Buffer, n: number, r: number, p: n
   } finally {
     // Hand the occupied slot directly to the oldest waiter, including when scrypt fails.
     const next = waiting.shift();
-    if (next) next();
-    else active--;
+    if (next) {
+      passwordHashQueueDepth.set(waiting.length);
+      next();
+    } else active--;
   }
 }
 
@@ -43,7 +50,15 @@ export async function hashPassword(password: string): Promise<string> {
   return ["scrypt", N, R, P, salt.toString("base64url"), key.toString("base64url")].join("$");
 }
 
-const dummyPasswordHash = await hashPassword(randomBytes(32).toString("base64url"));
+// Unknown and inactive accounts still perform the same scrypt check, with a random comparison value.
+const dummyPasswordHash = [
+  "scrypt",
+  N,
+  R,
+  P,
+  randomBytes(16).toString("base64url"),
+  randomBytes(KEYLEN).toString("base64url"),
+].join("$");
 
 export async function verifyPassword(password: string, stored: string = dummyPasswordHash): Promise<boolean> {
   const [alg, n, r, p, salt, hash] = stored.split("$");

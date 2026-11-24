@@ -3,7 +3,7 @@
 Part of the [production-readiness program](README.md). Prompt for the implementing agent:
 `prompts/api/01-operational-foundations-prompt.md`.
 
-| Status     | Not started                                                                          |
+| Status     | Phase A done 2026-11-25 (step 2). Phase B pending (step 3).                          |
 | ---------- | ------------------------------------------------------------------------------------ |
 | Depends on | [00](00-immediate-hardening.md) (shares the error code `unavailable`)                |
 | Unblocks   | Every later plan: they all emit metrics and logs and rely on validated configuration |
@@ -147,3 +147,68 @@ observability and internal endpoints), `Dockerfile` (build argument, health chec
 - **Cardinality.** A raw path or an id in a label will exhaust the metrics backend. Review every label.
 - **Statement timeouts and long operations.** `rebuild-metrics` and migrations must override the timeout; the
   scripts pass their own options to `openDatabase()`.
+
+## Implementation notes
+
+### Step 2 · Phase A · 2026-11-25
+
+- Step 1 was marked done and matched the starting `main` commit `13e916b`. Baseline `npm run check`
+  passed with 144 tests and all 66 catalogued endpoints covered.
+- `apps/api/src/config.ts` validates environment input before startup. The operations guide owns the
+  [configuration defaults](../../developer/operations.md#configuration) and
+  [metric catalogue](../../developer/operations.md#monitoring). Local Compose and the production-build
+  browser fixture explicitly opt in to the guards they need.
+- The request lifecycle is in `apps/api/src/observability/`. HTTP, rate-limit and SQLSTATE instrumentation
+  runs at the HTTP boundary. The hash queue reports current waiters and retains one process-wide budget.
+  Unknown and inactive accounts still perform one scrypt verification against a random comparison value.
+- `X-Request-Id` is accepted only when it matches the specified pattern. The public error envelope includes
+  it, and the existing web toast quotes it for 5xx responses. CORS permits sending and reading the header
+  from configured origins. The public health response body retains its existing contract.
+- New packages are `pino@10.4.0` for JSON events and `prom-client@15.1.3` for the registry. The dev-only
+  `pino-pretty@13.2.0` formats local logs. Both Pino packages declare no Node engine floor, and
+  `prom-client` declares `^16 || ^18 || >=20`, compatible with Node 22.18. npm marked the plan's pinned
+  `prom-client` version deprecated during install. Its lockfile adds a transitive OpenTelemetry API package.
+  Production-only installs emit JSON when the pretty formatter is absent.
+- Request timings and in-flight counts cover handler execution. `bytesOut` uses the known response length
+  or zero for a bodyless response and is `null` when the length is discovered later by the server adapter.
+  This avoids reading response streams for logging. The `db_errors_total` code label uses the SQLSTATE
+  class. The error event records the full SQLSTATE when available.
+
+**Verification.** `npm run docs:api` regenerated the contract reference and OpenAPI. `npm run check` and
+`npm run test:pg` each passed 154 tests and contract-checked all 66 endpoints. PostgreSQL 17.12 ran in
+an isolated Compose project. The production container passed `docker compose up --build --wait app`.
+`npm run test:e2e` passed all 54 browser tests, including the 503 request-ID toast.
+
+The correlation test sent two authenticated failure requests with IPv4 and IPv6 forwarded address fixtures.
+Each 500 echoed the ID in the header and envelope, and produced one error event and one request event with
+that ID. The captured logs excluded network addresses and limiter keys, route values, query terms, request
+bodies, credentials and database parameters. The socket test saw a public 404 and an internal 200 on
+`/metrics`. An isolated production container with `INTERNAL_PORT=9100` served the same registry with no
+published port. The image with default settings returned the unchanged health payload and a public 404 for
+`/metrics`, including when the client accepted HTML.
+
+Completed request from the production container:
+
+```json
+{
+  "level": 30,
+  "time": 1795563991903,
+  "requestId": "step2-smoke-ok",
+  "method": "GET",
+  "route": "/v1/health",
+  "status": 200,
+  "durationMs": 3.052878000002238,
+  "actorId": null,
+  "bytesOut": null,
+  "msg": "request completed"
+}
+```
+
+Unexpected error event from the IPv4 fixture, with its timestamp omitted:
+
+```json
+{ "level": 50, "requestId": "correlate-v4", "pgCode": "XX000", "msg": "unexpected request error" }
+```
+
+Phase B owns drain verification, probes, database guard rails and the error reporter. The next eligible row
+after this commit is **step 3 (plan 01, phase B)**, using `prompts/api/01-operational-foundations-prompt.md`.

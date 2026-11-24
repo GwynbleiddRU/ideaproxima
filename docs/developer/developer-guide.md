@@ -235,7 +235,8 @@ is [`api/openapi.json`](api/openapi.json) and is also served live at `GET /v1/op
   `:revision`, `:evidence`, …) must be UUIDs; anything else is a 404. `:idea` accepts an id or a slug, people are
   addressed by `:handle`, topics by `:slug`, and stances/involvements by their vocabulary key (`:kind`,
   `:capacity`).
-- **Errors** always use `{ "error": { "code", "message", "details"? } }`:
+- **Errors** use `{ "error": { "code", "message", "details"?, "requestId"? } }`. The API echoes a valid
+  `X-Request-Id` or generates a UUIDv7 and sends it in the response header and error envelope.
 
   | Status | `code`               | Meaning                                                                                     |
   | ------ | -------------------- | ------------------------------------------------------------------------------------------- |
@@ -243,11 +244,12 @@ is [`api/openapi.json`](api/openapi.json) and is also served live at `GET /v1/op
   | 401    | `unauthenticated`    | No valid session (or wrong credentials on login).                                           |
   | 403    | `forbidden`          | Signed in, but not allowed.                                                                 |
   | 404    | `not_found`          | No such resource, or hidden by moderation.                                                  |
+  | 405    | `validation_failed`  | A Hono handler rejected the HTTP method.                                                    |
   | 409    | `conflict`           | Duplicate, or concurrent modification (revisions return `details.currentRevisionId`).       |
   | 413    | `payload_too_large`  | Request body over the limit.                                                                |
   | 422    | `invariant_violated` | Well-formed but breaks a domain rule (e.g. a stage without proof; `details.requirement`).   |
   | 429    | `rate_limited`       | Too many requests. `Retry-After` header and `details.retryAfterSeconds`.                    |
-  | 500    | `internal_error`     | A bug. Logged server-side.                                                                  |
+  | 500    | `internal_error`     | Unexpected failure, correlated with the request ID in the logs.                             |
   | 503    | `unavailable`        | The password hashing queue is full. Retry after the interval in `Retry-After` (one second). |
 
 - **Pagination.** Lists return `{ items, nextCursor }`. Pass `cursor` back unchanged; `limit` is 1–100 (default
@@ -263,6 +265,13 @@ is [`api/openapi.json`](api/openapi.json) and is also served live at `GET /v1/op
   data. Never present them as recorded facts.
 - **Versioning.** Additive changes (new fields, endpoints) stay in v1, and clients must ignore unknown fields.
   Breaking changes would be served as `/v2` alongside v1.
+
+### Logging
+
+Use the process logger in `apps/api/src/observability/logger.ts`. Request events use the matched route pattern
+and an authenticated actor's ID. Keep raw paths, headers, cookies, bodies, search terms, e-mail addresses and
+client network keys out of logs. Unexpected errors use a fixed message, the request ID and any SQLSTATE.
+Keep exception objects, error strings, stacks, SQL and database parameters out of those events.
 
 ## Everyday commands
 

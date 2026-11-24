@@ -3,7 +3,7 @@ import type { Context } from "hono";
 import type { AppConfig } from "../config";
 import type { AppEnv } from "./env";
 
-type AddressConfig = Pick<AppConfig, "clientIpHeader" | "trustProxyHops" | "rateLimitIpv6Prefix">;
+type AddressConfig = Pick<AppConfig, "http" | "rateLimits">;
 
 /** Canonical IPv6 text, including the hexadecimal form of embedded IPv4 addresses. */
 function canonicalV6(address: string) {
@@ -12,10 +12,11 @@ function canonicalV6(address: string) {
 
 export function networkKey(config: AddressConfig, headers: Headers, socket?: string): string {
   let address = socket;
-  if (config.clientIpHeader) {
-    address = headers.get(config.clientIpHeader)?.trim() ?? socket;
-  } else if (config.trustProxyHops > 0) {
-    address = headers.get("x-forwarded-for")?.split(",").at(-config.trustProxyHops)?.trim() ?? socket;
+  const { clientIpHeader, trustProxyHops } = config.http;
+  if (clientIpHeader) {
+    address = headers.get(clientIpHeader)?.trim() ?? socket;
+  } else if (trustProxyHops > 0) {
+    address = headers.get("x-forwarded-for")?.split(",").at(-trustProxyHops)?.trim() ?? socket;
   }
   if (!address) return "unknown";
   const family = isIP(address);
@@ -35,7 +36,7 @@ export function networkKey(config: AddressConfig, headers: Headers, socket?: str
     const low = words[7]!;
     return `v4:${high >>> 8}.${high & 255}.${low >>> 8}.${low & 255}`;
   }
-  const prefix = config.rateLimitIpv6Prefix;
+  const prefix = config.rateLimits.ipv6Prefix;
   const masked = words.map((word, i) => {
     const bits = Math.max(0, Math.min(16, prefix - 16 * i));
     return (word & (0xffff << (16 - bits))).toString(16);

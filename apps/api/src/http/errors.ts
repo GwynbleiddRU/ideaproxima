@@ -3,6 +3,8 @@ import { HTTPException } from "hono/http-exception";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
 import type { ErrorResponse } from "@ideaproxima/contracts";
 import { DomainError, type DomainErrorCode } from "@ideaproxima/domain";
+import { dbErrors } from "../observability/metrics";
+import type { AppEnv } from "./env";
 
 /** The single mapping from domain error codes to HTTP status codes. */
 const STATUS: Record<DomainErrorCode, ContentfulStatusCode> = {
@@ -18,30 +20,48 @@ const STATUS: Record<DomainErrorCode, ContentfulStatusCode> = {
 /** Postgres error code, whether thrown directly (postgres-js) or wrapped by Drizzle (`cause`). */
 function pgCode(err: unknown): string | undefined {
   const e = err as { code?: unknown; cause?: { code?: unknown } };
-  const code =
-    typeof e?.code === "string" ? e.code : typeof e?.cause?.code === "string" ? e.cause.code : undefined;
-  return code && /^[0-9A-Z]{5}$/.test(code) ? code : undefined;
+  // PostgreSQL's letter-prefixed classes, plus standard numeric classes. Node codes such as EPIPE differ.
+  const sqlState = /^(?:[0-9][0-9A-Z]|F0|HV|P0|XX)[0-9A-Z]{3}$/;
+  return [e?.code, e?.cause?.code].find(
+    (code): code is string => typeof code === "string" && sqlState.test(code),
+  );
 }
 
-const body = (code: string, message: string, details?: unknown): ErrorResponse => ({
-  error: details === undefined ? { code, message } : { code, message, details },
-});
+export function errorResponse(
+  c: Context<AppEnv>,
+  status: ContentfulStatusCode,
+  code: string,
+  message: string,
+  details?: unknown,
+) {
+  return c.json<ErrorResponse>({ error: { code, message, requestId: c.get("requestId"), details } }, status);
+}
 
-export function handleError(err: Error, c: Context) {
+export function recordDatabaseError(err: unknown): string | undefined {
+  const code = pgCode(err);
+  if (code) dbErrors.inc({ code: code.slice(0, 2) });
+  return code;
+}
+
+export function handleError(err: Error, c: Context<AppEnv>) {
   if (err instanceof DomainError) {
     if (err.code === "unavailable") c.header("Retry-After", "1");
-    return c.json(body(err.code, err.message, err.details), STATUS[err.code]);
+    return errorResponse(c, STATUS[err.code], err.code, err.message, err.details);
   }
-  if (err instanceof HTTPException) return c.json(body("http_error", err.message), err.status);
-  switch (pgCode(err)) {
+  if (err instanceof HTTPException) {
+    return errorResponse(c, err.status, err.status === 404 ? "not_found" : "validation_failed", err.message);
+  }
+  const code = recordDatabaseError(err);
+  switch (code) {
     // Unique violations reach here only on races the services did not pre-check (e.g. concurrent inserts).
     case "23505":
-      return c.json(body("conflict", "That already exists."), 409);
+      return errorResponse(c, 409, "conflict", "That already exists.");
     case "23503":
-      return c.json(body("invariant_violated", "A referenced record does not exist."), 422);
+      return errorResponse(c, 422, "invariant_violated", "A referenced record does not exist.");
     case "23514":
-      return c.json(body("validation_failed", "A value violates a database constraint."), 400);
+      return errorResponse(c, 400, "validation_failed", "A value violates a database constraint.");
   }
-  console.error(err);
-  return c.json(body("internal_error", "Something went wrong."), 500);
+  // Error messages, stacks and causes can contain SQL, parameters and credentials.
+  c.get("logger").error({ requestId: c.get("requestId"), pgCode: code }, "unexpected request error");
+  return errorResponse(c, 500, "internal_error", "Something went wrong.");
 }

@@ -54,6 +54,7 @@ services:
       NODE_ENV: production
       # Plain HTTP on localhost. Behind HTTPS in production, leave this unset (Secure cookies by default).
       COOKIE_SECURE: "false"
+      ALLOW_INSECURE_COOKIES: "true"
     ports:
       - "${APP_PORT:-3000}:3000"
     depends_on:

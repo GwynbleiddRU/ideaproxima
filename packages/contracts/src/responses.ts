@@ -68,9 +68,10 @@ export const ErrorResponse = named(
       code: z.string(),
       message: z.string(),
       details: z.unknown().optional(),
+      requestId: z.string().optional(),
     }),
   }),
-  "Every error. `code` is stable and machine-readable; `message` is for humans; `details` is code-specific.",
+  "Every error. `code` is stable and machine-readable; `message` is for humans; `details` is code-specific; `requestId` correlates the response with server logs.",
 );
 export type ErrorResponse = z.infer<typeof ErrorResponse>;
 

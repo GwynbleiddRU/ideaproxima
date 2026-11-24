@@ -9,6 +9,7 @@ export class ApiError extends Error {
     readonly code: string,
     message: string,
     readonly details?: unknown,
+    readonly requestId?: string,
   ) {
     super(message);
     this.name = "ApiError";
@@ -70,12 +71,15 @@ async function request<T>(
   });
   const data: unknown = await response.json().catch(() => null);
   if (!response.ok) {
-    const error = (data as { error?: { code?: string; message?: string; details?: unknown } } | null)?.error;
+    const error = (
+      data as { error?: { code?: string; message?: string; details?: unknown; requestId?: string } } | null
+    )?.error;
     throw new ApiError(
       response.status,
       error?.code ?? "http_error",
       error?.message ?? response.statusText,
       error?.details,
+      error?.requestId ?? response.headers.get("X-Request-Id") ?? undefined,
     );
   }
   return data as T;

@@ -1,6 +1,7 @@
 import type { Context, MiddlewareHandler } from "hono";
-import type { ErrorResponse } from "@ideaproxima/contracts";
+import { rateLimitDecisions } from "../observability/metrics";
 import type { AppEnv } from "./env";
+import { errorResponse } from "./errors";
 
 /**
  * Fixed-window, in-memory rate limiting. Deliberately simple: it protects a single API process against
@@ -8,7 +9,7 @@ import type { AppEnv } from "./env";
  * routing or replace the store with a shared one (Redis/Postgres) — the middleware interface stays the same.
  */
 export function rateLimit(options: {
-  name: string;
+  name: "requests" | "authentication" | "writes";
   perMinute: number;
   key: (c: Context<AppEnv>) => string | null;
 }): MiddlewareHandler<AppEnv> {
@@ -32,17 +33,18 @@ export function rateLimit(options: {
     }
     entry.count++;
     if (entry.count > options.perMinute) {
+      rateLimitDecisions.inc({ policy: options.name, outcome: "denied" });
       const retryAfter = Math.max(1, Math.ceil((entry.resetAt - now) / 1000));
       c.header("Retry-After", String(retryAfter));
-      const body: ErrorResponse = {
-        error: {
-          code: "rate_limited",
-          message: `Too many requests (${options.name}). Try again in ${retryAfter}s.`,
-          details: { retryAfterSeconds: retryAfter },
-        },
-      };
-      return c.json(body, 429);
+      return errorResponse(
+        c,
+        429,
+        "rate_limited",
+        `Too many requests (${options.name}). Try again in ${retryAfter}s.`,
+        { retryAfterSeconds: retryAfter },
+      );
     }
+    rateLimitDecisions.inc({ policy: options.name, outcome: "allowed" });
     await next();
   };
 }

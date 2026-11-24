@@ -1,5 +1,23 @@
 import { expect, test } from "@playwright/test";
-import { watchErrors } from "./helpers";
+import { IDEA, signIn, watchErrors } from "./helpers";
+
+test("a failed stance shows the server request ID in the error toast", async ({ page }) => {
+  await signIn(page);
+  await page.route("**/v1/ideas/*/stances/*", (route) =>
+    route.fulfill({
+      status: 503,
+      json: { error: { code: "unavailable", message: "Try again shortly.", requestId: "stance-test-id" } },
+    }),
+  );
+  await page.goto(`/ideas/${IDEA.slug}`);
+  await page
+    .getByRole("button", { name: /^Important/ })
+    .first()
+    .click();
+  await expect(page.getByRole("alert")).toContainText(
+    "Try again shortly. Quote this id if you report the problem: stance-test-id",
+  );
+});
 
 /**
  * The whole contribution loop as one newcomer: join → propose → take a stance → evaluate → add a claim →

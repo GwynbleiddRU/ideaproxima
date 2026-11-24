@@ -228,11 +228,11 @@ container can be added if contributors ever need a fully reproducible toolchain;
 ### ADR-20 The web app: a SPA served by the API process
 
 `apps/web` is a single-page application (React 19, TypeScript, SCSS modules, Vite). In production the API process
-serves its build at every path outside `/v1` (`src/http/web.ts`): files are loaded into memory at startup,
+serves its build on the public listener outside `/v1` (`src/http/web.ts`): files are loaded into memory at startup,
 compressed in the background (brotli/gzip, fast fallback on the first request), hashed assets are cached for a
 year, and the HTML shell carries a CSP that allows its one inline script by hash. In development Vite serves the
 app and proxies `/v1` to the API (`scripts/dev.ts` starts both). Consequences: one origin everywhere (no CORS, a
-first-party HttpOnly session cookie, no token in JavaScript), one image, one port.
+first-party HttpOnly session cookie, no token in JavaScript), one image, one public port.
 
 Why a SPA and not SSR (Next, TanStack Start): the product is an interactive research tool whose pages are mostly
 read-then-act; a SPA with per-route code splitting and data preloading on intent renders from cache on most
@@ -246,6 +246,19 @@ never drift from the API. Forms rely on native constraints (limits from `LIMITS`
 validation errors. Narrative Markdown is rendered by micromark, which escapes raw HTML and drops dangerous URL
 protocols. Quality gates: `apps/web/test` (pure logic) and `audit/` (Playwright flows, axe WCAG 2.1 AA in both
 themes, first-visit budgets: JS ≤ 160 KB compressed, LCP ≤ 2.5 s, CLS ≤ 0.05).
+
+### ADR-21 Request observability and the internal listener
+
+One Zod configuration schema validates startup settings before opening the database or listeners. It
+groups settings by owner and requires explicit production overrides for PGlite and insecure cookies.
+
+The public app uses Pino events with an allowlist of fields. An inbound ID that matches
+`^[A-Za-z0-9_-]{8,64}$` is echoed, and other requests receive a UUIDv7. The header, error envelope and logs
+carry the same ID. Error events omit the exception object to avoid leaking credentials or query parameters.
+
+One `prom-client` registry collects process metrics and application counters. Public HTTP labels are
+bounded by the route definitions and a fixed set of methods. The optional `INTERNAL_PORT` listener
+serves the registry separately from the public API and SPA, without publishing a Compose port.
 
 ## How to extend safely
 

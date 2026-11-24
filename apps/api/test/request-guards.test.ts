@@ -3,6 +3,7 @@ import { createApp } from "../src/app";
 import { loadConfig } from "../src/config";
 import * as crypto from "../src/modules/identity/crypto";
 import * as identity from "../src/modules/identity/service";
+import { passwordHashQueueDepth } from "../src/observability/metrics";
 import { createHarness, type Harness } from "./harness";
 
 vi.hoisted(() => {
@@ -86,11 +87,17 @@ it("verifies exactly once for known, unknown and deactivated accounts", async ()
 });
 
 it("admits one active and one waiting login, returns 503 on overflow and recovers", async () => {
-  const email = "queue@example.test";
-  const replies = await Promise.all([login(email), login(email), login(email)]);
-  expect(replies.map((reply) => reply.status).sort()).toEqual([401, 401, 503]);
-  const busy = replies.find((reply) => reply.status === 503)!;
-  expect(busy.body.error.code).toBe("unavailable");
-  expect(busy.headers.get("Retry-After")).toBe("1");
-  expect((await login(email)).status).toBe(401);
+  const queueDepth = vi.spyOn(passwordHashQueueDepth, "set");
+  try {
+    const email = "queue@example.test";
+    const replies = await Promise.all([login(email), login(email), login(email)]);
+    expect(replies.map((reply) => reply.status).sort()).toEqual([401, 401, 503]);
+    const busy = replies.find((reply) => reply.status === 503)!;
+    expect(busy.body.error.code).toBe("unavailable");
+    expect(busy.headers.get("Retry-After")).toBe("1");
+    expect(queueDepth.mock.calls).toEqual([[1], [0]]);
+    expect((await login(email)).status).toBe(401);
+  } finally {
+    queueDepth.mockRestore();
+  }
 });

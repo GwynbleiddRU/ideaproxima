@@ -12,6 +12,7 @@ import * as catalog from "../../modules/catalog/service";
 import * as history from "../../modules/history/service";
 import { search } from "../../modules/search/service";
 import type { AppEnv } from "../env";
+import { recordDatabaseError } from "../errors";
 import { jsonBody, queryOf } from "../input";
 
 let openApiDocument: ReturnType<typeof buildOpenApiDocument> | null = null;
@@ -39,7 +40,8 @@ export const catalogRoutes = new Hono<AppEnv>()
     try {
       await c.get("ctx").db.execute(sql`select 1`);
       return c.json<HealthResponse>({ ok: true, database: "up" });
-    } catch {
+    } catch (error) {
+      recordDatabaseError(error);
       return c.json<HealthResponse>({ ok: false, database: "down" }, 503);
     }
   })

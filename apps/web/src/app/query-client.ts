@@ -18,7 +18,10 @@ export function createQueryClient() {
     },
     mutationCache: new MutationCache({
       onError: (error, _vars, _context, mutation) => {
-        if (!mutation.meta?.inlineErrors) toast.error(errorMessage(error));
+        if (mutation.meta?.inlineErrors) return;
+        const message = errorMessage(error);
+        const requestId = error instanceof ApiError && error.status >= 500 ? error.requestId : undefined;
+        toast.error(requestId ? `${message} Quote this id if you report the problem: ${requestId}` : message);
       },
       onSuccess: (_data, _vars, _context, mutation) => {
         if (mutation.meta?.success) toast.success(mutation.meta.success);

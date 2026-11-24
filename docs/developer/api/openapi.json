@@ -4791,7 +4791,10 @@
               "message": {
                 "type": "string"
               },
-              "details": {}
+              "details": {},
+              "requestId": {
+                "type": "string"
+              }
             },
             "required": [
               "code",

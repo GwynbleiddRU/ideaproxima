@@ -20,7 +20,7 @@ const setSessionCookie = (c: Context<AppEnv>, auth: AuthResponse) =>
   setCookie(c, SESSION_COOKIE, auth.token, {
     httpOnly: true,
     sameSite: "Lax",
-    secure: c.get("config").cookieSecure,
+    secure: c.get("config").http.cookieSecure,
     path: "/",
     expires: new Date(auth.expiresAt),
   });
@@ -30,7 +30,7 @@ export const identityRoutes = new Hono<AppEnv>()
     const auth = await identity.register(
       c.get("ctx"),
       await jsonBody(c, RegisterRequest),
-      c.get("config").sessionTtlDays,
+      c.get("config").http.sessionTtlDays,
     );
     setSessionCookie(c, auth);
     return c.json(auth, 201);
@@ -39,7 +39,7 @@ export const identityRoutes = new Hono<AppEnv>()
     const auth = await identity.login(
       c.get("ctx"),
       await jsonBody(c, LoginRequest),
-      c.get("config").sessionTtlDays,
+      c.get("config").http.sessionTtlDays,
     );
     setSessionCookie(c, auth);
     return c.json(auth);

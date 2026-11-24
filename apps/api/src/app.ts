@@ -2,14 +2,13 @@ import { Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
 import { getCookie } from "hono/cookie";
 import { cors } from "hono/cors";
-import { logger } from "hono/logger";
 import { secureHeaders } from "hono/secure-headers";
-import type { ErrorResponse } from "@ideaproxima/contracts";
+import type { Logger } from "pino";
 import { uniformWeights, type WeightPolicy } from "@ideaproxima/domain";
 import type { AppConfig } from "./config";
 import type { Database } from "./db/client";
 import { SESSION_COOKIE, type AppEnv } from "./http/env";
-import { handleError } from "./http/errors";
+import { errorResponse, handleError } from "./http/errors";
 import { clientAddress } from "./http/client-address";
 import { rateLimit } from "./http/rate-limit";
 import { catalogRoutes } from "./http/routes/catalog";
@@ -18,10 +17,14 @@ import { ideaRoutes } from "./http/routes/ideas";
 import { resourceRoutes } from "./http/routes/resources";
 import { webApp } from "./http/web";
 import { resolveSession } from "./modules/identity/service";
+import { createLogger } from "./observability/logger";
+import { identifyRequest, observeRequest } from "./observability/request";
+import { METRICS_PATH } from "./observability/metrics";
 
 export interface AppDeps {
   db: Database;
   config: AppConfig;
+  logger?: Logger;
   /** Evaluator weighting for derived metrics. Defaults to the uniform baseline. */
   weights?: WeightPolicy;
   /** Directory of the built web app to serve at `/` (see http/web.ts). Null or absent: API only. */
@@ -35,43 +38,40 @@ const WRITE_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
  * standalone Node server (src/main.ts), inside a frontend framework's route handler, or in tests via
  * `app.request()` without opening a port.
  *
- * Middleware order matters: security headers → (logging) → web app files → CORS → body size limit → network
+ * Middleware order matters: request identity → observability → security headers → web app files → CORS → body size limit → network
  * limit → session resolution → auth and write limits → routes. API middleware only runs under /v1.
  * Versioning: additive changes (new fields, endpoints) stay in
  * v1; breaking changes get /v2 alongside, sharing the same services.
  */
 export function createApp(deps: AppDeps) {
   const { config } = deps;
+  const { http } = config;
   const weights = deps.weights ?? uniformWeights;
   const app = new Hono<AppEnv>();
 
+  app.use("*", ...identifyRequest);
+  app.use("*", observeRequest(deps.logger ?? createLogger(config.log), config.log.requests));
   app.use("*", secureHeaders());
-  if (config.logRequests) app.use("*", logger());
+  // Keep the public endpoint absent even for browsers that would otherwise receive the SPA shell.
+  app.use(METRICS_PATH, async (c) => c.notFound());
   if (deps.webRoot) app.use("*", webApp(deps.webRoot));
-  if (config.corsOrigins.length) {
+  if (http.corsOrigins.length) {
     app.use(
       "*",
       cors({
-        origin: config.corsOrigins,
+        origin: http.corsOrigins,
         credentials: true,
-        allowHeaders: ["Content-Type", "Authorization"],
+        allowHeaders: ["Content-Type", "Authorization", "X-Request-Id"],
+        exposeHeaders: ["X-Request-Id"],
       }),
     );
   }
   app.use(
     "*",
     bodyLimit({
-      maxSize: config.maxBodyBytes,
+      maxSize: http.maxBodyBytes,
       onError: (c) =>
-        c.json<ErrorResponse>(
-          {
-            error: {
-              code: "payload_too_large",
-              message: `Request body exceeds ${config.maxBodyBytes} bytes.`,
-            },
-          },
-          413,
-        ),
+        errorResponse(c, 413, "payload_too_large", `Request body exceeds ${http.maxBodyBytes} bytes.`),
     }),
   );
 
@@ -123,14 +123,11 @@ export function createApp(deps: AppDeps) {
 
   app.onError(handleError);
   app.notFound((c) =>
-    c.json<ErrorResponse>(
-      {
-        error: {
-          code: "not_found",
-          message: "No such endpoint. The API is served under /v1; GET /v1 lists its entry points.",
-        },
-      },
+    errorResponse(
+      c,
       404,
+      "not_found",
+      "No such endpoint. The API is served under /v1; GET /v1 lists its entry points.",
     ),
   );
 

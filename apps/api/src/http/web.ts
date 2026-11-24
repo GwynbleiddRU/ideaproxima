@@ -4,6 +4,7 @@ import { extname, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { brotliCompress, brotliCompressSync, constants as zlib, gzip, gzipSync } from "node:zlib";
 import type { MiddlewareHandler } from "hono";
+import type { AppEnv } from "./env";
 
 /**
  * Serves the built web app (apps/web/dist) from the API process. One origin serves both the interface and
@@ -127,7 +128,7 @@ function precompress(files: Map<string, StaticFile>) {
  * Middleware serving the web app from `root`. Mount it before session resolution: static requests need no
  * database work. Requests it does not answer (other methods, `/v1`, unknown non-HTML paths) fall through.
  */
-export function webApp(root: string): MiddlewareHandler {
+export function webApp(root: string): MiddlewareHandler<AppEnv> {
   const files = loadFiles(root);
   const index = files.get("/index.html");
   if (!index) throw new Error(`${root} contains no index.html. Build the web app first (npm run build).`);
@@ -146,6 +147,7 @@ export function webApp(root: string): MiddlewareHandler {
       file = index;
     }
 
+    c.set("webRoute", file === index ? "web" : "static");
     const headers: Record<string, string> = {
       "content-type": file.type,
       "cache-control": file.cacheControl,
@@ -163,6 +165,7 @@ export function webApp(root: string): MiddlewareHandler {
         headers["content-encoding"] = encoding;
       }
     }
+    headers["content-length"] = String(body.length);
     if (method === "HEAD") return c.body(null, 200, headers);
     return c.body(new Uint8Array(body), 200, headers);
   };

@@ -1429,6 +1429,7 @@ Provide exactly one basis: `sourceId`, `source` (registered or matched by DOI/UR
 | `error.code` | string | yes |  |
 | `error.message` | string | yes |  |
 | `error.details` | any | no |  |
+| `error.requestId` | string | no |  |
 
 ### <a id="schema-evaluation"></a>Evaluation
 

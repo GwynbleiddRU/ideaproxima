@@ -71,7 +71,7 @@ type Handle = (typeof PEOPLE)[number]["handle"];
 
 async function main() {
   const demo = process.argv.includes("--demo");
-  const database = await openDatabase(loadConfig().databaseUrl);
+  const database = await openDatabase(loadConfig().db.url);
   await database.migrate();
   await ensureBaseTopics(database.db);
   console.info("Base topics ensured.");
