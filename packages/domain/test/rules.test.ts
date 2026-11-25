@@ -183,10 +183,10 @@ describe("ratings", () => {
 });
 
 describe("permissions", () => {
-  const member: Actor = { id: "m", role: "member", active: true };
-  const moderator: Actor = { id: "mod", role: "moderator", active: true };
-  const admin: Actor = { id: "adm", role: "admin", active: true };
-  const deactivated: Actor = { id: "x", role: "admin", active: false };
+  const member: Actor = { id: "m", role: "member", active: true, trust: "new" };
+  const moderator: Actor = { id: "mod", role: "moderator", active: true, trust: "staff" };
+  const admin: Actor = { id: "adm", role: "admin", active: true, trust: "staff" };
+  const deactivated: Actor = { id: "x", role: "admin", active: false, trust: "staff" };
 
   it("denies everything to anonymous and deactivated actors", () => {
     for (const action of ACTIONS) {

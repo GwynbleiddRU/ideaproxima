@@ -10,12 +10,15 @@ This document explains the _shape_ and the _guarantees_.
 | **Facts**       | Things that happened or were explicitly recorded | Append-only. Only supersession/withdrawal/moderation markers may change (DB-enforced) | revisions, evaluations, stances, evidence, transitions, outcomes, activities                             |
 | **Projections** | Current state, for querying                      | Rewritten only by the service that appends the underlying fact, same transaction      | `ideas.title/summary/tags/updated_at/current_revision_id`, `ideas.stage/stage_changed_at`, `idea_topics` |
 | **Derived**     | Computed from facts by an algorithm              | Disposable; rebuilt any time                                                          | `idea_metrics`                                                                                           |
-| **Operational** | State needed to run the service                  | Mutable and eligible for cleanup                                                      | `sessions`, `jobs`, `job_schedules`; rate-limit counters currently live in memory                        |
+| **Operational** | State needed to run the service                  | Mutable and eligible for cleanup                                                      | `sessions`, `jobs`, `job_schedules`, `rate_limits`                                                       |
 
 Mutable by nature (not history): `people` profile fields, `accounts`, `topics`, `topic_translations`, `initiatives.status`
 (status _history_ is in the ledger), `hidden_at` flags (moderation _history_ is in the ledger).
 
 ## Tables
+
+`rate_limits` holds a scoped key and its theoretical arrival time in an unlogged table. A database crash
+can reset these budgets. The worker purges timestamps older than one minute on a one-minute schedule.
 
 ### Identity
 

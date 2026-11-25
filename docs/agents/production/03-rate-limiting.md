@@ -3,7 +3,7 @@
 Part of the [production-readiness program](README.md). Prompt for the implementing agent:
 `prompts/api/03-rate-limiting-prompt.md`.
 
-| Status     | Not started                                                                                                                                                                       |
+| Status     | Phase A complete 2026-11-25 (step 10). Step 11, phase B, is next.                                                                                                                 |
 | ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Depends on | [00](00-immediate-hardening.md) (network keys), [01](01-operational-foundations.md) (metrics, configuration), [02](02-background-jobs.md) (the PostgreSQL store's purge schedule) |
 | Unblocks   | Open registration; [07](07-moderation-core.md) (report limits); [12](12-public-api.md) (key quotas)                                                                               |
@@ -196,7 +196,7 @@ Rules for declarations:
   to `true` for `POST`, `PUT`, `PATCH` and `DELETE`. A `POST` that changes nothing (the similarity queries of
   [11](11-semantic-search.md)) sets `mutates: false` and is treated as a read.
 
-Today 37 of the 66 endpoints mutate; three of them are public (`register`, `login`, `logout`).
+At step 10, 38 of the 68 endpoints mutate; three are public (`register`, `login`, `logout`).
 
 ### Enforcement order
 
@@ -311,3 +311,52 @@ verification plus `new`-tier limits plus pre-moderation of new accounts ([08](08
 - **The limiter becoming a dependency.** If the shared store fails, fail open for `read.*` and `write.*` (log
   and count it) and fail closed for `auth.*`.
 - **A draft header format.** If the IETF draft changes before publication, only the formatter changes.
+
+## Implementation notes
+
+### Step 10 · Phase A · 2026-11-25
+
+Steps 1–9 were Done at clean `main` commit `c1dd2b0`. The checkout contained the pre-session network
+ceiling, bounded hashing, configuration schema, job scheduler and English catalogues. The baseline
+`npm run check` passed with 214 tests and coverage of all 68 endpoints.
+
+- `packages/domain/src/rules/rate-limits.ts` implements the policy table above, trust classification, GCRA
+  and graph cost. Memory and PostgreSQL use integer microseconds, rounding a non-integral unit interval up.
+  Peek reports the current balance and whether one more unit fits. Denials preserve the balance.
+- `apps/api/src/modules/rate-limits/` owns key construction and the two stores. The memory cap evicts the
+  least recently charged key in constant time. PostgreSQL uses its own clock, an atomic upsert on the pool
+  and a read after denial. Migrations 0004–0005 create the operational table and make it unlogged.
+  `modules/jobs` schedules its purge. Network keys and normalised email subjects use HMAC-SHA-256.
+- `modules/identity/service.ts` computes trust from the account creation and verification dates on session
+  lookup, falling back to the person's creation date for a legacy session without an account row. A current
+  restriction takes precedence over staff. The established and restricted markers are supplied as null
+  until plans 04 and 07. The email verification requirement defaults to false.
+- A policy override supplies replacement rules per base tier in catalogue order, preserving scopes and rule
+  count. Tier factors and the read/write scale apply to limit and explicit burst, rounding down to at least
+  one unit. A heavy-read burst must accommodate the three-unit graph cost. Public registration accepts a
+  request carrying a session, so its resolver always selects the anonymous network budget.
+
+**PostgreSQL store benchmark.** PostgreSQL 17.12 in local Docker, one sequential client, one warm key per
+outcome, 100 warm-up and 2,000 measured consumes per outcome. Latency covers the entire store call.
+With `TEST_DATABASE_URL` set to a local test server, run `npx tsx apps/api/scripts/bench-rate-limits.ts`.
+The script creates and drops its own database.
+
+| Outcome | SQL statements per decision | Statements/s | Mean ms | p50 ms | p95 ms |
+| ------- | --------------------------: | -----------: | ------: | -----: | -----: |
+| Allowed |                           1 |          904 |   1.106 |  1.061 |  1.286 |
+| Denied  |                           2 |          964 |   2.074 |  2.043 |  2.338 |
+
+The policy defaults stand pending real traffic. This synthetic benchmark measures the local store and
+does not establish the post-launch Redis trigger. No owner decision is pending for phase A.
+
+| Verification                                 | Result                                                                                                                                                                                                             |
+| -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `npm run check`                              | Passed typecheck, lint, format, docs, 229 tests on PGlite and the production build. Three PostgreSQL-only cases ran on the real server.                                                                            |
+| `npm run test:pg`                            | All 232 tests passed on PostgreSQL 17.12. Both full runs exercised all 68 endpoints.                                                                                                                               |
+| Shared store conformance                     | The same burst, weighted cost, peek, refill, reset and concurrency cases passed for memory and the SQL store on both drivers. Each admitted exactly 10 of 50 simultaneous consumes for one key with a burst of 10. |
+| Storage lifecycle                            | Verified unlogged persistence, scheduled purge on redelivery, retention of live and recently expired rows, memory sweep and eviction.                                                                              |
+| `npm run db:generate` and `npm run docs:api` | Drizzle found no schema drift after migrations 0004–0005. The generated contract reference matched the checkout.                                                                                                   |
+| `npm run test:e2e`                           | All 62 browser checks passed, including registration and contribution.                                                                                                                                             |
+
+**Next eligible row:** step 11 (plan 03, phase B), `prompts/api/03-rate-limiting-prompt.md`.
+Wire the policies through the endpoint catalogue, request middleware, failure throttle and web retry handling.

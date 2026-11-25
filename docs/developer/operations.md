@@ -59,6 +59,7 @@ Invalid settings stop startup with one error listing the affected variables. Boo
 | `CLIENT_IP_HEADER`               | unset                                           | Single-value header overwritten by the edge, e.g. `cf-connecting-ip`, `fly-client-ip` or `x-real-ip`. Takes precedence over hop counting. A missing header uses the socket peer. |
 | `TRUST_PROXY`                    | `false`                                         | Deprecated for one release. `true` warns at startup and defaults `TRUST_PROXY_HOPS` to one (the last entry).                                                                     |
 | `RATE_LIMIT_IPV6_PREFIX`         | `64`                                            | IPv6 network prefix length (0–128). IPv4-mapped addresses share their IPv4 bucket. Invalid addresses share one unknown bucket.                                                   |
+| `TRUST_REQUIRE_VERIFIED_EMAIL`   | `false`                                         | Require verified email for promotion from new to member. Keep false until verification ships in plan 04.                                                                         |
 | `RATE_LIMIT_REQUESTS_PER_MINUTE` | `600`                                           | Requests per network per minute, including reads, before session lookup. Zero disables this limit.                                                                               |
 | `PASSWORD_HASH_CONCURRENCY`      | `3`                                             | Maximum simultaneous scrypt operations per process. Minimum one.                                                                                                                 |
 | `PASSWORD_HASH_QUEUE`            | `32`                                            | Maximum waiting scrypt operations. Zero allows only active slots. Overflow returns 503 `unavailable` with `Retry-After: 1`.                                                      |
@@ -86,6 +87,7 @@ A crashed worker's leases expire after 60 seconds.
 
 Compose starts both processes after migration. The worker's private health check scrapes port 9100.
 Hourly schedules purge sessions expired or revoked over 30 days ago and apply job retention.
+Every minute the worker removes rate-limit timestamps that expired more than a minute ago.
 Daily reconciliation samples up to 25 ideas, repairs their metrics and increments
 `metrics_reconcile_drift_total` once per repaired idea. Ideas with an outstanding refresh are skipped.
 

@@ -179,7 +179,7 @@ Updated by whoever finishes a step: `Not started`, `In progress`, `Waiting for t
 | 7    | 05   | B     | Web localisation runtime, language switcher, right-to-left, script fonts; shell and auth pages extracted   | Mock-ups              | Done 2026-11-25 |
 | 8    | 05   | C1    | Interface extraction: home, explore, the idea page and its tabs                                            | —                     | Done 2026-11-25 |
 | 9    | 05   | C2    | Interface extraction: editor, topics, search, activity, people, account, dialogs, toasts and errors        | —                     | Done 2026-11-25 |
-| 10   | 03   | A     | GCRA, memory and PostgreSQL stores, trust tiers, the policy catalogue                                      | —                     | Not started     |
+| 10   | 03   | A     | GCRA, memory and PostgreSQL stores, trust tiers, the policy catalogue                                      | —                     | Done 2026-11-25 |
 | 11   | 03   | B     | Limits declared per endpoint and enforced; rate-limit headers; web handling of 429                         | —                     | Not started     |
 | 12   | 03   | C     | Proof of work on registration                                                                              | —                     | Not started     |
 | 13   | 04   | A     | Mail, verification, password reset, e-mail change, registration modes                                      | Decision 7; mock-ups  | Not started     |

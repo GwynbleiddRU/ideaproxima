@@ -215,6 +215,12 @@ count from the right or a single header their edge overwrites. Login verifies on
 deactivated accounts. Registration, login and password changes share three active scrypt slots and 32 waiting
 slots by default. See the [configuration and proxy checklist](../developer/operations.md#configuration).
 
+Plan 03 phase A adds a GCRA engine with named policies and bounded memory and shared PostgreSQL stores.
+Session resolution computes trust in its existing query. Trust gates rate limits and pre-moderation only.
+The PostgreSQL store charges a key atomically on the application pool so a rolled-back domain write still
+spends its budget. Phase B connects the new engine to HTTP. The [policy table and measurements](production/03-rate-limiting.md#policies)
+record the defaults and the store contract.
+
 ### ADR-18 Operator commands and explicit migrations
 
 The production build bundles operator commands next to the server (`dist/migrate.js`, `seed.js`, `set-role.js`,

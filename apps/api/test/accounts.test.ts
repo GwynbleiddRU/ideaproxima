@@ -1,5 +1,8 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import type { ActivityDto, MeResponse, Page, PersonDto } from "@ideaproxima/contracts";
+import { eq, sql } from "drizzle-orm";
+import { accounts } from "../src/db/schema";
+import { resolveSession } from "../src/modules/identity/service";
 import { createHarness, type Harness } from "./harness";
 
 let h: Harness;
@@ -10,6 +13,21 @@ afterAll(() => h.close());
 
 const login = (email: string, password = "correct horse battery") =>
   h.call("POST", "/auth/login", { body: { email, password } });
+
+it("resolves trust from the session account age and verification setting", async () => {
+  const user = await h.user("tier-member");
+  const tier = async (requireVerifiedEmail = false) =>
+    (await resolveSession(h.db, user.token, requireVerifiedEmail))?.actor.trust;
+  expect(await tier()).toBe("new");
+  await h.db
+    .update(accounts)
+    .set({ createdAt: sql`now() - interval '4 days'` })
+    .where(eq(accounts.personId, user.id));
+  expect(await tier()).toBe("member");
+  expect(await tier(true)).toBe("new");
+  await h.db.update(accounts).set({ emailVerifiedAt: new Date() }).where(eq(accounts.personId, user.id));
+  expect(await tier(true)).toBe("member");
+});
 
 describe("password change", () => {
   it("requires the current password and signs out every other session", async () => {

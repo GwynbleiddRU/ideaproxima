@@ -102,7 +102,10 @@ export function createApp(deps: AppDeps) {
     const token = header?.toLowerCase().startsWith("bearer ")
       ? header.slice(7).trim()
       : getCookie(c, SESSION_COOKIE);
-    const session = token && /^[A-Za-z0-9_-]{43}$/.test(token) ? await resolveSession(deps.db, token) : null;
+    const session =
+      token && /^[A-Za-z0-9_-]{43}$/.test(token)
+        ? await resolveSession(deps.db, token, config.rateLimits.requireVerifiedEmail)
+        : null;
     c.set("ctx", {
       db: deps.db,
       actor: session?.actor ?? null,

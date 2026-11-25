@@ -29,6 +29,20 @@
       "when": 1795590820958,
       "tag": "0003_pink_micromacro",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1795613345021,
+      "tag": "0004_rate_limits",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1795613352308,
+      "tag": "0005_unlogged_rate_limits",
+      "breakpoints": true
     }
   ]
 }

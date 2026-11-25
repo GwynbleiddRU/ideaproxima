@@ -98,7 +98,7 @@ async function seedDemo(db: Database) {
       },
       1,
     );
-    as[p.handle] = { ...base, actor: { id: auth.person.id, role: "member", active: true } };
+    as[p.handle] = { ...base, actor: { id: auth.person.id, role: "member", active: true, trust: "new" } };
     await identity.updateProfile(as[p.handle], { bio: p.bio, capacities: [...p.capacities] });
   }
 

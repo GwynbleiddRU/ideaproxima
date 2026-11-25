@@ -1,5 +1,6 @@
 import { DomainError } from "../errors";
 import type { PersonRole } from "../vocabulary/people";
+import type { TrustTier } from "./rate-limits";
 
 /**
  * Authorization policy. One table, one function — every permission decision in the system goes through here
@@ -35,6 +36,7 @@ export type Action = (typeof ACTIONS)[number];
 export interface Actor {
   id: string;
   role: PersonRole;
+  trust: TrustTier;
   /** Deactivated accounts keep their history but cannot act. */
   active: boolean;
 }

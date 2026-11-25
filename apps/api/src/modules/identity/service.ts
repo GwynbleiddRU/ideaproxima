@@ -13,7 +13,7 @@ import type {
 } from "@ideaproxima/contracts";
 import type { PersonRole } from "@ideaproxima/domain";
 import { isLocale, type Locale } from "@ideaproxima/i18n";
-import { DomainError, authorize, isValidHandle, notFound, type Actor } from "@ideaproxima/domain";
+import { DomainError, authorize, isValidHandle, notFound, trustTier, type Actor } from "@ideaproxima/domain";
 import { queryRows, type Database } from "../../db/client";
 import { accounts, ideas, involvements, people, personExpertise, sessions, topics } from "../../db/schema";
 import { recordActivity } from "../shared/activity";
@@ -50,6 +50,7 @@ export async function createSession(db: Database, personId: string, ttlDays: num
 export async function resolveSession(
   db: Database,
   token: string,
+  requireVerifiedEmail = false,
 ): Promise<{ actor: Actor; sessionId: string; locale: Locale | null } | null> {
   const [row] = await db
     .select({
@@ -57,6 +58,8 @@ export async function resolveSession(
       id: people.id,
       role: people.role,
       deactivatedAt: people.deactivatedAt,
+      createdAt: sql<Date>`coalesce(${accounts.createdAt}, ${people.createdAt})`.mapWith(accounts.createdAt),
+      emailVerifiedAt: accounts.emailVerifiedAt,
       locale: accounts.locale,
     })
     .from(sessions)
@@ -73,7 +76,16 @@ export async function resolveSession(
   if (!row || row.deactivatedAt) return null;
   return {
     sessionId: row.sessionId,
-    actor: { id: row.id, role: row.role, active: true },
+    actor: {
+      id: row.id,
+      role: row.role,
+      active: true,
+      trust: trustTier(
+        { ...row, establishedAt: null, restrictedUntil: null },
+        new Date(),
+        requireVerifiedEmail,
+      ),
+    },
     locale: savedLocale(row.locale),
   };
 }
@@ -224,7 +236,10 @@ export async function register(ctx: Ctx, input: RegisterRequest, ttlDays: number
       .values({ handle: input.handle, displayName: input.displayName })
       .returning();
     await tx.db.insert(accounts).values({ personId: person!.id, email: input.email, passwordHash, locale });
-    const actorCtx: Ctx = { ...tx, actor: { id: person!.id, role: person!.role, active: true } };
+    const actorCtx: Ctx = {
+      ...tx,
+      actor: { id: person!.id, role: person!.role, active: true, trust: "new" },
+    };
     await recordActivity(actorCtx, {
       action: "person.registered",
       subject: { kind: "person", id: person!.id },

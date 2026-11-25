@@ -1,6 +1,8 @@
 import { asc, eq, sql } from "drizzle-orm";
 import { afterAll, beforeAll, expect, it } from "vitest";
-import { activities, ideaMetrics, jobs, sessions, stances } from "../src/db/schema";
+import { activities, ideaMetrics, jobs, rateLimits, sessions, stances } from "../src/db/schema";
+import { schedules } from "../src/modules/jobs/schedules";
+import { queryRows } from "../src/db/client";
 import { enqueue } from "../src/modules/jobs/queue";
 import { drainJobs } from "../src/modules/jobs/runner";
 import { inTransaction } from "../src/modules/shared/context";
@@ -26,7 +28,10 @@ async function run(kind: string, payload = {}) {
 it("commits or rolls back the stance, its activity and its coalesced refresh together", async () => {
   const idea = await h.idea(person.token);
   await drainJobs(h.ctx);
-  const ctx = { ...h.ctx, actor: { id: person.id, role: "member" as const, active: true } };
+  const ctx = {
+    ...h.ctx,
+    actor: { id: person.id, role: "member" as const, active: true, trust: "new" as const },
+  };
   const pending = () => h.db.select().from(jobs).where(eq(jobs.state, "pending"));
   const ledger = () =>
     h.db.select({ id: activities.id }).from(activities).where(eq(activities.action, "stance.taken"));
@@ -108,6 +113,28 @@ it("purges expired or revoked sessions in batches and retains recent sessions on
     expect(retained.map((r) => r.hash)).toEqual(
       expect.arrayContaining(["recent-expiry", "recent-revocation"]),
     );
+  }
+});
+
+it("purges only rate-limit debt expired over a minute ago, including on redelivery", async () => {
+  expect(schedules.find((s) => s.kind === "rate_limits.purge")?.every).toBe(60_000);
+  expect(
+    await queryRows(
+      h.db,
+      sql`select pg_class.relpersistence from pg_class where pg_class.oid = 'rate_limits'::regclass`,
+    ),
+  ).toEqual([{ relpersistence: "u" }]);
+  await h.db.insert(rateLimits).values([
+    { key: "expired", tat: sql`now() - interval '2 minutes'` },
+    { key: "recent", tat: sql`now() - interval '5 seconds'` },
+    { key: "live", tat: sql`now() + interval '1 hour'` },
+  ]);
+  for (let attempt = 0; attempt < 2; attempt++) {
+    await run("rate_limits.purge");
+    expect(await h.db.select({ key: rateLimits.key }).from(rateLimits).orderBy(rateLimits.key)).toEqual([
+      { key: "live" },
+      { key: "recent" },
+    ]);
   }
 });
 

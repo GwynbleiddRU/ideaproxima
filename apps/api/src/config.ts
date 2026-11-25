@@ -97,6 +97,7 @@ const envSettings = z.object({
   CORS_ORIGINS: origins.default([]),
   TRUST_PROXY_HOPS: integer(0).optional(),
   TRUST_PROXY: boolean.default(false),
+  TRUST_REQUIRE_VERIFIED_EMAIL: boolean.default(false),
   CLIENT_IP_HEADER: headerName.optional(),
   RATE_LIMIT_IPV6_PREFIX: integer(0, 128).default(64),
   RATE_LIMIT_REQUESTS_PER_MINUTE: integer(0).default(600),
@@ -222,6 +223,7 @@ export function loadConfig(
       connectTimeoutMs: values.DB_CONNECT_TIMEOUT_MS,
     },
     rateLimits: {
+      requireVerifiedEmail: values.TRUST_REQUIRE_VERIFIED_EMAIL,
       requestsPerMinute: values.RATE_LIMIT_REQUESTS_PER_MINUTE,
       authPerMinute: values.RATE_LIMIT_AUTH_PER_MINUTE,
       writesPerMinute: values.RATE_LIMIT_WRITES_PER_MINUTE,

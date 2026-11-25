@@ -13,5 +13,6 @@ export * from "./rules/lifecycle";
 export * from "./rules/relations";
 export * from "./rules/signals";
 export * from "./rules/permissions";
+export * from "./rules/rate-limits";
 
 export * from "./metrics/baseline";
