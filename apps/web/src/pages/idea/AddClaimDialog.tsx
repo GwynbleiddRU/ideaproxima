@@ -1,5 +1,5 @@
 import { vocabularyField } from "@/lib/vocabulary";
-import { useLocale } from "@/locales/react";
+import { useMessage } from "@/locales/react";
 import { useQuery } from "@tanstack/react-query";
 import { useState, type FormEvent } from "react";
 import type { AddClaimRequest, IdeaDetail } from "@ideaproxima/contracts";
@@ -36,13 +36,14 @@ export function AddClaimDialog({
   onClose: () => void;
   idea: IdeaDetail;
 }) {
+  const t = useMessage();
   return (
     <Dialog
       open={open}
       onClose={onClose}
       size="lg"
-      title="Add a claim"
-      description="A claim is one statement the idea depends on, phrased so that evidence could support or challenge it."
+      title={t("addClaim.title")}
+      description={t("addClaim.description")}
     >
       <ClaimForm idea={idea} onDone={onClose} />
     </Dialog>
@@ -50,7 +51,7 @@ export function AddClaimDialog({
 }
 
 function ClaimForm({ idea, onDone }: { idea: IdeaDetail; onDone: () => void }) {
-  useLocale();
+  const t = useMessage();
   const add = useAddClaim(idea.slug);
   const [mode, setMode] = useState<"new" | "existing">("new");
   const [statement, setStatement] = useState("");
@@ -88,20 +89,20 @@ function ClaimForm({ idea, onDone }: { idea: IdeaDetail; onDone: () => void }) {
   return (
     <form onSubmit={submit} className={forms.form}>
       <Segmented
-        label="New or existing claim"
+        label={t("addClaim.newOrExistingClaim")}
         value={mode}
         onChange={setMode}
         options={[
-          { value: "new", label: "State a new claim" },
-          { value: "existing", label: "Link an existing claim" },
+          { value: "new", label: t("addClaim.stateANewClaim") },
+          { value: "existing", label: t("addClaim.linkAnExistingClaim") },
         ]}
       />
       {mode === "new" ? (
         <Field
-          label="Statement"
+          label={t("addClaim.statement")}
           error={errors.statement}
           counter={`${statement.length} / ${LIMITS.claimStatement.max}`}
-          hint="One checkable statement. “Membranes can selectively capture microplastics below 5 µm”, not “this will work”."
+          hint={t("addClaim.statementHint")}
         >
           {(p) => (
             <textarea
@@ -117,14 +118,14 @@ function ClaimForm({ idea, onDone }: { idea: IdeaDetail; onDone: () => void }) {
           )}
         </Field>
       ) : (
-        <Fieldset legend="Find the claim">
+        <Fieldset legend={t("addClaim.findTheClaim")}>
           <input
             className={control}
             type="search"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search claim statements"
-            aria-label="Search claims"
+            placeholder={t("addClaim.searchClaimStatements")}
+            aria-label={t("addClaim.searchClaims")}
           />
           <div className={forms.choices}>
             {(results.data?.claims ?? []).map((c) => (
@@ -137,19 +138,17 @@ function ClaimForm({ idea, onDone }: { idea: IdeaDetail; onDone: () => void }) {
                   required
                 />
                 <strong>{c.statement}</strong>
-                <span>
-                  Used by {c.ideaCount} idea{c.ideaCount === 1 ? "" : "s"}
-                </span>
+                <span>{t("addClaim.usage", { count: c.ideaCount })}</span>
               </label>
             ))}
           </div>
           {q.length > 1 && results.data && !results.data.claims.length && (
-            <p className={forms.note}>No claims match. State a new one instead.</p>
+            <p className={forms.note}>{t("addClaim.noMatches")}</p>
           )}
         </Fieldset>
       )}
 
-      <Fieldset legend="Its role in this idea">
+      <Fieldset legend={t("addClaim.itsRoleInThis")}>
         <div className={forms.choices}>
           {CLAIM_ROLES.map((r) => (
             <label key={r} className={forms.choice}>
@@ -162,7 +161,7 @@ function ClaimForm({ idea, onDone }: { idea: IdeaDetail; onDone: () => void }) {
       </Fieldset>
 
       {hasDepth && (
-        <Fieldset legend="How far down the chain of consequences?">
+        <Fieldset legend={t("addClaim.consequenceDepth")}>
           <div className={forms.choices}>
             {CONSEQUENCE_DEPTHS.map((d) => (
               <label key={d} className={forms.choice}>
@@ -184,10 +183,7 @@ function ClaimForm({ idea, onDone }: { idea: IdeaDetail; onDone: () => void }) {
         </Fieldset>
       )}
 
-      <Fieldset
-        legend="Your own assessment"
-        hint="Optional. Recorded as an ordinary, attributed evaluation of the claim."
-      >
+      <Fieldset legend={t("addClaim.yourOwnAssessment")} hint={t("addClaim.assessmentHint")}>
         <div className={forms.row}>
           {(["support", "plausibility"] as const).map((d) => (
             <Field key={d} label={vocabularyField("dimensions", d, "label", DIMENSIONS[d].label)} optional>
@@ -198,7 +194,7 @@ function ClaimForm({ idea, onDone }: { idea: IdeaDetail; onDone: () => void }) {
                   value={d === "support" ? support : plausibility}
                   onChange={(e) => (d === "support" ? setSupport : setPlausibility)(e.target.value)}
                 >
-                  <option value="">I don't know</option>
+                  <option value="">{t("evaluate.iDonTKnow")}</option>
                   {anchorsOf(d).map(([n, label]) => (
                     <option key={n} value={n}>
                       {n} — {label}
@@ -208,7 +204,7 @@ function ClaimForm({ idea, onDone }: { idea: IdeaDetail; onDone: () => void }) {
               )}
             </Field>
           ))}
-          <Field label="Confidence" optional>
+          <Field label={t("addClaim.confidence")} optional>
             {(p) => (
               <select
                 {...p}
@@ -216,10 +212,10 @@ function ClaimForm({ idea, onDone }: { idea: IdeaDetail; onDone: () => void }) {
                 value={confidence}
                 onChange={(e) => setConfidence(e.target.value as ConfidenceLevel | "")}
               >
-                <option value="">Unsure</option>
+                <option value="">{t("evaluate.unsure")}</option>
                 {CONFIDENCE_LEVELS.map((c) => (
                   <option key={c} value={c}>
-                    {c}
+                    {t(`evaluate.confidence.${c}`)}
                   </option>
                 ))}
               </select>
@@ -230,14 +226,14 @@ function ClaimForm({ idea, onDone }: { idea: IdeaDetail; onDone: () => void }) {
 
       <FormError error={add.error} />
       <div className={forms.actions}>
-        <Button onClick={onDone}>Cancel</Button>
+        <Button onClick={onDone}>{t("common.cancel")}</Button>
         <Button
           type="submit"
           variant="primary"
           loading={add.isPending}
           disabled={mode === "existing" && !claimId}
         >
-          Add claim
+          {t("addClaim.addClaim")}
         </Button>
       </div>
     </form>

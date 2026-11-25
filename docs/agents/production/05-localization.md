@@ -3,7 +3,7 @@
 Part of the [production-readiness program](README.md). Prompt for the implementing agent:
 `prompts/api/05-localization-prompt.md`.
 
-| Status     | Phases A, B and C1 complete (steps 6–8, 2026-11-25). Phase C2 (step 9) is next.                                                               |
+| Status     | Phases A through C2 complete (steps 6–9, 2026-11-25). Phase D is step 38.                                                                     |
 | ---------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
 | Depends on | [01](01-operational-foundations.md) (configuration, logs); phase D on every interface change before step 38                                   |
 | Unblocks   | Every later plan's strings and error reasons; [06](06-multilingual-content-and-search.md); localised e-mail in [04](04-accounts-and-trust.md) |
@@ -447,3 +447,47 @@ The audit wrote the measurements to `audit/artifacts/performance.json`.
 The next eligible row is **step 9 (plan 05, phase C2)**. Use `prompts/api/05-localization-prompt.md` for the
 remaining interface extraction and its lint and fixture coverage. Keep the documented locale defaults while
 program decision 2 is pending.
+
+### Phase C2, step 9 (2026-11-25)
+
+The checkout started clean on `main` at `8c43e38`. The sequence marked steps 1–8 done and their commits were
+present in order (`13e916b`, `0b237de`, `57d4f66`, `e6f463b`, `e29459e`, `1edb929`, `3cbaf61`, `8c43e38`).
+Phase B's approved previews, the locale runtime and the C1 extraction were present. The baseline
+`npm run check` passed with 212 tests, three PostgreSQL-only skips and all 68 endpoints exercised. The Windows
+sandbox's `tsx` launcher could not read the OS account, so the baseline and phase commands ran outside it.
+
+- Added 397 English message IDs for the editor, topic directory and detail, search, the public ledger and its
+  shared feed, people and account, standalone claim/source and principles pages, contribution and moderation
+  dialogs, toasts and error states. The catalogue also supplies the static English no-JavaScript notice.
+  ICU handles counts and ordering. Rich placeholders keep links, emphasis and the original titles and quotes
+  in React elements. The 22 Arabic fixture entries exercise translations alongside English fallback.
+- The literal-text rule applies across `apps/web/src/**/*.{ts,tsx}`. Its fixture probes every source directory
+  for JSX text, expression text, conditional and template labels and accessible props. It also accepts
+  catalogue calls and route and data attributes. Toast success metadata carries typed IDs resolved at mutation
+  completion. Stable API codes, reasons and field paths stay in the response.
+- Packing all English text into the initial locale chunk raised the cold idea visit to 164.4 KiB in English
+  and Russian. The English fallback now has a shared chunk requested with secondary routes and the home and
+  history feeds. Its Brotli body is 4.90 KiB. It is loaded before those routes render and stays loaded when
+  the display language changes.
+  The active locale still selects its own compiled chunk, and each rich message picks its own fallback so a
+  nested translation can use the active locale inside an English sentence. The root locale provider also
+  applies the account preference when a route fails before the normal page shell renders.
+
+| Final cold visit | JavaScript (KiB) | CSS (KiB) | LCP (ms) | CLS   |
+| ---------------- | ---------------- | --------- | -------- | ----- |
+| Home, English    | 148.6            | 16.7      | 224      | 0.008 |
+| Explore, English | 137.0            | 14.2      | 132      | 0.007 |
+| Idea, English    | 159.7            | 14.8      | 196      | 0.021 |
+| Idea, Russian    | 159.8            | 14.8      | 204      | 0.021 |
+
+`npm run check` passed with 214 tests, three PostgreSQL-only skips and all 68 endpoints covered.
+`npm run docs:api` regenerated identical artifacts. `npm run test:e2e` passed all 62 Chromium checks on
+isolated port 3192, including the two expanded Arabic scenarios, route-load failure and retry, axe in both
+themes and every first-visit budget. The two C2 scenarios saved 16 screenshots under the ignored
+`audit/artifacts/test-results/` directory. Cold-visit data is in `audit/artifacts/performance.json`.
+
+Program decision 2 remains pending. The twelve documented locales use beta status, English fallback and
+Latin digits in Arabic. Full translation drafts and release checks are phase D.
+
+The next eligible row is **step 10 (plan 03, phase A)**. Use `prompts/api/03-rate-limiting-prompt.md` for the
+GCRA engine and its store conformance checks, trust tiers and policy catalogue.

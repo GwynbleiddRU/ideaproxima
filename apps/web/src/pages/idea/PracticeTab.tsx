@@ -383,7 +383,7 @@ function CreateInitiativeDialog({
                 type="url"
                 value={form.url}
                 onChange={set("url")}
-                placeholder="https://"
+                placeholder={t("common.urlExample")}
               />
             )}
           </Field>

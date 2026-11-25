@@ -97,6 +97,7 @@ export const formatNumber = (n: number) => formats().number.format(n);
 export const formatDecimal = (n: number) => formats().decimal.format(n);
 export const formatPaddedNumber = (n: number) => formats().paddedNumber.format(n);
 export const formatList = (values: string[]) => formats().list.format(values);
+export const formatListParts = (values: string[]) => formats().list.formatToParts(values);
 
 /** 0–1 share as a whole percentage. */
 export const percent = (share: number) => formats().percent.format(share);

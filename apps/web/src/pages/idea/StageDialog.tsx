@@ -1,9 +1,10 @@
 import { vocabularyField } from "@/lib/vocabulary";
-import { useLocale } from "@/locales/react";
+import { vocabularyText } from "@/locales/runtime";
+import { useMessage } from "@/locales/react";
 import { useQuery } from "@tanstack/react-query";
 import { useState, type FormEvent } from "react";
 import type { IdeaDetail } from "@ideaproxima/contracts";
-import { IDEA_STAGE_INFO, IDEA_STAGES, LIMITS, type IdeaStage } from "@ideaproxima/domain";
+import { IDEA_STAGE_INFO, IDEA_STAGES, LIMITS, stageProofReason, type IdeaStage } from "@ideaproxima/domain";
 import { useTransitionStage } from "@/api/ideas";
 import { practiceQueries } from "@/api/practice";
 import forms from "@/components/forms.module.scss";
@@ -25,12 +26,13 @@ export function StageDialog({
   onClose: () => void;
   idea: IdeaDetail;
 }) {
+  const t = useMessage();
   return (
     <Dialog
       open={open}
       onClose={onClose}
-      title="Record a stage change"
-      description="Stage changes are permanent entries in the idea's history, with your rationale."
+      title={t("stageDialog.recordAStageChange")}
+      description={t("stageDialog.description")}
     >
       <StageForm idea={idea} onDone={onClose} />
     </Dialog>
@@ -38,7 +40,7 @@ export function StageDialog({
 }
 
 function StageForm({ idea, onDone }: { idea: IdeaDetail; onDone: () => void }) {
-  useLocale();
+  const t = useMessage();
   const requirements = new Map(idea.stageRequirements.map((r) => [r.stage, r]));
   const [to, setTo] = useState<IdeaStage | null>(null);
   const [rationale, setRationale] = useState("");
@@ -58,12 +60,15 @@ function StageForm({ idea, onDone }: { idea: IdeaDetail; onDone: () => void }) {
   return (
     <form onSubmit={submit} className={forms.form}>
       <Fieldset
-        legend="New stage"
-        hint={`Currently: ${vocabularyField("stages", idea.stage, "label", IDEA_STAGE_INFO[idea.stage].label)}.`}
+        legend={t("stageDialog.newStage")}
+        hint={t("stageDialog.currentStage", {
+          stage: vocabularyField("stages", idea.stage, "label", IDEA_STAGE_INFO[idea.stage].label),
+        })}
       >
         <div className={forms.choices}>
           {IDEA_STAGES.filter((s) => s !== idea.stage).map((s) => {
             const req = requirements.get(s);
+            const proof = stageProofReason(s);
             return (
               <label key={s} className={forms.choice}>
                 <input type="radio" name="stage" checked={to === s} onChange={() => setTo(s)} />
@@ -71,8 +76,12 @@ function StageForm({ idea, onDone }: { idea: IdeaDetail; onDone: () => void }) {
                 <span>
                   {req
                     ? req.met
-                      ? "✓ Requirement met"
-                      : `Needs: ${req.requirement}`
+                      ? t("stageDialog.requirementMet")
+                      : t("stageDialog.needsProof", {
+                          requirement: proof
+                            ? vocabularyText(`errors.${proof}`, req.requirement)
+                            : req.requirement,
+                        })
                     : vocabularyField("stages", s, "description", IDEA_STAGE_INFO[s].description)}
                 </span>
               </label>
@@ -80,7 +89,7 @@ function StageForm({ idea, onDone }: { idea: IdeaDetail; onDone: () => void }) {
           })}
         </div>
       </Fieldset>
-      <Field label="Rationale" hint="Why the idea is now at this stage. Shown in the idea's history.">
+      <Field label={t("stageDialog.rationale")} hint={t("stageDialog.rationaleHint")}>
         {(p) => (
           <textarea
             {...p}
@@ -94,11 +103,7 @@ function StageForm({ idea, onDone }: { idea: IdeaDetail; onDone: () => void }) {
         )}
       </Field>
       {(initiatives.data?.length ?? 0) > 0 && (
-        <Field
-          label="Motivating initiative"
-          optional
-          hint="The experiment, pilot or deployment that justifies the change."
-        >
+        <Field label={t("stageDialog.motivatingInitiative")} optional hint={t("stageDialog.initiativeHint")}>
           {(p) => (
             <select
               {...p}
@@ -106,7 +111,7 @@ function StageForm({ idea, onDone }: { idea: IdeaDetail; onDone: () => void }) {
               value={initiativeId}
               onChange={(e) => setInitiativeId(e.target.value)}
             >
-              <option value="">None</option>
+              <option value="">{t("stageDialog.none")}</option>
               {initiatives.data?.map((i) => (
                 <option key={i.id} value={i.id}>
                   {i.title}
@@ -118,14 +123,14 @@ function StageForm({ idea, onDone }: { idea: IdeaDetail; onDone: () => void }) {
       )}
       <FormError error={transition.error} />
       <div className={forms.actions}>
-        <Button onClick={onDone}>Cancel</Button>
+        <Button onClick={onDone}>{t("common.cancel")}</Button>
         <Button
           type="submit"
           variant="primary"
           loading={transition.isPending}
           disabled={!to || !rationale.trim()}
         >
-          Record stage
+          {t("stageDialog.recordStage")}
         </Button>
       </div>
     </form>

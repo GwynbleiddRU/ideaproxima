@@ -93,7 +93,7 @@ export function useWithdrawEvaluation(target: EvaluationTarget, extra: readonly 
     (dimensions: string[]) =>
       http.post<WithdrawEvaluationResponse>("/evaluations/withdraw", { target, dimensions }),
     evaluationInvalidations(target, extra),
-    { success: "Your ratings were withdrawn. They remain in the history as superseded." },
+    { success: "toast.ratingsWithdrawn" },
   );
 }
 
@@ -102,7 +102,7 @@ export function useDeclareInvolvement(slug: string) {
     ({ capacity, ...input }: DeclareInvolvementRequest & { capacity: Capacity }) =>
       http.put<InvolvementDto[]>(`${ideaPath(slug)}/involvements/${capacity}`, input),
     [keys.idea(slug)],
-    { inlineErrors: true, success: "Thank you. Your involvement is recorded on the idea." },
+    { inlineErrors: true, success: "toast.involvementRecorded" },
   );
 }
 

@@ -1,4 +1,6 @@
 import { isLocale } from "@ideaproxima/i18n/locales";
+import { formatList } from "@/lib/format";
+import { message } from "@/locales/runtime";
 
 /**
  * The one place the web app talks HTTP. Same-origin requests to /v1; the session is the HttpOnly cookie the API
@@ -32,19 +34,22 @@ export const isApiError = (e: unknown, status?: number): e is ApiError =>
 /** A message fit for a person: the API's own message, or a calm fallback for network failures. */
 export function errorMessage(error: unknown): string {
   if (error instanceof ApiError) {
-    if (error.status === 401) return "Please sign in to do that.";
-    if (error.status === 429) return "Too many requests. Please wait a moment and try again.";
+    if (error.status === 401) return message("error.signIn");
+    if (error.status === 429) return message("auth.rateLimit");
     const issues = Object.entries(error.fieldErrors);
     if (error.code === "validation_failed" && issues.length) {
-      return `Please check: ${issues.map(([path, message]) => `${humanizePath(path)} — ${message}`).join("; ")}`;
+      const fields = issues.map(([path, detail]) =>
+        message("error.fieldIssue", { field: humanizePath(path), detail }),
+      );
+      return message("error.validation", { issues: formatList(fields) });
     }
     return error.message;
   }
-  return "Could not reach the server. Check your connection and try again.";
+  return message("auth.network");
 }
 
 /** "source.title" → "source title", "sections.overview" → "sections overview". */
-const humanizePath = (path: string) => (path ? path.replace(/[._]/g, " ") : "request");
+const humanizePath = (path: string) => (path ? path.replace(/[._]/g, " ") : message("error.request"));
 
 type QueryValue = string | number | boolean | null | undefined;
 export type Query = Record<string, QueryValue>;
@@ -83,7 +88,7 @@ async function request<T>(
     throw new ApiError(
       response.status,
       error?.code ?? "http_error",
-      error?.message ?? response.statusText,
+      error?.message ?? message("error.httpStatus", { status: response.status }),
       error?.details,
       error?.requestId ?? response.headers.get("X-Request-Id") ?? undefined,
     );

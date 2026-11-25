@@ -1,3 +1,4 @@
+import { formatPaddedNumber } from "@/lib/format";
 import { vocabularyField } from "@/lib/vocabulary";
 import { useMessage } from "@/locales/react";
 import { Link } from "@tanstack/react-router";
@@ -16,58 +17,51 @@ import styles from "./AboutPage.module.scss";
 
 const PRINCIPLES = [
   {
-    title: "Ideas deserve preservation",
-    body: "An idea does not need to be feasible, proven or popular to be kept. Some are developed decades before the technology or social conditions they need exist.",
+    title: "about.principle.ideas.deserve.title",
+    body: "about.principle.ideas.deserve.body",
   },
   {
-    title: "Popularity is not quality",
-    body: "Attention shows what people care about. It never decides what is true, feasible or valuable, and it is never blended into the assessed measures.",
+    title: "about.principle.popularity.is.title",
+    body: "about.principle.popularity.is.body",
   },
   {
-    title: "Uncertainty stays visible",
-    body: `Ratings show their spread and their number. Below ${MIN_RATINGS_FOR_CONFIDENCE} independent ratings, a measure says “too early to tell”. Absence of data is never shown as a low score.`,
+    title: "about.principle.uncertainty.stays.title",
+    body: "about.principle.uncertainty.stays.body",
   },
   {
-    title: "Facts are never rewritten",
-    body: "Revisions, ratings, evidence and stage changes are append-only. Corrections supersede; withdrawals are marked; moderation hides but never deletes, and is logged publicly.",
+    title: "about.principle.facts.are.title",
+    body: "about.principle.facts.are.body",
   },
   {
-    title: "Knowledge, not posts",
-    body: "Ideas are made of shared claims, evidence with stated limitations, arguments, typed connections to other ideas, and recorded real-world initiatives, including failures.",
+    title: "about.principle.knowledge.not.title",
+    body: "about.principle.knowledge.not.body",
   },
   {
-    title: "Contribution, not hierarchy",
-    body: "Reputation will reflect demonstrated contribution: useful criticism, evidence, accurate judgment. It is a measure of contribution, never of intelligence.",
+    title: "about.principle.contribution.not.title",
+    body: "about.principle.contribution.not.body",
   },
-];
+] as const;
 
 export function AboutPage() {
   const t = useMessage();
   return (
     <div className="container">
-      <title>Principles · ideaproxima</title>
-      <PageHeader
-        eyebrow="Principles"
-        title="A collective memory of humanity's attempts to imagine its future"
-        lede="ideaproxima connects ideas with the people capable of advancing them: the scientist who finds a direction worth researching, the engineer a concept worth building, the funder an opportunity worth backing."
-      />
+      <title>{t("common.pageTitle", { title: t("nav.principles") })}</title>
+      <PageHeader eyebrow={t("nav.principles")} title={t("about.title")} lede={t("about.lede")} />
 
       <section className={styles.principles}>
         {PRINCIPLES.map((p, i) => (
           <article key={p.title}>
-            <span className={styles.number}>{String(i + 1).padStart(2, "0")}</span>
-            <h2>{p.title}</h2>
-            <p>{p.body}</p>
+            <span className={styles.number}>{formatPaddedNumber(i + 1)}</span>
+            <h2>{t(p.title)}</h2>
+            <p>{t(p.body, { count: MIN_RATINGS_FOR_CONFIDENCE })}</p>
           </article>
         ))}
       </section>
 
       <section id="stages" className={styles.section}>
-        <SectionHeading eyebrow="What has been done" title="Six lifecycle stages" />
-        <p className={styles.lede}>
-          The unit of value is progression. Later stages require proof: a recorded experiment, deployment or
-          outcome. The stage says what was done, not what is known.
-        </p>
+        <SectionHeading eyebrow={t("about.whatHasBeenDone")} title={t("about.sixLifecycleStages")} />
+        <p className={styles.lede}>{t("about.stagesDescription")}</p>
         <ol className={styles.stages} role="list">
           {IDEA_STAGES.map((s) => (
             <li key={s}>
@@ -79,11 +73,8 @@ export function AboutPage() {
       </section>
 
       <section className={styles.section}>
-        <SectionHeading eyebrow="What is known" title="How claims are judged" />
-        <p className={styles.lede}>
-          Ideas rest on claims. A claim's status is derived from independent assessments and the evidence
-          attached to it. It is never typed in by anyone.
-        </p>
+        <SectionHeading eyebrow={t("about.whatIsKnown")} title={t("about.howClaimsAreJudged")} />
+        <p className={styles.lede}>{t("about.claimsDescription")}</p>
         <dl className={styles.statuses}>
           {CLAIM_STATUSES.map((s) => (
             <div key={s}>
@@ -97,7 +88,7 @@ export function AboutPage() {
       </section>
 
       <section className={styles.section}>
-        <SectionHeading eyebrow="How to discover" title="Lenses instead of one ranking" />
+        <SectionHeading eyebrow={t("about.howToDiscover")} title={t("about.lensesTitle")} />
         <div className={styles.lenses}>
           {LENS_GROUPS.map((group) => (
             <div key={group.signal}>
@@ -119,20 +110,16 @@ export function AboutPage() {
       </section>
 
       <section className={styles.closing}>
-        <p>
-          The current measures are a transparent baseline. A reputation-weighted system, where people who have
-          shown good judgment in a domain count for more there, is planned. It will be labelled wherever it is
-          used.
-        </p>
+        <p>{t("about.lensesDescription")}</p>
         <div className={styles.actions}>
           <ButtonLink to="/explore" variant="primary">
-            Start exploring
+            {t("about.startExploring")}
           </ButtonLink>
           <ButtonLink to="/new" variant="secondary">
-            Propose an idea
+            {t("nav.propose")}
           </ButtonLink>
           <a href="/v1/openapi.json" className="link">
-            Open API (OpenAPI 3.1)
+            {t("about.openApiOpenapi3")}
           </a>
         </div>
       </section>

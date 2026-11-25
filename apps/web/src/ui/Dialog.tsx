@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, type ReactNode } from "react";
 import { X } from "lucide-react";
 import { cx } from "@/lib/cx";
+import { useMessage } from "@/locales/react";
 import styles from "./Dialog.module.scss";
 
 /**
@@ -15,7 +16,7 @@ export function Dialog({
   children,
   footer,
   size = "md",
-  closeLabel = "Close",
+  closeLabel,
 }: {
   open: boolean;
   onClose: () => void;
@@ -26,6 +27,7 @@ export function Dialog({
   size?: "sm" | "md" | "lg";
   closeLabel?: string;
 }) {
+  const t = useMessage();
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
 
@@ -54,7 +56,12 @@ export function Dialog({
               </h2>
               {description && <p className={styles.description}>{description}</p>}
             </div>
-            <button type="button" className={styles.close} onClick={onClose} aria-label={closeLabel}>
+            <button
+              type="button"
+              className={styles.close}
+              onClick={onClose}
+              aria-label={closeLabel ?? t("locale.close")}
+            >
               <X size={18} />
             </button>
           </header>

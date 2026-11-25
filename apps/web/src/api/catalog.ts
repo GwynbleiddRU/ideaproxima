@@ -57,7 +57,7 @@ export function useTopicNames() {
 export function useCreateTopic() {
   return useApiMutation((input: CreateTopicRequest) => http.post<TopicDto>("/topics", input), [keys.topics], {
     inlineErrors: true,
-    success: "Topic created.",
+    success: "toast.topicCreated",
   });
 }
 

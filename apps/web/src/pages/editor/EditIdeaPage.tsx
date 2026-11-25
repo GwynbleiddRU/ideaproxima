@@ -1,3 +1,4 @@
+import { LocalizedText, useMessage } from "@/locales/react";
 import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { getRouteApi, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
@@ -20,6 +21,7 @@ const route = getRouteApi("/ideas/$idea/edit");
  * one for the stewards to decide. Either way the previous text is never lost.
  */
 export function EditIdeaPage() {
+  const t = useMessage();
   const { idea: ref } = route.useParams();
   const idea = useSuspenseQuery(ideaQueries.detail(ref)).data;
   const { isModerator } = useSession();
@@ -44,10 +46,10 @@ export function EditIdeaPage() {
       {
         onSuccess: (revision) => {
           if (revision.status === "proposed") {
-            toast.success("Your proposed revision is waiting for a steward's decision.");
+            toast.success(t("toast.revisionProposed"));
             void navigate({ to: "/ideas/$idea/history", params: { idea: idea.slug } });
           } else {
-            toast.success(`Revision ${revision.number} published.`);
+            toast.success(t("toast.revisionPublished", { number: revision.number }));
             void navigate({ to: "/ideas/$idea", params: { idea: idea.slug } });
           }
         },
@@ -56,25 +58,29 @@ export function EditIdeaPage() {
 
   return (
     <div className="container">
-      <title>{`Edit: ${idea.title} · ideaproxima`}</title>
+      <title>{t("common.pageTitle", { title: t("editor.edit.title", { idea: idea.title }) })}</title>
       <PageHeader
-        eyebrow={publishes ? "Edit" : "Suggest an edit"}
+        eyebrow={publishes ? t("editor.edit.edit") : t("editor.edit.suggestAnEdit")}
         title={idea.title}
-        lede={
-          publishes
-            ? "As a steward you publish directly. A new revision is created; the previous one stays in the history."
-            : "Your changes become a proposed revision. The idea's stewards will accept or decline it, and you are credited either way."
-        }
+        lede={publishes ? t("editor.edit.publishLede") : t("editor.edit.proposalLede")}
       />
       {conflict && (
         <div className={styles.conflict} role="alert">
           <p>
-            <strong>Someone published a newer revision while you were editing.</strong> Your text is kept
-            below. Review the{" "}
-            <Link to="/ideas/$idea/history" params={{ idea: idea.slug }} target="_blank" className="link">
-              latest changes
-            </Link>
-            , then submit again on top of them.
+            <LocalizedText
+              id="editor.edit.conflict"
+              components={{
+                0: <strong />,
+                1: (
+                  <Link
+                    to="/ideas/$idea/history"
+                    params={{ idea: idea.slug }}
+                    target="_blank"
+                    className="link"
+                  />
+                ),
+              }}
+            />
           </p>
           <Button
             size="sm"
@@ -83,21 +89,23 @@ export function EditIdeaPage() {
               void queryClient.invalidateQueries({ queryKey: keys.idea(idea.slug) });
             }}
           >
-            Use the latest revision as the base
+            {t("editor.edit.rebase")}
           </Button>
         </div>
       )}
       {/* Not keyed by revision: after a rebase the editor keeps the author's text; only the base moves. */}
       <IdeaEditor
         initial={initial}
-        submitLabel={publishes ? "Publish revision" : "Propose revision"}
+        submitLabel={publishes ? t("editor.edit.publishRevision") : t("editor.edit.proposeRevision")}
         pending={submit.isPending}
         error={conflict ? null : submit.error}
-        aside={<p className={styles.note}>Editing revision {idea.revision.number}.</p>}
+        aside={
+          <p className={styles.note}>{t("editor.edit.baseRevision", { number: idea.revision.number })}</p>
+        }
         footer={
           <Field
-            label="What changed and why"
-            hint="Shown in the history."
+            label={t("editor.edit.changeNote")}
+            hint={t("editor.edit.changeNoteHint")}
             error={isApiError(submit.error) ? submit.error.fieldErrors.changeNote : undefined}
           >
             {(p) => (

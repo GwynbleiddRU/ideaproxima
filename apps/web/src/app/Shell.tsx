@@ -3,7 +3,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { LogOut, Menu, Moon, Plus, Search, Settings, Shield, Sun, User } from "lucide-react";
 import { useLogout, useSession } from "@/api/session";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
-import { LocaleProvider, LocalizedText, useMessage } from "@/locales/react";
+import { LocalizedText, useMessage } from "@/locales/react";
 import { cx } from "@/lib/cx";
 import { resolvedTheme, setTheme, useTheme, type ThemePreference } from "@/lib/theme";
 import { Avatar } from "@/ui/Avatar";
@@ -215,14 +215,6 @@ function Footer() {
 }
 
 export function Shell() {
-  return (
-    <LocaleProvider>
-      <ShellContent />
-    </LocaleProvider>
-  );
-}
-
-function ShellContent() {
   const t = useMessage();
   const { me, loading } = useSession();
   const [menuOpen, setMenuOpen] = useState(false);

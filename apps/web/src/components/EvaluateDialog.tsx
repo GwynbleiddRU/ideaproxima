@@ -1,5 +1,5 @@
 import { vocabularyField } from "@/lib/vocabulary";
-import { useLocale } from "@/locales/react";
+import { LocalizedText, useMessage } from "@/locales/react";
 import { useQuery } from "@tanstack/react-query";
 import { useState, type FormEvent } from "react";
 import type { EvaluationTarget } from "@ideaproxima/contracts";
@@ -43,13 +43,14 @@ export function EvaluateDialog({
   subject: string;
   invalidate?: readonly (readonly unknown[])[];
 }) {
+  const t = useMessage();
   return (
     <Dialog
       open={open}
       onClose={onClose}
       size="lg"
-      title={`Evaluate “${subject}”`}
-      description="Rate only what you can judge — every dimension is optional and stays separate."
+      title={t("evaluate.title", { subject })}
+      description={t("evaluate.description")}
     >
       <EvaluateForm target={target} invalidate={invalidate} onDone={onClose} />
     </Dialog>
@@ -65,7 +66,7 @@ function EvaluateForm({
   invalidate: readonly (readonly unknown[])[];
   onDone: () => void;
 }) {
-  useLocale();
+  const t = useMessage();
   const { me } = useSession();
   const current = useQuery(signalQueries.evaluations(target));
   const dimensions = dimensionsFor(target.kind).filter((d) => DIMENSIONS[d].scale.kind === "ordinal");
@@ -119,7 +120,7 @@ function EvaluateForm({
                   onChange={() => set(d, { value: null })}
                   className="visually-hidden"
                 />
-                I don't know
+                {t("evaluate.iDonTKnow")}
               </label>
             </div>
             <div className={styles.scale}>
@@ -143,15 +144,17 @@ function EvaluateForm({
                 <span className={styles.chosen}>
                   {value} — {anchors.find(([n]) => n === value)?.[1]}
                 </span>
-                <span>How sure are you?</span>
+                <span>{t("evaluate.howSureAreYou")}</span>
                 <Segmented<ConfidenceLevel | "unset">
-                  label={`Confidence in your ${vocabularyField("dimensions", d, "label", definition.label).toLowerCase()} rating`}
+                  label={t("evaluate.confidenceLabel", {
+                    dimension: vocabularyField("dimensions", d, "label", definition.label).toLowerCase(),
+                  })}
                   size="sm"
                   value={values[d]?.confidence ?? "unset"}
                   onChange={(c) => set(d, { confidence: c === "unset" ? null : c })}
                   options={[
-                    { value: "unset", label: "Unsure" },
-                    ...CONFIDENCE_LEVELS.map((c) => ({ value: c, label: c[0]!.toUpperCase() + c.slice(1) })),
+                    { value: "unset", label: t("evaluate.unsure") },
+                    ...CONFIDENCE_LEVELS.map((c) => ({ value: c, label: t(`evaluate.confidence.${c}`) })),
                   ]}
                 />
               </div>
@@ -160,11 +163,7 @@ function EvaluateForm({
         );
       })}
 
-      <Field
-        label="Why?"
-        optional
-        hint="What your ratings rest on — a source, an experience, a calculation. Shown with them."
-      >
+      <Field label={t("evaluate.why")} optional hint={t("evaluate.rationaleHint")}>
         {(p) => (
           <textarea
             {...p}
@@ -180,10 +179,15 @@ function EvaluateForm({
 
       <div className={styles.footer}>
         <p className={styles.count}>
-          <b>
-            {ratings.length} of {dimensions.length}
-          </b>{" "}
-          rated{ratings.length < dimensions.length && " · the rest stay “I don't know”"}
+          <LocalizedText
+            id="evaluate.progress"
+            values={{
+              count: ratings.length,
+              total: dimensions.length,
+              remaining: ratings.length < dimensions.length ? "yes" : "no",
+            }}
+            components={{ 0: <b /> }}
+          />
         </p>
         <div className={styles.buttons}>
           {mine.length > 0 && (
@@ -195,7 +199,7 @@ function EvaluateForm({
                 withdraw.mutate([...new Set(mine.map((e) => e.dimension))], { onSuccess: onDone })
               }
             >
-              Withdraw mine
+              {t("evaluate.withdrawMine")}
             </Button>
           )}
           <Button
@@ -205,7 +209,7 @@ function EvaluateForm({
             loading={submit.isPending}
             disabled={ratings.length === 0}
           >
-            {mine.length ? "Update evaluation" : "Save evaluation"}
+            {mine.length ? t("evaluate.updateEvaluation") : t("evaluate.saveEvaluation")}
           </Button>
         </div>
       </div>

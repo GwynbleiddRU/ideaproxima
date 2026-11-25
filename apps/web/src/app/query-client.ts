@@ -1,5 +1,6 @@
 import { MutationCache, QueryClient } from "@tanstack/react-query";
 import { ApiError, errorMessage } from "@/api/http";
+import { message } from "@/locales/runtime";
 import { toast } from "@/ui/Toast";
 
 /**
@@ -19,12 +20,12 @@ export function createQueryClient() {
     mutationCache: new MutationCache({
       onError: (error, _vars, _context, mutation) => {
         if (mutation.meta?.inlineErrors) return;
-        const message = errorMessage(error);
+        const detail = errorMessage(error);
         const requestId = error instanceof ApiError && error.status >= 500 ? error.requestId : undefined;
-        toast.error(requestId ? `${message} Quote this id if you report the problem: ${requestId}` : message);
+        toast.error(requestId ? message("error.requestId", { detail, requestId }) : detail);
       },
       onSuccess: (_data, _vars, _context, mutation) => {
-        if (mutation.meta?.success) toast.success(mutation.meta.success);
+        if (mutation.meta?.success) toast.success(message(mutation.meta.success));
       },
     }),
   });

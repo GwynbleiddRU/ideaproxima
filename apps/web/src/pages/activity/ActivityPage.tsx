@@ -1,3 +1,5 @@
+import type { MessageId } from "@/locales/messages";
+import { useMessage } from "@/locales/react";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { useRef } from "react";
@@ -28,44 +30,51 @@ import styles from "./ActivityPage.module.scss";
 
 interface Filter {
   action?: string;
-  label: string;
+  label: MessageId;
   icon: LucideIcon;
 }
 
 /** Verb families of the ledger, grouped; each is an action prefix the API filters on. */
-const GROUPS: { label?: string; filters: Filter[] }[] = [
-  { filters: [{ label: "Everything", icon: List }] },
+const GROUPS: { label?: MessageId; filters: Filter[] }[] = [
+  { filters: [{ label: "activityPage.filter.everything", icon: List }] },
   {
-    label: "Ideas",
+    label: "activityPage.filter.ideas",
     filters: [
-      { action: "idea.", label: "New ideas", icon: Lightbulb },
-      { action: "revision.", label: "Revisions", icon: PenLine },
-      { action: "stage.", label: "Stage changes", icon: Flag },
+      { action: "idea.", label: "activityPage.filter.newIdeas", icon: Lightbulb },
+      { action: "revision.", label: "activityPage.filter.revisions", icon: PenLine },
+      { action: "stage.", label: "activityPage.filter.stageChanges", icon: Flag },
     ],
   },
   {
-    label: "Knowledge",
+    label: "activityPage.filter.knowledge",
     filters: [
-      { action: "claim.", label: "Claims", icon: FileText },
-      { action: "evidence.", label: "Evidence", icon: Paperclip },
-      { action: "argument.", label: "Arguments", icon: Scale },
-      { action: "relation.", label: "Connections", icon: GitFork },
+      { action: "claim.", label: "activityPage.filter.claims", icon: FileText },
+      { action: "evidence.", label: "activityPage.filter.evidence", icon: Paperclip },
+      { action: "argument.", label: "activityPage.filter.arguments", icon: Scale },
+      { action: "relation.", label: "activityPage.filter.connections", icon: GitFork },
     ],
   },
-  { label: "Judgement", filters: [{ action: "evaluation.", label: "Evaluations", icon: Gauge }] },
   {
-    label: "Practice",
+    label: "activityPage.filter.judgement",
+    filters: [{ action: "evaluation.", label: "activityPage.filter.evaluations", icon: Gauge }],
+  },
+  {
+    label: "activityPage.filter.practice",
     filters: [
-      { action: "initiative.", label: "Initiatives", icon: Rocket },
-      { action: "outcome.", label: "Outcomes", icon: Target },
+      { action: "initiative.", label: "activityPage.filter.initiatives", icon: Rocket },
+      { action: "outcome.", label: "activityPage.filter.outcomes", icon: Target },
     ],
   },
-  { label: "Transparency", filters: [{ action: "moderation.", label: "Moderation log", icon: Shield }] },
+  {
+    label: "activityPage.filter.transparency",
+    filters: [{ action: "moderation.", label: "activityPage.filter.moderationLog", icon: Shield }],
+  },
 ];
 const ALL = GROUPS.flatMap((g) => g.filters);
 
 /** The append-only activity ledger: everything that happened, newest first. Moderation is public too. */
 export function ActivityPage() {
+  const t = useMessage();
   const { action } = useSearch({ from: "/activity" });
   const navigate = useNavigate({ from: "/activity" });
   const feed = useInfiniteQuery(catalogQueries.activity(action));
@@ -77,20 +86,16 @@ export function ActivityPage() {
 
   return (
     <div className="container">
-      <title>{moderation ? "Moderation log · ideaproxima" : "Activity · ideaproxima"}</title>
+      <title>{t("common.pageTitle", { title: t(moderation ? "nav.moderation" : "nav.activity") })}</title>
       <PageHeader
-        title={moderation ? "Moderation log" : "Activity"}
-        lede={
-          moderation
-            ? "Every hide, restore, deactivation and reactivation, with the moderator and the reason. Hidden content is never deleted."
-            : "Every contribution is recorded and nothing is rewritten — the archive's memory of how ideas progress."
-        }
+        title={moderation ? t("nav.moderation") : t("nav.activity")}
+        lede={moderation ? t("activityPage.moderationLede") : t("activityPage.activityLede")}
       />
       <div className={styles.layout}>
-        <nav className={styles.rail} aria-label="Filter the record">
+        <nav className={styles.rail} aria-label={t("activityPage.filterTheRecord")}>
           {GROUPS.map((group, i) => (
             <div key={group.label ?? i} className={styles.group}>
-              {group.label && <p className={styles.groupLabel}>{group.label}</p>}
+              {group.label && <p className={styles.groupLabel}>{t(group.label)}</p>}
               {group.filters.map(({ action: a, label, icon: Icon }) => (
                 <Link
                   key={label}
@@ -108,7 +113,7 @@ export function ActivityPage() {
         </nav>
 
         <label className={styles.select}>
-          <span className="visually-hidden">Show</span>
+          <span className="visually-hidden">{t("activityPage.show")}</span>
           <select
             className={control}
             value={action ?? ""}
@@ -124,7 +129,7 @@ export function ActivityPage() {
           </select>
         </label>
 
-        <section ref={feedRef} className={styles.feed} aria-label="The record">
+        <section ref={feedRef} className={styles.feed} aria-label={t("activityPage.theRecord")}>
           {feed.isPending ? (
             <Skeleton lines={10} />
           ) : feed.isError ? (
@@ -132,12 +137,14 @@ export function ActivityPage() {
           ) : entries.length ? (
             <ActivityFeed entries={entries} byDay dayHeading="h2" />
           ) : (
-            <EmptyState title={moderation ? "No moderation actions yet" : "Nothing recorded yet"} />
+            <EmptyState
+              title={moderation ? t("activityPage.moderationEmpty") : t("activityPage.activityEmpty")}
+            />
           )}
           {feed.hasNextPage && (
             <div className={styles.more}>
               <Button onClick={() => void feed.fetchNextPage()} loading={feed.isFetchingNextPage}>
-                Older entries
+                {t("activityPage.olderEntries")}
               </Button>
             </div>
           )}

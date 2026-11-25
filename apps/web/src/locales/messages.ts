@@ -3,6 +3,7 @@ import { STEWARD_ROLE_INFO } from "../../../../packages/domain/src/vocabulary/pe
 // Shell labels appear in navigation and accessible names. Reuse the same ID across entry points.
 export const englishMessages = {
   "brand.name": "ideaproxima",
+  "bootstrap.noScript": "ideaproxima needs JavaScript. The archive is also available as an API at /v1.",
   "nav.explore": "Explore",
   "nav.topics": "Topics",
   "nav.activity": "Activity",
@@ -80,6 +81,8 @@ export const englishMessages = {
   "common.progress": "{count, number} of {total, number}", // Current and total, for a measure or stage.
   "common.cancel": "Cancel",
   "common.title": "Title",
+  "common.doiExample": "10.1000/xyz123",
+  "common.urlExample": "https://",
   "common.hidden": "Hidden",
   "common.status": "Status",
   "common.note": "Note",
@@ -520,6 +523,504 @@ export const englishMessages = {
   "idea.claim.outcomeSource": "From an outcome recorded on the platform: {result}.", // A vocabulary label.
   "idea.claim.withdrawnReason": "Withdrawn: {reason}", // The contributor's recorded reason.
   "idea.claim.citationDetail": " · {detail}", // Bibliographic metadata or a locator after a source title.
+
+  // Principles page and its vocabulary examples.
+  "about.title": "A collective memory of humanity's attempts to imagine its future",
+  "about.lede":
+    "ideaproxima connects ideas with the people capable of advancing them: the scientist who finds a direction worth researching, the engineer a concept worth building, the funder an opportunity worth backing.",
+  "about.whatHasBeenDone": "What has been done",
+  "about.sixLifecycleStages": "Six lifecycle stages",
+  "about.stagesDescription":
+    "The unit of value is progression. Later stages require proof: a recorded experiment, deployment or outcome. The stage says what was done, not what is known.",
+  "about.whatIsKnown": "What is known",
+  "about.howClaimsAreJudged": "How claims are judged",
+  "about.claimsDescription":
+    "Ideas rest on claims. A claim's status is derived from independent assessments and the evidence attached to it. It is never typed in by anyone.",
+  "about.howToDiscover": "How to discover",
+  "about.lensesTitle": "Lenses instead of one ranking",
+  "about.lensesDescription":
+    "The current measures are a transparent baseline. A reputation-weighted system, where people who have shown good judgment in a domain count for more there, is planned. It will be labelled wherever it is used.",
+  "about.startExploring": "Start exploring",
+  "about.openApiOpenapi3": "Open API (OpenAPI 3.1)",
+  "about.principle.ideas.deserve.title": "Ideas deserve preservation",
+  "about.principle.ideas.deserve.body":
+    "An idea does not need to be feasible, proven or popular to be kept. Some are developed decades before the technology or social conditions they need exist.",
+  "about.principle.popularity.is.title": "Popularity is not quality",
+  "about.principle.popularity.is.body":
+    "Attention shows what people care about. It never decides what is true, feasible or valuable, and it is never blended into the assessed measures.",
+  "about.principle.uncertainty.stays.title": "Uncertainty stays visible",
+  "about.principle.uncertainty.stays.body":
+    "Ratings show their spread and their number. Below {count, number} independent ratings, a measure says “too early to tell”. Absence of data is never shown as a low score.",
+  "about.principle.facts.are.title": "Facts are never rewritten",
+  "about.principle.facts.are.body":
+    "Revisions, ratings, evidence and stage changes are append-only. Corrections supersede; withdrawals are marked; moderation hides but never deletes, and is logged publicly.",
+  "about.principle.knowledge.not.title": "Knowledge, not posts",
+  "about.principle.knowledge.not.body":
+    "Ideas are made of shared claims, evidence with stated limitations, arguments, typed connections to other ideas, and recorded real-world initiatives, including failures.",
+  "about.principle.contribution.not.title": "Contribution, not hierarchy",
+  "about.principle.contribution.not.body":
+    "Reputation will reflect demonstrated contribution: useful criticism, evidence, accurate judgment. It is a measure of contribution, never of intelligence.",
+
+  // Account settings. The handle and email identify the signed-in reader.
+  "account.account": "Account",
+  "account.public": "Public",
+  "account.profile": "Profile",
+  "account.displayName": "Display name",
+  "account.affiliation": "Affiliation",
+  "account.aboutYou": "About you",
+  "account.howYouCanHelp": "How you can help advance ideas",
+  "account.saveProfile": "Save profile",
+  "account.domains": "Domains",
+  "account.expertise": "Expertise",
+  "account.expertiseDescription": "Self-declared until verified by a moderator. Shown on your profile.",
+  "account.verifiedBadge": "Verified",
+  "account.selfDeclared": "Self-declared",
+  "account.chooseATopic": "Choose a topic",
+  "account.basis": "Basis",
+  "account.expertiseBasisHint": "Degree, role, years of practice…",
+  "account.declareExpertise": "Declare expertise",
+  "account.security": "Security",
+  "account.currentPassword": "Current password",
+  "account.newPassword": "New password",
+  "account.changePassword": "Change password",
+  "account.signedInEmail": "Signed in as @{handle} ({email}). Your profile is public; your email is not.",
+  "account.signedIn": "Signed in as @{handle}. Your profile is public; your email is not.",
+  "account.removeExpertise": "Remove {topic}",
+
+  // Ledger sentences. In event messages, 0 is the idea subject and 1 is a quote or emphasized vocabulary. In withActors, 0 is the actor list and 1 is the full event.
+  "activity.hidden": "contributed content hidden by moderation",
+  "activity.unknown": "{action}{hasIdea, select, yes { in <0/>} other {}}",
+  "activity.anIdea": "an idea",
+  "activity.theIdea": "the idea",
+  "activity.operator": "An operator",
+  "activity.otherActors": "{count, plural, one {# other} other {# others}}",
+  "activity.withActors": "<0/> <1/>",
+  "activity.evaluation.idea": "evaluated <0/>{hasDimensions, select, yes { on {dimensions}} other {}}",
+  "activity.evaluation.target":
+    "assessed {target, select, relation {a connection} evidence {evidence} claim {a claim} other {{target}}}{hasIdea, select, yes { in <0/>} other {}}",
+  "activity.idea.proposed": "proposed <0/>",
+  "activity.revision.published":
+    "published revision {number, number}{hasIdea, select, yes { of <0/>} other {}}{hasQuote, select, yes { <1/>} other {}}",
+  "activity.revision.proposed":
+    "proposed revision {number, number}{hasIdea, select, yes { of <0/>} other {}}{hasQuote, select, yes { <1/>} other {}}",
+  "activity.revision.accepted":
+    "accepted revision {number, number}{hasIdea, select, yes { of <0/>} other {}}",
+  "activity.revision.rejected":
+    "declined revision {number, number}{hasIdea, select, yes { of <0/>} other {}}",
+  "activity.revision.withdrawn":
+    "withdrew revision {number, number}{hasIdea, select, yes { of <0/>} other {}}",
+  "activity.stage.changed": "moved <0/> to <1>{stage}</1>",
+  "activity.steward.appointed": "appointed a steward{hasIdea, select, yes { for <0/>} other {}}",
+  "activity.claim.stated":
+    "stated a claim{hasIdea, select, yes { on <0/>} other {}}{hasQuote, select, yes {: <1/>} other {}}",
+  "activity.claim.linked":
+    "linked {count, plural, one {a claim} other {# claims}} as {role}{hasIdea, select, yes { in <0/>} other {}}",
+  "activity.claim.unlinked": "unlinked a claim{hasIdea, select, yes { from <0/>} other {}}",
+  "activity.evidence.attached":
+    "{stance, select, supports {attached {count, plural, one {supporting evidence} other {# supporting sources}}} challenges {attached {count, plural, one {challenging evidence} other {# challenging sources}}} other {attached {count, plural, one {mixed evidence} other {# mixed sources}}}} to a claim{hasIdea, select, yes { in <0/>} other {}}",
+  "activity.evidence.withdrawn": "withdrew evidence{hasIdea, select, yes { in <0/>} other {}}",
+  "activity.source.registered": "registered a source{hasQuote, select, yes { <1/>} other {}}",
+  "activity.argument.made":
+    "{stance, select, supports {argued for} opposes {argued against} other {qualified}} {target, select, idea {<0/>} claim {a claim{hasIdea, select, yes { in <0/>} other {}}} evidence {evidence{hasIdea, select, yes { in <0/>} other {}}} relation {a relation{hasIdea, select, yes { in <0/>} other {}}} other {{target}{hasIdea, select, yes { in <0/>} other {}}}}{hasQuote, select, yes {: <1/>} other {}}",
+  "activity.argument.withdrawn": "withdrew an argument{hasIdea, select, yes { on <0/>} other {}}",
+  "activity.evaluation.withdrawn": "withdrew ratings{hasIdea, select, yes { on <0/>} other {}}",
+  "activity.stance.taken": "marked <0/> {stance}",
+  "activity.stance.retracted": "retracted a perspective{hasIdea, select, yes { on <0/>} other {}}",
+  "activity.involvement.declared":
+    "{status, select, active {started working on <0/> ({capacity})} concluded {concluded their involvement{hasIdea, select, yes { in <0/>} other {}}} other {offered to help with <1>{capacity}</1>{hasIdea, select, yes { on <0/>} other {}}}}",
+  "activity.involvement.withdrawn": "ended their involvement{hasIdea, select, yes { in <0/>} other {}}",
+  "activity.relation.proposed": "connected <0/> to another idea{hasType, select, yes { ({type})} other {}}",
+  "activity.relation.retracted": "retracted a connection{hasIdea, select, yes { of <0/>} other {}}",
+  "activity.initiative.created":
+    "recorded an initiative{hasIdea, select, yes { on <0/>} other {}}{hasQuote, select, yes {: <1/>} other {}}",
+  "activity.initiative.status_changed":
+    "marked an initiative {status}{hasIdea, select, yes { on <0/>} other {}}",
+  "activity.outcome.recorded":
+    "recorded an outcome — <1>{result}</1>{lessons, select, yes {, with lessons} other {}}{hasIdea, select, yes { for <0/>} other {}}",
+  "activity.comment.posted":
+    "{kind, select, question {{count, plural, one {asked a question} other {asked questions}}} suggestion {{count, plural, one {made a suggestion} other {made suggestions}}} other {commented}}{hasIdea, select, yes { on <0/>} other {}}",
+  "activity.topic.created": "created the topic “{topic}”",
+  "activity.topic.translation_updated": "updated the {locale} translation of “{topic}”",
+  "activity.person.registered": "joined the archive",
+  "activity.person.profile_updated": "updated their profile",
+  "activity.person.role_changed": "role changed from {from} to {to}",
+  "activity.expertise.declared": "declared expertise in {topic}",
+  "activity.expertise.revoked": "withdrew expertise in {topic}",
+  "activity.moderation.hidden":
+    "hid content{hasIdea, select, yes { in <0/>} other {}}{hasQuote, select, yes { — <1/>} other {}}",
+  "activity.moderation.restored":
+    "restored content{hasIdea, select, yes { in <0/>} other {}}{hasQuote, select, yes { — <1/>} other {}}",
+  "activity.moderation.person_deactivated":
+    "deactivated an account{hasQuote, select, yes { — <1/>} other {}}",
+  "activity.moderation.person_reactivated":
+    "reactivated an account{hasQuote, select, yes { — <1/>} other {}}",
+
+  // Ledger page heading, action filters and pagination.
+  "activityPage.moderationLede":
+    "Every hide, restore, deactivation and reactivation, with the moderator and the reason. Hidden content is never deleted.",
+  "activityPage.activityLede":
+    "Every contribution is recorded and nothing is rewritten — the archive's memory of how ideas progress.",
+  "activityPage.filterTheRecord": "Filter the record",
+  "activityPage.show": "Show",
+  "activityPage.theRecord": "The record",
+  "activityPage.moderationEmpty": "No moderation actions yet",
+  "activityPage.activityEmpty": "Nothing recorded yet",
+  "activityPage.olderEntries": "Older entries",
+  "activityPage.filter.everything": "Everything",
+  "activityPage.filter.ideas": "Ideas",
+  "activityPage.filter.newIdeas": "New ideas",
+  "activityPage.filter.revisions": "Revisions",
+  "activityPage.filter.stageChanges": "Stage changes",
+  "activityPage.filter.knowledge": "Knowledge",
+  "activityPage.filter.claims": "Claims",
+  "activityPage.filter.evidence": "Evidence",
+  "activityPage.filter.arguments": "Arguments",
+  "activityPage.filter.connections": "Connections",
+  "activityPage.filter.judgement": "Judgement",
+  "activityPage.filter.evaluations": "Evaluations",
+  "activityPage.filter.practice": "Practice",
+  "activityPage.filter.initiatives": "Initiatives",
+  "activityPage.filter.outcomes": "Outcomes",
+  "activityPage.filter.transparency": "Transparency",
+  "activityPage.filter.moderationLog": "Moderation log",
+
+  // Dialog for stating a claim or linking an existing one.
+  "addClaim.title": "Add a claim",
+  "addClaim.description":
+    "A claim is one statement the idea depends on, phrased so that evidence could support or challenge it.",
+  "addClaim.newOrExistingClaim": "New or existing claim",
+  "addClaim.stateANewClaim": "State a new claim",
+  "addClaim.linkAnExistingClaim": "Link an existing claim",
+  "addClaim.statement": "Statement",
+  "addClaim.statementHint":
+    "One checkable statement. “Membranes can selectively capture microplastics below 5 µm”, not “this will work”.",
+  "addClaim.findTheClaim": "Find the claim",
+  "addClaim.searchClaimStatements": "Search claim statements",
+  "addClaim.searchClaims": "Search claims",
+  "addClaim.noMatches": "No claims match. State a new one instead.",
+  "addClaim.itsRoleInThis": "Its role in this idea",
+  "addClaim.consequenceDepth": "How far down the chain of consequences?",
+  "addClaim.yourOwnAssessment": "Your own assessment",
+  "addClaim.assessmentHint": "Optional. Recorded as an ordinary, attributed evaluation of the claim.",
+  "addClaim.confidence": "Confidence",
+  "addClaim.addClaim": "Add claim",
+  "addClaim.usage": "{count, plural, one {Used by # idea} other {Used by # ideas}}",
+
+  // Evidence form. The claim is contributed text and source details are bibliographic.
+  "addEvidence.stance": "What does it do to the claim?",
+  "addEvidence.basis": "Basis",
+  "addEvidence.aPublicationOrSource": "A publication or source",
+  "addEvidence.anOutcomeRecordedHere": "An outcome recorded here",
+  "addEvidence.kindOfSource": "Kind of source",
+  "addEvidence.year": "Year",
+  "addEvidence.authors": "Authors",
+  "addEvidence.journalPublisherOrVenue": "Journal, publisher or venue",
+  "addEvidence.deduplicationHint": "A known DOI or URL reuses the existing source record.",
+  "addEvidence.url": "URL",
+  "addEvidence.outcome": "Outcome",
+  "addEvidence.chooseAnOutcome": "Choose an outcome",
+  "addEvidence.summary": "What does it show about the claim?",
+  "addEvidence.limitations": "What does it NOT establish?",
+  "addEvidence.limitationsHint": "Scope, sample, conditions, open questions. Strongly encouraged.",
+  "addEvidence.locator": "Where in the source",
+  "addEvidence.locatorHint": "Page, figure, table, section…",
+  "addEvidence.forClaim": "For the claim: “{claim}”",
+
+  // Standalone claim page. The statedByPerson placeholder links to a contributor.
+  "claimPage.claim": "Claim",
+  "claimPage.argue": "Argue",
+  "claimPage.forAndAgainst": "For and against",
+  "claimPage.noEvidenceHelp": "Until evidence is attached, this claim remains a hypothesis.",
+  "claimPage.reasoning": "Reasoning",
+  "claimPage.sharedKnowledge": "Shared knowledge",
+  "claimPage.ideasRestingOnIt": "Ideas resting on it",
+  "claimPage.underpinsCount": "{count, plural, one {Underpins # idea} other {Underpins # ideas}}",
+  "claimPage.title": "Claim: {claim}",
+  "claimPage.statedByPerson": "Stated by <0/>",
+  "claimPage.evidence": "Evidence",
+  "claimPage.arguments": "Arguments",
+
+  // Shared title, counter and heading patterns.
+  "common.pageTitle": "{title} · ideaproxima",
+  "common.countLabel": "{label} ({count, number})",
+  "common.counter": "{count, number} / {total, number}",
+
+  // Idea editor and revision pages. The conflict placeholders hold the highlighted warning and a link to history.
+  "editor.edit.edit": "Edit",
+  "editor.edit.suggestAnEdit": "Suggest an edit",
+  "editor.edit.publishLede":
+    "As a steward you publish directly. A new revision is created; the previous one stays in the history.",
+  "editor.edit.proposalLede":
+    "Your changes become a proposed revision. The idea's stewards will accept or decline it, and you are credited either way.",
+  "editor.edit.rebase": "Use the latest revision as the base",
+  "editor.edit.publishRevision": "Publish revision",
+  "editor.edit.proposeRevision": "Propose revision",
+  "editor.edit.changeNote": "What changed and why",
+  "editor.edit.changeNoteHint": "Shown in the history.",
+  "editor.aTitle": "A title",
+  "editor.aShortSummary": "A short summary",
+  "editor.atLeastOneTopic": "At least one topic",
+  "editor.thePossibility": "The possibility",
+  "editor.titleLabel": "What possibility do you want humanity to remember?",
+  "editor.nameTheIdea": "Name the idea",
+  "editor.summaryLabel": "In two or three sentences",
+  "editor.summaryHint": "What is it, and why might it matter? This is what people see in lists.",
+  "editor.whereItBelongs": "Where it belongs",
+  "editor.primaryTopic": "Primary topic",
+  "editor.primary": "(primary)",
+  "editor.tags": "Tags",
+  "editor.tagsHint": "optional · press Enter to add",
+  "editor.tagsExample": "e.g. water, microplastics",
+  "editor.developIt": "Develop it",
+  "editor.sectionsHint": "every part is optional; speculation is allowed",
+  "editor.written": "Written",
+  "editor.write": "Write",
+  "editor.overviewPlaceholder": "What exactly is proposed, in more detail?",
+  "editor.markdownHint": "Sections support Markdown: **bold**, *italic*, lists, [links](https://…).",
+  "editor.previewHeading": "How it will appear",
+  "editor.previewLabel": "Preview of the idea in lists",
+  "editor.yourTitle": "Your title",
+  "editor.previewSummary": "Your summary will appear here.",
+  "editor.new.proposeAPossibility": "Propose a possibility",
+  "editor.new.title": "Write it down before it is lost",
+  "editor.new.lede":
+    "An idea does not need to be feasible, proven or popular to deserve preservation. Start with a title and a summary; anyone can help develop the rest.",
+  "editor.new.addToTheArchive": "Add to the archive",
+  "editor.new.draftHelp":
+    "You become the idea's first steward. Your draft is kept in this browser until you publish.",
+  "editor.edit.title": "Edit: {idea}",
+  "editor.edit.conflict":
+    "<0>Someone published a newer revision while you were editing.</0> Your text is kept below. Review the <1>latest changes</1>, then submit again on top of them.",
+  "editor.edit.baseRevision": "Editing revision {number, number}.",
+  "editor.topicSelection": "Topics <0>{min, number}–{max, number}; the first is primary</0>",
+  "editor.removeTag": "Remove tag {tag}",
+  "editor.requirement.aTitle": "Add a title to publish.",
+  "editor.requirement.aShortSummary": "Add a short summary to publish.",
+  "editor.requirement.atLeastOneTopic": "Add at least one topic to publish.",
+  "editor.requirementStatus": " — {done, select, yes {done} other {missing}}",
+  "editor.sectionProgress": "Sections developed: <0>{count, number}</0> of {total, number} <1>(optional)</1>",
+
+  // Client error feedback. The API supplies the detail. Request IDs, HTTP statuses and field identifiers are diagnostic data.
+  "error.route.eyebrow": "Something went wrong",
+  "error.route.title": "This page could not be loaded.",
+  "error.route.goHome": "Go home",
+  "error.requestId": "{detail} Quote this id if you report the problem: {requestId}",
+  "error.signIn": "Please sign in to do that.",
+  "error.fieldIssue": "{field} — {detail}",
+  "error.validation": "Please check: {issues}",
+  "error.request": "request",
+  "error.httpStatus": "The server returned HTTP {status, number}.",
+
+  // Evaluation dialog. The subject is a title or a translated label, and the dimension is a vocabulary label.
+  "evaluate.description": "Rate only what you can judge — every dimension is optional and stays separate.",
+  "evaluate.iDonTKnow": "I don't know",
+  "evaluate.howSureAreYou": "How sure are you?",
+  "evaluate.unsure": "Unsure",
+  "evaluate.why": "Why?",
+  "evaluate.rationaleHint":
+    "What your ratings rest on — a source, an experience, a calculation. Shown with them.",
+  "evaluate.withdrawMine": "Withdraw mine",
+  "evaluate.updateEvaluation": "Update evaluation",
+  "evaluate.saveEvaluation": "Save evaluation",
+  "evaluate.title": "Evaluate “{subject}”",
+  "evaluate.confidenceLabel": "Confidence in your {dimension} rating",
+  "evaluate.progress":
+    "<0>{count, number} of {total, number}</0> rated{remaining, select, yes { · the rest stay “I don't know”} other {}}",
+  "evaluate.confidence.low": "Low",
+  "evaluate.confidence.medium": "Medium",
+  "evaluate.confidence.high": "High",
+
+  // Loading and retry states and the default disclosure label.
+  "feedback.tryAgain": "Try again",
+  "feedback.loading": "Loading…",
+  "feedback.howComputed": "How is this computed?",
+
+  // Optional form-field hint.
+  "field.optional": "optional",
+
+  // Involvement dialog. The capacity is a vocabulary label.
+  "involve.howCanYouHelp": "How can you help?",
+  "involve.description":
+    "Your involvement is shown on the idea, so others looking to collaborate can find you.",
+  "involve.inWhatCapacity": "In what capacity?",
+  "involve.whereDoYouStand": "Where do you stand?",
+  "involve.noteHint": "What you can offer, or what you are working on.",
+  "involve.update": "Update",
+  "involve.recordMyInvolvement": "Record my involvement",
+  "involve.withdraw": "Remove my {capacity} involvement",
+
+  // Moderation dialog. The action and target are stable keys. Translate each complete title.
+  "moderation.restore": "Restore",
+  "moderation.hide": "Hide",
+  "moderation.restoreHelp": "It becomes publicly visible again.",
+  "moderation.hideHelp":
+    "It disappears from public views but stays in the record. The reason is published in the moderation log.",
+  "moderation.actionTitle":
+    "{restore, select, yes {{kind, select, idea {Restore this idea} revision {Restore this revision} claim {Restore this claim} evidence {Restore this evidence} argument {Restore this argument} comment {Restore this comment} relation {Restore this relation} initiative {Restore this initiative} outcome {Restore this outcome} source {Restore this source} other {Restore this content}}} other {{kind, select, idea {Hide this idea} revision {Hide this revision} claim {Hide this claim} evidence {Hide this evidence} argument {Hide this argument} comment {Hide this comment} relation {Hide this relation} initiative {Hide this initiative} outcome {Hide this outcome} source {Hide this source} other {Hide this content}}}}",
+
+  // Missing or hidden page and its recovery controls.
+  "notFound.heading": "Nothing is archived here.",
+  "notFound.description":
+    "The page may have moved, or the content was hidden by moderation. Hidden content stays in the record; the public moderation log explains why.",
+  "notFound.searchLabel": "Search for what you were looking for",
+  "notFound.title": "Not found",
+
+  // Public profile and moderation controls. Contribution plurals describe the number shown beside each label.
+  "person.ideas": "Ideas",
+  "person.helpingWith": "Helping with",
+  "person.editProfile": "Edit profile",
+  "person.deactivated": "Deactivated",
+  "person.canHelpWith": "Can help with",
+  "person.expertise": "Expertise",
+  "person.verified": "verified",
+  "person.selfDeclared": "self-declared",
+  "person.recordedContributions": "Recorded contributions",
+  "person.noContributionsRecordedYet": "No contributions recorded yet.",
+  "person.contributionsDescription":
+    "Plain counts of what is in the record — not a measure of quality, influence or intelligence.",
+  "person.aboutTheseNumbers": "About these numbers",
+  "person.contributionsHelp":
+    "Contribution influence (how strongly someone's evaluations count, per domain) will be computed from demonstrated judgment, and explained here when it exists.",
+  "person.profileSections": "Profile sections",
+  "person.noIdeasProposedYet": "No ideas proposed yet",
+  "person.anIdeaDoesNot": "An idea does not need to be feasible, proven or popular to be kept.",
+  "person.notInvolvedInAny": "Not involved in any idea yet",
+  "person.olderActivity": "Older activity",
+  "person.role": "Role",
+  "person.deactivateAccount": "Deactivate account",
+  "person.reactivateAccount": "Reactivate account",
+  "person.deactivateThisAccount": "Deactivate this account",
+  "person.reactivateThisAccount": "Reactivate this account",
+  "person.deactivateHelp":
+    "They will be signed out and unable to act. Their contributions stay, attributed. The reason is published.",
+  "person.reactivateHelp": "They will be able to sign in and contribute again.",
+  "person.deactivate": "Deactivate",
+  "person.reactivate": "Reactivate",
+  "person.role.member": "member",
+  "person.roleOption.member": "Member",
+  "person.role.moderator": "moderator",
+  "person.roleOption.moderator": "Moderator",
+  "person.role.admin": "admin",
+  "person.roleOption.admin": "Admin",
+  "person.contributions.ideasProposed": "{count, plural, one {idea proposed} other {ideas proposed}}",
+  "person.contributions.revisionsAccepted":
+    "{count, plural, one {revision accepted} other {revisions accepted}}",
+  "person.contributions.claims": "{count, plural, one {claim stated} other {claims stated}}",
+  "person.contributions.evidence": "{count, plural, one {piece of evidence} other {pieces of evidence}}",
+  "person.contributions.arguments": "{count, plural, one {argument} other {arguments}}",
+  "person.contributions.evaluations": "{count, plural, one {evaluation} other {evaluations}}",
+  "person.contributions.comments": "{count, plural, one {comment} other {comments}}",
+  "person.contributions.initiatives":
+    "{count, plural, one {initiative recorded} other {initiatives recorded}}",
+  "person.contributions.usefulReceived":
+    "{count, plural, one {time marked useful} other {times marked useful}}",
+  "person.joinedOn": " · joined {date}",
+  "person.sinceDate": "· since <0/>",
+
+  // Shared confirmation form that records a public reason.
+  "reason.reason": "Reason",
+  "reason.publicHint": "Recorded publicly with this action.",
+
+  // Search screens. The query is user text. Preserve the search operators in the examples.
+  "search.placeholder": "Ideas, claims, sources, people…",
+  "search.clearTheSearch": "Clear the search",
+  "search.resultTypes": "Result types",
+  "search.emptyHelp":
+    "Try fewer or different words. If the idea is not here yet, it may be yours to propose.",
+  "search.ideas": "Ideas",
+  "search.claims": "Claims",
+  "search.sources": "Sources",
+  "search.people": "People",
+  "search.noMatchingIdeas": "No matching ideas",
+  "search.proposeHelp":
+    "If you have one in mind, write it down — it does not need to be feasible or proven to be kept.",
+  "search.intro":
+    "Search titles, summaries, claim statements, source titles and names. Or start from a domain:",
+  "search.exploreAllIdeas": "Explore all ideas",
+  "search.allTypes": "All",
+  "search.queryTitle": "“{query}” · Search",
+  "search.empty": "Nothing found for “{query}”",
+  "search.noMatchingIdea": "No idea mentions “{query}” yet.",
+  "search.browseTopic": "Browse the <0/> topic, or write the idea down yourself.",
+  "search.examples": 'Tips: <0>"exact phrase"</0> · <1>water OR soil</1> · <2>nanorobots -medical</2>',
+
+  // Standalone source page. The registeredByPerson placeholder links to a contributor.
+  "sourcePage.source": "Source",
+  "sourcePage.deduplicationHelp":
+    "Sources are deduplicated by DOI and URL, so every claim citing this work points to the same record.",
+  "sourcePage.citationCount":
+    "{count, plural, one {Cited as evidence # time} other {Cited as evidence # times}}",
+  "sourcePage.registeredByPerson": "Registered by <0/>",
+  "sourcePage.authors": "Authors",
+  "sourcePage.venue": "Venue",
+  "sourcePage.year": "Year",
+
+  // Stage transition dialog. The stage and proof requirement come from the domain.
+  "stageDialog.recordAStageChange": "Record a stage change",
+  "stageDialog.description":
+    "Stage changes are permanent entries in the idea's history, with your rationale.",
+  "stageDialog.newStage": "New stage",
+  "stageDialog.requirementMet": "✓ Requirement met",
+  "stageDialog.rationale": "Rationale",
+  "stageDialog.rationaleHint": "Why the idea is now at this stage. Shown in the idea's history.",
+  "stageDialog.motivatingInitiative": "Motivating initiative",
+  "stageDialog.initiativeHint": "The experiment, pilot or deployment that justifies the change.",
+  "stageDialog.none": "None",
+  "stageDialog.recordStage": "Record stage",
+  "stageDialog.currentStage": "Currently: {stage}.",
+  "stageDialog.needsProof": "Needs: {requirement}", // The stage's proof requirement, from the domain catalogue.
+
+  // Success notifications and their dismiss button. Revision numbers identify published revisions.
+  "toast.topicCreated": "Topic created.",
+  "toast.connectionRecorded": "Connection recorded.",
+  "toast.connectionRetracted": "Connection retracted.",
+  "toast.ideaProposed": "Your idea is in the archive.",
+  "toast.proposalWithdrawn": "Proposal withdrawn.",
+  "toast.stageRecorded": "Stage recorded.",
+  "toast.stewardAppointed": "Steward appointed.",
+  "toast.claimAdded": "Claim added.",
+  "toast.claimUnlinked": "Claim unlinked from this idea.",
+  "toast.evidenceAttached": "Evidence attached.",
+  "toast.evidenceWithdrawn": "Evidence withdrawn. It stays in the record, marked as withdrawn.",
+  "toast.argumentAdded": "Argument added.",
+  "toast.argumentWithdrawn": "Argument withdrawn.",
+  "toast.profileSaved": "Profile saved.",
+  "toast.passwordChanged": "Password changed. Your other sessions were signed out.",
+  "toast.expertiseDeclared": "Expertise declared.",
+  "toast.roleChanged": "Role changed. The change is recorded in the public activity log.",
+  "toast.initiativeRecorded": "Initiative recorded.",
+  "toast.statusUpdated": "Status updated.",
+  "toast.outcomeRecorded": "Outcome recorded. Failures are knowledge too.",
+  "toast.ratingsWithdrawn": "Your ratings were withdrawn. They remain in the history as superseded.",
+  "toast.involvementRecorded": "Thank you. Your involvement is recorded on the idea.",
+  "toast.revisionProposed": "Your proposed revision is waiting for a steward's decision.",
+  "toast.dismiss": "Dismiss",
+  "toast.revisionPublished": "Revision {number, number} published.",
+
+  // Individual topic page. Topic names come from the locale-specific API catalogue.
+  "topic.breadcrumb": "Breadcrumb",
+  "topic.proposeAnIdeaHere": "Propose an idea here",
+  "topic.order": "Order",
+  "topic.lensEmpty": "No ideas under this lens yet",
+  "topic.proposeTheFirst": "Propose the first",
+  "topic.lensEmptyHelp": "Assessment-based lenses only include ideas with enough independent ratings.",
+  "topic.emptyHelp": "An idea does not need to be feasible, proven or popular to deserve preservation.",
+  "topic.oftenTogetherWith": "Often together with",
+  "topic.ideasIn": "Ideas in {topic}",
+  "topic.empty": "No ideas in {topic} yet",
+  "topic.sharedCount": "{count, number} shared",
+
+  // Topic directory and creation dialog.
+  "topics.lede": "Ideas span domains: each belongs to up to four topics, the first being its primary home.",
+  "topics.newTopic": "New topic",
+  "topics.noIdeasYet": "No ideas yet.",
+  "topics.proposeTheFirst": "Propose the first",
+  "topics.newest": "Newest",
+  "topics.createDescription": "Topic changes are recorded in the public activity log.",
+  "topics.description": "Description",
+  "topics.nestUnder": "Nest under",
+  "topics.topLevel": "Top level",
+  "topics.createTopic": "Create topic",
 } as const;
 
 export type MessageId = keyof typeof englishMessages;
@@ -527,6 +1028,28 @@ export type MessageId = keyof typeof englishMessages;
 // Small beta fixtures for the web localization audit. Full translated catalogues are phase D.
 export const translatedMessages = {
   ar: {
+    "account.account": "الحساب",
+    "nav.account": "حسابك",
+    "account.profile": "الملف الشخصي",
+    "account.saveProfile": "احفظ الملف الشخصي",
+    "activity.idea.proposed": "اقترح <0/>",
+    "activityPage.filterTheRecord": "تصفية السجل",
+    "addClaim.title": "أضف ادعاءً",
+    "about.title": "ذاكرة جماعية لمحاولات البشرية تخيل مستقبلها",
+    "claimPage.claim": "ادعاء",
+    "editor.nameTheIdea": "سم الفكرة",
+    "editor.new.title": "دوّنها قبل أن تضيع",
+    "error.signIn": "سجّل الدخول للقيام بذلك.",
+    "error.requestId": "{detail} اذكر هذا المعرّف عند الإبلاغ عن المشكلة: {requestId}",
+    "evaluate.title": "قيّم «{subject}»",
+    "feedback.tryAgain": "حاول مجددًا",
+    "notFound.heading": "لا يوجد شيء في الأرشيف هنا.",
+    "person.recordedContributions": "المساهمات المسجلة",
+    "search.empty": "لا نتائج عن «{query}»",
+    "sourcePage.source": "مصدر",
+    "toast.dismiss": "إخفاء الإشعار",
+    "toast.profileSaved": "حُفظ الملف الشخصي.",
+    "topic.proposeAnIdeaHere": "اقترح فكرة هنا",
     "nav.explore": "استكشف",
     "nav.topics": "الموضوعات",
     "nav.activity": "النشاط",

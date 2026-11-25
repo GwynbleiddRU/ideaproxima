@@ -1,11 +1,13 @@
-import { I18nProvider, Trans, useLingui } from "@lingui/react";
+import { I18nProvider, useLingui } from "@lingui/react";
+import { TransNoContext, type TransProps } from "@lingui/react/server";
 import { useRouterState } from "@tanstack/react-router";
-import { useEffect, type ComponentProps, type ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import { useSession } from "@/api/session";
 import type { MessageId } from "./messages";
 import { readLocalePreference, resolveLocale } from "./preferences";
 import { activateLocale, activeLocale, message, messageCatalogue, webI18n } from "./runtime";
 
+/** The root route wraps both the normal shell and its error boundaries in the locale context. */
 export function LocaleProvider({ children }: { children: ReactNode }) {
   const { locale: account } = useSession();
   const explicit = useRouterState({ select: (state) => state.location.searchStr });
@@ -42,9 +44,9 @@ export function useLocale() {
 export function LocalizedText({
   id,
   ...props
-}: Pick<ComponentProps<typeof Trans>, "components" | "values"> & { id: MessageId }) {
+}: Pick<TransProps, "components" | "values"> & { id: MessageId }) {
   useLingui();
-  const catalogue = messageCatalogue(id);
-  const text = <Trans id={id} {...props} />;
-  return catalogue === webI18n ? text : <I18nProvider i18n={catalogue}>{text}</I18nProvider>;
+  const i18n = messageCatalogue(id);
+  // Select the fallback for this message alone. Nested messages still follow the active locale.
+  return <TransNoContext id={id} {...props} lingui={{ i18n }} />;
 }

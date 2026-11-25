@@ -1,5 +1,5 @@
 import { vocabularyField } from "@/lib/vocabulary";
-import { useLocale } from "@/locales/react";
+import { useMessage } from "@/locales/react";
 import { useState, type FormEvent } from "react";
 import type { IdeaDetail } from "@ideaproxima/contracts";
 import {
@@ -30,12 +30,13 @@ export function InvolveDialog({
   onClose: () => void;
   idea: IdeaDetail;
 }) {
+  const t = useMessage();
   return (
     <Dialog
       open={open}
       onClose={onClose}
-      title="How can you help?"
-      description="Your involvement is shown on the idea, so others looking to collaborate can find you."
+      title={t("involve.howCanYouHelp")}
+      description={t("involve.description")}
     >
       <InvolveForm idea={idea} onDone={onClose} />
     </Dialog>
@@ -43,7 +44,7 @@ export function InvolveDialog({
 }
 
 function InvolveForm({ idea, onDone }: { idea: IdeaDetail; onDone: () => void }) {
-  useLocale();
+  const t = useMessage();
   const existing = idea.viewer?.involvements ?? [];
   const [capacity, setCapacity] = useState<Capacity>(existing[0]?.capacity ?? "research");
   const current = existing.find((i) => i.capacity === capacity);
@@ -59,7 +60,7 @@ function InvolveForm({ idea, onDone }: { idea: IdeaDetail; onDone: () => void })
 
   return (
     <form onSubmit={submit} className={forms.form}>
-      <Fieldset legend="In what capacity?">
+      <Fieldset legend={t("involve.inWhatCapacity")}>
         <div className={forms.choices}>
           {CAPACITIES.map((c) => (
             <label key={c} className={forms.choice}>
@@ -81,7 +82,7 @@ function InvolveForm({ idea, onDone }: { idea: IdeaDetail; onDone: () => void })
           ))}
         </div>
       </Fieldset>
-      <Fieldset legend="Where do you stand?">
+      <Fieldset legend={t("involve.whereDoYouStand")}>
         <div className={forms.choices}>
           {INVOLVEMENT_STATUSES.map((s) => (
             <label key={s} className={forms.choice}>
@@ -101,7 +102,7 @@ function InvolveForm({ idea, onDone }: { idea: IdeaDetail; onDone: () => void })
           ))}
         </div>
       </Fieldset>
-      <Field label="Note" optional hint="What you can offer, or what you are working on.">
+      <Field label={t("common.note")} optional hint={t("involve.noteHint")}>
         {(p) => (
           <textarea
             {...p}
@@ -121,15 +122,20 @@ function InvolveForm({ idea, onDone }: { idea: IdeaDetail; onDone: () => void })
             loading={withdraw.isPending}
             onClick={() => withdraw.mutate(capacity, { onSuccess: onDone })}
           >
-            Remove my{" "}
-            {vocabularyField("capacities", capacity, "label", CAPACITY_INFO[capacity].label).toLowerCase()}{" "}
-            involvement
+            {t("involve.withdraw", {
+              capacity: vocabularyField(
+                "capacities",
+                capacity,
+                "label",
+                CAPACITY_INFO[capacity].label,
+              ).toLowerCase(),
+            })}
           </Button>
         ) : (
           <span />
         )}
         <Button type="submit" variant="primary" loading={declare.isPending}>
-          {current ? "Update" : "Record my involvement"}
+          {current ? t("involve.update") : t("involve.recordMyInvolvement")}
         </Button>
       </div>
     </form>

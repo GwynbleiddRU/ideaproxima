@@ -23,7 +23,7 @@ export function useCreateInitiative(slug: string) {
   return useApiMutation(
     (input: CreateInitiativeRequest) => http.post<InitiativeDto>(`${ideaPath(slug)}/initiatives`, input),
     [keys.idea(slug)],
-    { inlineErrors: true, success: "Initiative recorded." },
+    { inlineErrors: true, success: "toast.initiativeRecorded" },
   );
 }
 
@@ -32,7 +32,7 @@ export function useUpdateInitiativeStatus(slug: string) {
     ({ initiativeId, ...input }: UpdateInitiativeStatusRequest & { initiativeId: string }) =>
       http.post<InitiativeDto>(`/initiatives/${initiativeId}/status`, input),
     [keys.idea(slug)],
-    { inlineErrors: true, success: "Status updated." },
+    { inlineErrors: true, success: "toast.statusUpdated" },
   );
 }
 
@@ -41,6 +41,6 @@ export function useRecordOutcome(slug: string) {
     ({ initiativeId, ...input }: RecordOutcomeRequest & { initiativeId: string }) =>
       http.post<InitiativeDto>(`/initiatives/${initiativeId}/outcomes`, input),
     [keys.idea(slug)],
-    { inlineErrors: true, success: "Outcome recorded. Failures are knowledge too." },
+    { inlineErrors: true, success: "toast.outcomeRecorded" },
   );
 }

@@ -1,3 +1,4 @@
+import { useMessage } from "@/locales/react";
 import { useNavigate } from "@tanstack/react-router";
 import { useProposeIdea } from "@/api/ideas";
 import { PageHeader } from "@/components/PageHeader";
@@ -7,27 +8,24 @@ import styles from "./editor-page.module.scss";
 const DRAFT_KEY = "ip-draft-new-idea";
 
 export function NewIdeaPage() {
+  const t = useMessage();
   const navigate = useNavigate();
   const propose = useProposeIdea();
   return (
     <div className="container">
-      <title>Propose an idea · ideaproxima</title>
+      <title>{t("common.pageTitle", { title: t("nav.propose") })}</title>
       <PageHeader
-        eyebrow="Propose a possibility"
-        title="Write it down before it is lost"
-        lede="An idea does not need to be feasible, proven or popular to deserve preservation. Start with a title and a summary; anyone can help develop the rest."
+        eyebrow={t("editor.new.proposeAPossibility")}
+        title={t("editor.new.title")}
+        lede={t("editor.new.lede")}
       />
       <IdeaEditor
         initial={emptyDraft}
         draftKey={DRAFT_KEY}
-        submitLabel="Add to the archive"
+        submitLabel={t("editor.new.addToTheArchive")}
         pending={propose.isPending}
         error={propose.error}
-        aside={
-          <p className={styles.note}>
-            You become the idea's first steward. Your draft is kept in this browser until you publish.
-          </p>
-        }
+        aside={<p className={styles.note}>{t("editor.new.draftHelp")}</p>}
         onSubmit={(draft) =>
           propose.mutate(draft, {
             onSuccess: (idea) => {

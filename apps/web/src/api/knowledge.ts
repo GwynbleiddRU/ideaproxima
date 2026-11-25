@@ -48,7 +48,7 @@ export function useAddClaim(slug: string) {
   return useApiMutation(
     (input: AddClaimRequest) => http.post<IdeaClaimDto>(`${ideaPath(slug)}/claims`, input),
     [keys.idea(slug)],
-    { inlineErrors: true, success: "Claim added." },
+    { inlineErrors: true, success: "toast.claimAdded" },
   );
 }
 
@@ -56,7 +56,7 @@ export function useUnlinkClaim(slug: string) {
   return useApiMutation(
     (linkId: string) => http.post<{ ok: true }>(`${ideaPath(slug)}/claims/${linkId}/unlink`),
     [keys.idea(slug)],
-    { success: "Claim unlinked from this idea." },
+    { success: "toast.claimUnlinked" },
   );
 }
 
@@ -65,7 +65,7 @@ export function useAttachEvidence(claimId: string, slug?: string) {
   return useApiMutation(
     (input: AttachEvidenceRequest) => http.post<EvidenceDto>(`/claims/${claimId}/evidence`, input),
     slug ? [keys.claim(claimId), keys.idea(slug)] : [keys.claim(claimId)],
-    { inlineErrors: true, success: "Evidence attached." },
+    { inlineErrors: true, success: "toast.evidenceAttached" },
   );
 }
 
@@ -74,7 +74,7 @@ export function useWithdrawEvidence(claimId: string, slug?: string) {
     ({ evidenceId, reason }: { evidenceId: string; reason: string }) =>
       http.post<EvidenceDto>(`/evidence/${evidenceId}/withdraw`, { reason }),
     slug ? [keys.claim(claimId), keys.idea(slug)] : [keys.claim(claimId)],
-    { inlineErrors: true, success: "Evidence withdrawn. It stays in the record, marked as withdrawn." },
+    { inlineErrors: true, success: "toast.evidenceWithdrawn" },
   );
 }
 
@@ -82,7 +82,7 @@ export function useCreateArgument(invalidate: readonly (readonly unknown[])[]) {
   return useApiMutation(
     (input: CreateArgumentRequest) => http.post<ArgumentDto>("/arguments", input),
     invalidate.map((k) => [...k]),
-    { inlineErrors: true, success: "Argument added." },
+    { inlineErrors: true, success: "toast.argumentAdded" },
   );
 }
 
@@ -91,6 +91,6 @@ export function useWithdrawArgument(invalidate: readonly (readonly unknown[])[])
     ({ argumentId, reason }: { argumentId: string; reason: string }) =>
       http.post<ArgumentDto>(`/arguments/${argumentId}/withdraw`, { reason }),
     invalidate.map((k) => [...k]),
-    { inlineErrors: true, success: "Argument withdrawn." },
+    { inlineErrors: true, success: "toast.argumentWithdrawn" },
   );
 }

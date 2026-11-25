@@ -178,7 +178,7 @@ Updated by whoever finishes a step: `Not started`, `In progress`, `Waiting for t
 | 6    | 05   | A     | `packages/i18n`, error reasons, localised vocabulary, topics and errors, `/v1/locales`                     | Decision 2            | Done 2026-11-25 |
 | 7    | 05   | B     | Web localisation runtime, language switcher, right-to-left, script fonts; shell and auth pages extracted   | Mock-ups              | Done 2026-11-25 |
 | 8    | 05   | C1    | Interface extraction: home, explore, the idea page and its tabs                                            | —                     | Done 2026-11-25 |
-| 9    | 05   | C2    | Interface extraction: editor, topics, search, activity, people, account, dialogs                           | —                     | Not started     |
+| 9    | 05   | C2    | Interface extraction: editor, topics, search, activity, people, account, dialogs, toasts and errors        | —                     | Done 2026-11-25 |
 | 10   | 03   | A     | GCRA, memory and PostgreSQL stores, trust tiers, the policy catalogue                                      | —                     | Not started     |
 | 11   | 03   | B     | Limits declared per endpoint and enforced; rate-limit headers; web handling of 429                         | —                     | Not started     |
 | 12   | 03   | C     | Proof of work on registration                                                                              | —                     | Not started     |

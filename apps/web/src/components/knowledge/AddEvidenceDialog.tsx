@@ -1,5 +1,5 @@
 import { vocabularyField } from "@/lib/vocabulary";
-import { useLocale } from "@/locales/react";
+import { useMessage } from "@/locales/react";
 import { useQuery } from "@tanstack/react-query";
 import { useState, type FormEvent } from "react";
 import type { AttachEvidenceRequest } from "@ideaproxima/contracts";
@@ -40,13 +40,14 @@ export function AddEvidenceDialog({
   claimStatement: string;
   ideaSlug?: string;
 }) {
+  const t = useMessage();
   return (
     <Dialog
       open={open}
       onClose={onClose}
       size="lg"
-      title="Attach evidence"
-      description={`For the claim: “${claimStatement}”`}
+      title={t("idea.claim.attach")}
+      description={t("addEvidence.forClaim", { claim: claimStatement })}
     >
       <EvidenceForm claimId={claimId} ideaSlug={ideaSlug} onDone={onClose} />
     </Dialog>
@@ -62,7 +63,7 @@ function EvidenceForm({
   ideaSlug?: string;
   onDone: () => void;
 }) {
-  useLocale();
+  const t = useMessage();
   const attach = useAttachEvidence(claimId, ideaSlug);
   const initiatives = useQuery({ ...practiceQueries.initiatives(ideaSlug ?? ""), enabled: !!ideaSlug });
   const outcomes = (initiatives.data ?? []).flatMap((i) =>
@@ -117,7 +118,7 @@ function EvidenceForm({
 
   return (
     <form onSubmit={submit} className={forms.form}>
-      <Fieldset legend="What does it do to the claim?">
+      <Fieldset legend={t("addEvidence.stance")}>
         <div className={forms.choices}>
           {EVIDENCE_STANCES.map((s) => (
             <label key={s} className={forms.choice}>
@@ -133,12 +134,12 @@ function EvidenceForm({
 
       {outcomes.length > 0 && (
         <Segmented
-          label="Basis"
+          label={t("addEvidence.basis")}
           value={basis}
           onChange={setBasis}
           options={[
-            { value: "source", label: "A publication or source" },
-            { value: "outcome", label: "An outcome recorded here" },
+            { value: "source", label: t("addEvidence.aPublicationOrSource") },
+            { value: "outcome", label: t("addEvidence.anOutcomeRecordedHere") },
           ]}
         />
       )}
@@ -146,7 +147,7 @@ function EvidenceForm({
       {basis === "source" ? (
         <>
           <div className={forms.row}>
-            <Field label="Kind of source">
+            <Field label={t("addEvidence.kindOfSource")}>
               {(p) => (
                 <select {...p} className={control} value={source.kind} onChange={setField("kind")}>
                   {SOURCE_KINDS.map((k) => (
@@ -157,7 +158,7 @@ function EvidenceForm({
                 </select>
               )}
             </Field>
-            <Field label="Year" optional error={errors["source.year"]}>
+            <Field label={t("addEvidence.year")} optional error={errors["source.year"]}>
               {(p) => (
                 <input
                   {...p}
@@ -171,7 +172,7 @@ function EvidenceForm({
               )}
             </Field>
           </div>
-          <Field label="Title" error={errors["source.title"]}>
+          <Field label={t("common.title")} error={errors["source.title"]}>
             {(p) => (
               <input
                 {...p}
@@ -185,7 +186,7 @@ function EvidenceForm({
             )}
           </Field>
           <div className={forms.row}>
-            <Field label="Authors" optional>
+            <Field label={t("addEvidence.authors")} optional>
               {(p) => (
                 <input
                   {...p}
@@ -196,7 +197,7 @@ function EvidenceForm({
                 />
               )}
             </Field>
-            <Field label="Journal, publisher or venue" optional>
+            <Field label={t("addEvidence.journalPublisherOrVenue")} optional>
               {(p) => (
                 <input
                   {...p}
@@ -209,19 +210,19 @@ function EvidenceForm({
             </Field>
           </div>
           <div className={forms.row}>
-            <Field label="DOI" optional hint="A known DOI or URL reuses the existing source record.">
+            <Field label={t("idea.claim.doi")} optional hint={t("addEvidence.deduplicationHint")}>
               {(p) => (
                 <input
                   {...p}
                   className={control}
                   value={source.doi}
                   onChange={setField("doi")}
-                  placeholder="10.1000/xyz123"
+                  placeholder={t("common.doiExample")}
                   maxLength={200}
                 />
               )}
             </Field>
-            <Field label="URL" optional error={errors["source.url"]}>
+            <Field label={t("addEvidence.url")} optional error={errors["source.url"]}>
               {(p) => (
                 <input
                   {...p}
@@ -229,14 +230,14 @@ function EvidenceForm({
                   type="url"
                   value={source.url}
                   onChange={setField("url")}
-                  placeholder="https://"
+                  placeholder={t("common.urlExample")}
                 />
               )}
             </Field>
           </div>
         </>
       ) : (
-        <Field label="Outcome">
+        <Field label={t("addEvidence.outcome")}>
           {(p) => (
             <select
               {...p}
@@ -245,7 +246,7 @@ function EvidenceForm({
               onChange={(e) => setOutcomeId(e.target.value)}
               required
             >
-              <option value="">Choose an outcome</option>
+              <option value="">{t("addEvidence.chooseAnOutcome")}</option>
               {outcomes.map((o) => (
                 <option key={o.id} value={o.id}>
                   {o.initiative}:{" "}
@@ -258,7 +259,7 @@ function EvidenceForm({
       )}
 
       <Field
-        label="What does it show about the claim?"
+        label={t("addEvidence.summary")}
         error={errors.summary}
         counter={`${summary.length} / ${LIMITS.evidenceSummary.max}`}
       >
@@ -275,11 +276,7 @@ function EvidenceForm({
           />
         )}
       </Field>
-      <Field
-        label="What does it NOT establish?"
-        optional
-        hint="Scope, sample, conditions, open questions. Strongly encouraged."
-      >
+      <Field label={t("addEvidence.limitations")} optional hint={t("addEvidence.limitationsHint")}>
         {(p) => (
           <textarea
             {...p}
@@ -291,7 +288,7 @@ function EvidenceForm({
           />
         )}
       </Field>
-      <Field label="Where in the source" optional hint="Page, figure, table, section…">
+      <Field label={t("addEvidence.locator")} optional hint={t("addEvidence.locatorHint")}>
         {(p) => (
           <input
             {...p}
@@ -304,9 +301,9 @@ function EvidenceForm({
       </Field>
       <FormError error={attach.error} />
       <div className={forms.actions}>
-        <Button onClick={onDone}>Cancel</Button>
+        <Button onClick={onDone}>{t("common.cancel")}</Button>
         <Button type="submit" variant="primary" loading={attach.isPending}>
-          Attach evidence
+          {t("idea.claim.attach")}
         </Button>
       </div>
     </form>

@@ -1,5 +1,6 @@
+import { formatNumber } from "@/lib/format";
 import { vocabularyField } from "@/lib/vocabulary";
-import { useLocale } from "@/locales/react";
+import { LocalizedText, useMessage } from "@/locales/react";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState, type FormEvent, type KeyboardEvent, type ReactNode } from "react";
 import { Check, ChevronDown, CircleCheck, CircleDashed, X } from "lucide-react";
@@ -56,7 +57,7 @@ export function IdeaEditor({
   footer?: ReactNode;
   onSubmit: (draft: IdeaDraft) => void;
 }) {
-  useLocale();
+  const t = useMessage();
   const [draft, setDraft] = useState<IdeaDraft>(() => restore(draftKey) ?? initial);
   const topics = useQuery(useTopicsQueryOptions());
   const [tagInput, setTagInput] = useState("");
@@ -106,11 +107,23 @@ export function IdeaEditor({
   const written = IDEA_SECTIONS.filter((k) => draft.sections[k]?.trim()).length;
   const topicNames = new Map(topics.data?.map((t) => [t.slug, t.name]));
   const checks = [
-    { label: "A title", done: draft.title.trim().length >= LIMITS.ideaTitle.min },
-    { label: "A short summary", done: draft.summary.trim().length >= LIMITS.ideaSummary.min },
-    { label: "At least one topic", done: draft.topics.length >= 1 },
+    {
+      label: "editor.aTitle" as const,
+      missing: "editor.requirement.aTitle" as const,
+      done: draft.title.trim().length >= LIMITS.ideaTitle.min,
+    },
+    {
+      label: "editor.aShortSummary" as const,
+      missing: "editor.requirement.aShortSummary" as const,
+      done: draft.summary.trim().length >= LIMITS.ideaSummary.min,
+    },
+    {
+      label: "editor.atLeastOneTopic" as const,
+      missing: "editor.requirement.atLeastOneTopic" as const,
+      done: draft.topics.length >= 1,
+    },
   ];
-  const missing = checks.find((c) => !c.done)?.label;
+  const missing = checks.find((c) => !c.done)?.missing;
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
@@ -122,12 +135,12 @@ export function IdeaEditor({
       <div className={styles.main}>
         <section className={styles.step}>
           <p className={styles.stepLabel}>
-            <span>01</span> The possibility
+            <span>01</span> {t("editor.thePossibility")}
           </p>
           <Field
-            label="What possibility do you want humanity to remember?"
+            label={t("editor.titleLabel")}
             error={errors.title}
-            counter={`${draft.title.length} / ${LIMITS.ideaTitle.max}`}
+            counter={t("common.counter", { count: draft.title.length, total: LIMITS.ideaTitle.max })}
           >
             {(p) => (
               <input
@@ -135,7 +148,7 @@ export function IdeaEditor({
                 className={controlLarge}
                 value={draft.title}
                 onChange={(e) => patch({ title: e.target.value })}
-                placeholder="Name the idea"
+                placeholder={t("editor.nameTheIdea")}
                 minLength={LIMITS.ideaTitle.min}
                 maxLength={LIMITS.ideaTitle.max}
                 required
@@ -143,10 +156,10 @@ export function IdeaEditor({
             )}
           </Field>
           <Field
-            label="In two or three sentences"
-            hint="What is it, and why might it matter? This is what people see in lists."
+            label={t("editor.summaryLabel")}
+            hint={t("editor.summaryHint")}
             error={errors.summary}
-            counter={`${draft.summary.length} / ${LIMITS.ideaSummary.max}`}
+            counter={t("common.counter", { count: draft.summary.length, total: LIMITS.ideaSummary.max })}
           >
             {(p) => (
               <textarea
@@ -165,29 +178,33 @@ export function IdeaEditor({
 
         <section className={styles.step}>
           <p className={styles.stepLabel}>
-            <span>02</span> Where it belongs
+            <span>02</span> {t("editor.whereItBelongs")}
           </p>
           <div className={styles.fieldBlock}>
             <p className={styles.label}>
-              Topics <span>1–{LIMITS.topicsPerIdea.max}; the first is primary</span>
+              <LocalizedText
+                id="editor.topicSelection"
+                values={{ min: LIMITS.topicsPerIdea.min, max: LIMITS.topicsPerIdea.max }}
+                components={{ 0: <span /> }}
+              />
             </p>
-            <div className={styles.chips} role="group" aria-label="Topics">
-              {topics.data?.map((t) => {
-                const index = draft.topics.indexOf(t.slug);
+            <div className={styles.chips} role="group" aria-label={t("nav.topics")}>
+              {topics.data?.map((topic) => {
+                const index = draft.topics.indexOf(topic.slug);
                 return (
                   <Chip
-                    key={t.id}
+                    key={topic.id}
                     pressed={index >= 0}
-                    onClick={() => toggleTopic(t.slug)}
-                    title={index === 0 ? "Primary topic" : undefined}
+                    onClick={() => toggleTopic(topic.slug)}
+                    title={index === 0 ? t("editor.primaryTopic") : undefined}
                   >
                     {index >= 0 && (
                       <span className={styles.order} aria-hidden>
-                        {index + 1}
+                        {formatNumber(index + 1)}
                       </span>
                     )}
-                    {t.name}
-                    {index === 0 && <span className="visually-hidden"> (primary)</span>}
+                    {topic.name}
+                    {index === 0 && <span className="visually-hidden">{t("editor.primary")}</span>}
                   </Chip>
                 );
               })}
@@ -196,7 +213,7 @@ export function IdeaEditor({
           </div>
           <div className={styles.fieldBlock}>
             <label className={styles.label} htmlFor="tag-input">
-              Tags <span>optional · press Enter to add</span>
+              {t("editor.tags")} <span>{t("editor.tagsHint")}</span>
             </label>
             <div className={styles.tags}>
               {draft.tags.map((tag) => (
@@ -205,7 +222,7 @@ export function IdeaEditor({
                   <button
                     type="button"
                     onClick={() => patch({ tags: draft.tags.filter((t) => t !== tag) })}
-                    aria-label={`Remove tag ${tag}`}
+                    aria-label={t("editor.removeTag", { tag })}
                   >
                     <X size={12} />
                   </button>
@@ -217,7 +234,7 @@ export function IdeaEditor({
                 onChange={(e) => setTagInput(e.target.value)}
                 onKeyDown={onTagKey}
                 onBlur={addTag}
-                placeholder={draft.tags.length ? "" : "e.g. water, microplastics"}
+                placeholder={draft.tags.length ? "" : t("editor.tagsExample")}
                 maxLength={LIMITS.tag.max}
               />
             </div>
@@ -226,7 +243,7 @@ export function IdeaEditor({
 
         <section className={styles.step}>
           <p className={styles.stepLabel}>
-            <span>03</span> Develop it <em>every part is optional; speculation is allowed</em>
+            <span>03</span> {t("editor.developIt")} <em>{t("editor.sectionsHint")}</em>
           </p>
           <div className={styles.sections}>
             {IDEA_SECTIONS.map((key) => {
@@ -254,7 +271,7 @@ export function IdeaEditor({
                       <span>{vocabularyField("sections", key, "description", info.description)}</span>
                     </span>
                     <span className={styles.sectionGo}>
-                      {value.trim() ? "Written" : "Write"}
+                      {value.trim() ? t("editor.written") : t("editor.write")}
                       <ChevronDown className={cx(open && styles.chevronOpen)} aria-hidden />
                     </span>
                   </button>
@@ -267,7 +284,7 @@ export function IdeaEditor({
                       // The overview's prompt is the title's question; ask for the detail instead.
                       placeholder={
                         key === "overview"
-                          ? "What exactly is proposed, in more detail?"
+                          ? t("editor.overviewPlaceholder")
                           : vocabularyField("sections", key, "prompt", info.prompt)
                       }
                       maxLength={LIMITS.section.max}
@@ -278,28 +295,31 @@ export function IdeaEditor({
               );
             })}
           </div>
-          <p className={styles.hint}>
-            Sections support Markdown: **bold**, *italic*, lists, [links](https://…).
-          </p>
+          <p className={styles.hint}>{t("editor.markdownHint")}</p>
         </section>
       </div>
 
       <aside className={styles.side}>
-        <p className="eyebrow">How it will appear</p>
+        <p className="eyebrow">{t("editor.previewHeading")}</p>
         <PreviewCard draft={draft} topicNames={topicNames} />
         <div className={styles.sideCard}>
           <ul className={styles.checks} role="list">
             {checks.map((c) => (
               <li key={c.label} className={cx(c.done && styles.checkDone)}>
-                {c.done ? <CircleCheck aria-hidden /> : <CircleDashed aria-hidden />} {c.label}
-                <span className="visually-hidden">{c.done ? " — done" : " — missing"}</span>
+                {c.done ? <CircleCheck aria-hidden /> : <CircleDashed aria-hidden />} {t(c.label)}
+                <span className="visually-hidden">
+                  {t("editor.requirementStatus", { done: c.done ? "yes" : "no" })}
+                </span>
               </li>
             ))}
             <li className={cx(written > 0 && styles.checkDone)}>
               {written > 0 ? <CircleCheck aria-hidden /> : <CircleDashed aria-hidden />}
               <span>
-                Sections developed: <b>{written}</b> of {IDEA_SECTIONS.length}{" "}
-                <span className={styles.optional}>(optional)</span>
+                <LocalizedText
+                  id="editor.sectionProgress"
+                  values={{ count: written, total: IDEA_SECTIONS.length }}
+                  components={{ 0: <b />, 1: <span className={styles.optional} /> }}
+                />
               </span>
             </li>
           </ul>
@@ -309,7 +329,7 @@ export function IdeaEditor({
           <Button type="submit" variant="primary" block loading={pending} disabled={!!missing}>
             {submitLabel}
           </Button>
-          {missing && <p className={styles.missing}>Add {missing.toLowerCase()} to publish.</p>}
+          {missing && <p className={styles.missing}>{t(missing)}</p>}
         </div>
       </aside>
     </form>
@@ -318,8 +338,9 @@ export function IdeaEditor({
 
 /** The idea as a list card will show it — a small reward for a clear title and summary. */
 function PreviewCard({ draft, topicNames }: { draft: IdeaDraft; topicNames: Map<string, string> }) {
+  const t = useMessage();
   return (
-    <div className={styles.preview} aria-label="Preview of the idea in lists" role="img">
+    <div className={styles.preview} aria-label={t("editor.previewLabel")} role="img">
       <div className={styles.previewTop}>
         <span className={styles.previewTopics}>
           {draft.topics.slice(0, 2).map((slug) => (
@@ -329,10 +350,10 @@ function PreviewCard({ draft, topicNames }: { draft: IdeaDraft; topicNames: Map<
         <StageBadge stage="imagined" />
       </div>
       <p className={cx(styles.previewTitle, !draft.title.trim() && styles.placeholder)}>
-        {draft.title.trim() || "Your title"}
+        {draft.title.trim() || t("editor.yourTitle")}
       </p>
       <p className={cx(styles.previewSummary, !draft.summary.trim() && styles.placeholder)}>
-        {draft.summary.trim() || "Your summary will appear here."}
+        {draft.summary.trim() || t("editor.previewSummary")}
       </p>
     </div>
   );

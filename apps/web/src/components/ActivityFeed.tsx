@@ -40,9 +40,19 @@ import {
 } from "@ideaproxima/domain";
 import { cx } from "@/lib/cx";
 import { foldActivity, type ActivityGroup } from "@/lib/activity";
-import { clockTime, dayLabel, formatDateTime, isToday, shortAgo } from "@/lib/format";
-import { formatCount } from "@/locales/runtime";
-import { useLocale } from "@/locales/react";
+import {
+  clockTime,
+  dayLabel,
+  formatDateTime,
+  formatList,
+  formatListParts,
+  isToday,
+  shortAgo,
+} from "@/lib/format";
+import { message } from "@/locales/runtime";
+import type { MessageId } from "@/locales/messages";
+import type { Values } from "@lingui/core";
+import { LocalizedText, useMessage } from "@/locales/react";
 import { dimensionLabel } from "@/lib/vocabulary";
 import { PersonLink } from "./meta";
 import styles from "./ActivityFeed.module.scss";
@@ -83,317 +93,194 @@ function kindOf(action: string): [LucideIcon, Tone] {
 
 // ---------------------------------------------------------------- sentences
 
-/**
- * What happened, as the rest of a sentence after the actor ("moved Water-cleaning nanorobots to Tested"). `idea`
- * is the idea's link, "the idea" inside its own page, or null when the action concerns no idea. Every verb of the
- * ledger has a phrase; unknown verbs fall back to the raw action, so new backend verbs never break the feed.
- * Past-tense phrases read the same with one actor or several, which is what makes folding possible.
- */
-function describe(e: ActivityDto, idea: ReactNode | null, count: number): ReactNode {
-  if (e.subject.hidden) return "contributed content hidden by moderation";
-  const p: Payload = e.payload;
-  const subject = idea ?? "an idea";
-  const on = (prep: string) =>
-    idea ? (
-      <>
-        {" "}
-        {prep} {idea}
-      </>
-    ) : null;
-  const quote = (text: string) => (text ? <q>{text}</q> : null);
-  const folded = count > 1;
+const targetKind = (p: Payload) => str((p.target as Payload | undefined)?.kind) || "idea";
 
+/** Keep the ledger verbs and linked subjects in one message so translators can move them together. */
+function describe(e: ActivityDto, idea: ReactNode, count: number): ReactNode {
+  if (e.subject.hidden) return <LocalizedText id="activity.hidden" />;
+  const p = e.payload;
+  const line = (
+    id: MessageId,
+    values: Values = {},
+    { quote, emphasis }: { quote?: string; emphasis?: boolean } = {},
+  ) => (
+    <LocalizedText
+      id={id}
+      values={{ count, hasIdea: idea ? "yes" : "no", hasQuote: quote ? "yes" : "no", ...values }}
+      components={{
+        0: <bdi>{idea ?? message("activity.anIdea")}</bdi>,
+        1: emphasis ? <b /> : <q dir="auto">{quote}</q>,
+      }}
+    />
+  );
+  const revision = (quote?: string) => [{ number: p.number }, { quote }] as const;
   switch (e.action) {
     case "idea.proposed":
-      return <>proposed {subject}</>;
+      return line("activity.idea.proposed");
     case "revision.published":
-      return (
-        <>
-          published revision {String(p.number)}
-          {on("of")} {quote(str(p.changeNote))}
-        </>
-      );
+      return line("activity.revision.published", ...revision(str(p.changeNote)));
     case "revision.proposed":
-      return (
-        <>
-          proposed revision {String(p.number)}
-          {on("of")} {quote(str(p.changeNote))}
-        </>
-      );
+      return line("activity.revision.proposed", ...revision(str(p.changeNote)));
     case "revision.accepted":
-      return (
-        <>
-          accepted revision {String(p.number)}
-          {on("of")}
-        </>
-      );
+      return line("activity.revision.accepted", ...revision());
     case "revision.rejected":
-      return (
-        <>
-          declined revision {String(p.number)}
-          {on("of")}
-        </>
-      );
+      return line("activity.revision.rejected", ...revision());
     case "revision.withdrawn":
-      return (
-        <>
-          withdrew revision {String(p.number)}
-          {on("of")}
-        </>
-      );
+      return line("activity.revision.withdrawn", ...revision());
     case "stage.changed":
-      return (
-        <>
-          moved {subject} to{" "}
-          <b>
-            {vocabularyField(
+      return line(
+        "activity.stage.changed",
+        {
+          stage:
+            vocabularyField(
               "stages",
               p.to as IdeaStage,
               "label",
               IDEA_STAGE_INFO[p.to as IdeaStage]?.label,
-            ) ?? str(p.to)}
-          </b>
-        </>
+            ) ?? str(p.to),
+        },
+        { emphasis: true },
       );
     case "steward.appointed":
-      return <>appointed a steward{on("for")}</>;
+      return line("activity.steward.appointed");
     case "claim.stated":
-      return (
-        <>
-          stated a claim{on("on")}: {quote(str(p.statement))}
-        </>
-      );
+      return line("activity.claim.stated", {}, { quote: str(p.statement) });
     case "claim.linked":
-      return (
-        <>
-          linked {folded ? formatCount("count.claim", count) : "a claim"} as{" "}
-          {lower(
+      return line("activity.claim.linked", {
+        role:
+          lower(
             vocabularyField(
               "claimRoles",
               p.role as ClaimRole,
               "label",
               CLAIM_ROLE_INFO[p.role as ClaimRole]?.label,
             ),
-          )}
-          {on("in")}
-        </>
-      );
+          ) || str(p.role),
+      });
     case "claim.unlinked":
-      return <>unlinked a claim{on("from")}</>;
-    case "evidence.attached": {
-      const stance =
-        str(p.stance) === "supports"
-          ? "supporting"
-          : str(p.stance) === "challenges"
-            ? "challenging"
-            : "mixed";
-      return (
-        <>
-          attached {folded ? `${count} ${stance} sources` : `${stance} evidence`} to a claim{on("in")}
-        </>
-      );
-    }
+      return line("activity.claim.unlinked");
+    case "evidence.attached":
+      return line("activity.evidence.attached", { stance: str(p.stance) });
     case "evidence.withdrawn":
-      return <>withdrew evidence{on("in")}</>;
+      return line("activity.evidence.withdrawn");
     case "source.registered":
-      return <>registered a source {quote(str(p.title))}</>;
-    case "argument.made": {
-      const target = str((p.target as Payload | undefined)?.kind);
-      const verb =
-        str(p.stance) === "supports"
-          ? "argued for"
-          : str(p.stance) === "opposes"
-            ? "argued against"
-            : "qualified";
-      return (
-        <>
-          {verb}{" "}
-          {target === "idea" || !target ? (
-            subject
-          ) : (
-            <>
-              a {target}
-              {on("in")}
-            </>
-          )}
-          : {quote(str(p.title))}
-        </>
+      return line("activity.source.registered", {}, { quote: str(p.title) });
+    case "argument.made":
+      return line(
+        "activity.argument.made",
+        { target: targetKind(p), stance: str(p.stance) },
+        { quote: str(p.title) },
       );
-    }
     case "argument.withdrawn":
-      return <>withdrew an argument{on("on")}</>;
+      return line("activity.argument.withdrawn");
     case "evaluation.submitted": {
-      const target = str((p.target as Payload | undefined)?.kind);
-      const dims = list(p.dimensions).map((d) => lower(dimensionLabel(d)));
-      if (target === "idea" || !target)
-        return (
-          <>
-            evaluated {subject}
-            {!folded && dims.length > 0 && ` on ${dims.join(", ")}`}
-          </>
-        );
-      const what =
-        target === "relation" ? "a connection" : target === "evidence" ? "evidence" : `a ${target}`;
-      return (
-        <>
-          assessed {what}
-          {on("in")}
-        </>
-      );
+      const target = targetKind(p);
+      if (target !== "idea") return line("activity.evaluation.target", { target });
+      const dimensions =
+        count === 1 ? formatList(list(p.dimensions).map((d) => lower(dimensionLabel(d)))) : "";
+      return line("activity.evaluation.idea", { dimensions, hasDimensions: dimensions ? "yes" : "no" });
     }
     case "evaluation.withdrawn":
-      return <>withdrew ratings{on("on")}</>;
+      return line("activity.evaluation.withdrawn");
     case "stance.taken":
-      return (
-        <>
-          marked {subject}{" "}
-          {lower(
+      return line("activity.stance.taken", {
+        stance:
+          lower(
             vocabularyField(
               "stanceKinds",
               p.kind as StanceKind,
               "label",
               STANCE_KIND_INFO[p.kind as StanceKind]?.label,
             ),
-          ) || str(p.kind)}
-        </>
-      );
+          ) || str(p.kind),
+      });
     case "stance.retracted":
-      return <>retracted a perspective{on("on")}</>;
-    case "involvement.declared": {
-      const capacity =
-        lower(
-          vocabularyField(
-            "capacities",
-            p.capacity as Capacity,
-            "label",
-            CAPACITY_INFO[p.capacity as Capacity]?.label,
-          ),
-        ) || str(p.capacity);
-      return str(p.status) === "active" ? (
-        <>
-          started working on {subject} ({capacity})
-        </>
-      ) : str(p.status) === "concluded" ? (
-        <>concluded their involvement{on("in")}</>
-      ) : (
-        <>
-          offered to help with <b>{capacity}</b>
-          {on("on")}
-        </>
+      return line("activity.stance.retracted");
+    case "involvement.declared":
+      return line(
+        "activity.involvement.declared",
+        {
+          status: str(p.status),
+          capacity:
+            lower(
+              vocabularyField(
+                "capacities",
+                p.capacity as Capacity,
+                "label",
+                CAPACITY_INFO[p.capacity as Capacity]?.label,
+              ),
+            ) || str(p.capacity),
+        },
+        { emphasis: true },
       );
-    }
     case "involvement.withdrawn":
-      return <>ended their involvement{on("in")}</>;
+      return line("activity.involvement.withdrawn");
     case "relation.proposed": {
       const type = RELATION_TYPE_INFO[p.type as RelationType];
-      return (
-        <>
-          connected {subject} to another idea
-          {type && ` (${vocabularyField("relationTypes", p.type as RelationType, "forward", type.forward)})`}
-        </>
-      );
+      return line("activity.relation.proposed", {
+        type: type ? vocabularyField("relationTypes", p.type as RelationType, "forward", type.forward) : "",
+        hasType: type ? "yes" : "no",
+      });
     }
     case "relation.retracted":
-      return <>retracted a connection{on("of")}</>;
+      return line("activity.relation.retracted");
     case "initiative.created":
-      return (
-        <>
-          recorded an initiative{on("on")}: {quote(str(p.title))}
-        </>
-      );
+      return line("activity.initiative.created", {}, { quote: str(p.title) });
     case "initiative.status_changed":
-      return (
-        <>
-          marked an initiative{" "}
-          {lower(
+      return line("activity.initiative.status_changed", {
+        status:
+          lower(
             vocabularyField(
               "initiativeStatuses",
               p.to as InitiativeStatus,
               "label",
               INITIATIVE_STATUS_INFO[p.to as InitiativeStatus]?.label,
             ),
-          ) || str(p.to)}
-          {on("on")}
-        </>
-      );
+          ) || str(p.to),
+      });
     case "outcome.recorded":
-      return (
-        <>
-          recorded an outcome —{" "}
-          <b>
-            {lower(
+      return line(
+        "activity.outcome.recorded",
+        {
+          result:
+            lower(
               vocabularyField(
                 "outcomeResults",
                 p.result as OutcomeResult,
                 "label",
                 OUTCOME_RESULT_INFO[p.result as OutcomeResult]?.label,
               ),
-            ) || str(p.result)}
-          </b>
-          {p.hasLessons ? ", with lessons" : ""}
-          {on("for")}
-        </>
+            ) || str(p.result),
+          lessons: p.hasLessons ? "yes" : "no",
+        },
+        { emphasis: true },
       );
-    case "comment.posted": {
-      const kind = str(p.kind);
-      const what =
-        kind === "question"
-          ? folded
-            ? "asked questions"
-            : "asked a question"
-          : kind === "suggestion"
-            ? folded
-              ? "made suggestions"
-              : "made a suggestion"
-            : "commented";
-      return (
-        <>
-          {what}
-          {on("on")}
-        </>
-      );
-    }
+    case "comment.posted":
+      return line("activity.comment.posted", { kind: str(p.kind) });
     case "topic.created":
-      return <>created the topic “{str(p.slug)}”</>;
+      return line("activity.topic.created", { topic: str(p.slug) });
     case "topic.translation_updated":
-      return (
-        <>
-          updated the {str(p.locale)} translation of “{str(p.slug)}”
-        </>
-      );
+      return line("activity.topic.translation_updated", { locale: str(p.locale), topic: str(p.slug) });
     case "person.registered":
-      return "joined the archive";
+      return line("activity.person.registered");
     case "person.profile_updated":
-      return "updated their profile";
+      return line("activity.person.profile_updated");
     case "person.role_changed":
-      return `role changed from ${str(p.from)} to ${str(p.to)}`;
+      return line("activity.person.role_changed", { from: str(p.from), to: str(p.to) });
     case "expertise.declared":
-      return `declared expertise in ${str(p.topic)}`;
+      return line("activity.expertise.declared", { topic: str(p.topic) });
     case "expertise.revoked":
-      return `withdrew expertise in ${str(p.topic)}`;
+      return line("activity.expertise.revoked", { topic: str(p.topic) });
     case "moderation.hidden":
-      return (
-        <>
-          hid content{on("in")} — {quote(str(p.reason))}
-        </>
-      );
+      return line("activity.moderation.hidden", {}, { quote: str(p.reason) });
     case "moderation.restored":
-      return (
-        <>
-          restored content{on("in")} — {quote(str(p.reason))}
-        </>
-      );
+      return line("activity.moderation.restored", {}, { quote: str(p.reason) });
     case "moderation.person_deactivated":
-      return <>deactivated an account — {quote(str(p.reason))}</>;
+      return line("activity.moderation.person_deactivated", {}, { quote: str(p.reason) });
     case "moderation.person_reactivated":
-      return <>reactivated an account — {quote(str(p.reason))}</>;
+      return line("activity.moderation.person_reactivated", {}, { quote: str(p.reason) });
     default:
-      return (
-        <>
-          {e.action}
-          {on("in")}
-        </>
-      );
+      return line("activity.unknown", { action: e.action });
   }
 }
 
@@ -407,23 +294,23 @@ function Actors({ entries }: { entries: ActivityDto[] }) {
   ];
   const shown = open || people.length <= 3 ? people : people.slice(0, 2);
   const rest = people.length - shown.length;
-  return (
-    <>
-      {shown.map((p, i) => (
-        <span key={p?.id ?? "operator"}>
-          {i > 0 && (rest === 0 && i === shown.length - 1 ? " and " : ", ")}
-          {p ? <PersonLink person={p} /> : <b>An operator</b>}
-        </span>
-      ))}
-      {rest > 0 && (
-        <>
-          {" and "}
-          <button type="button" className={styles.more} onClick={() => setOpen(true)}>
-            {rest} others
-          </button>
-        </>
-      )}
-    </>
+  const actors = shown.map((person) =>
+    person ? (
+      <PersonLink person={person} />
+    ) : (
+      <b>
+        <LocalizedText id="activity.operator" />
+      </b>
+    ),
+  );
+  if (rest > 0)
+    actors.push(
+      <button type="button" className={styles.more} onClick={() => setOpen(true)}>
+        <LocalizedText id="activity.otherActors" values={{ count: rest }} />
+      </button>,
+    );
+  return formatListParts(actors.map((_, index) => String(index))).map(({ type, value }, index) =>
+    type === "literal" ? value : <span key={index}>{actors[Number(value)]}</span>,
   );
 }
 
@@ -450,7 +337,7 @@ export function ActivityFeed({
   /** Show at most this many lines (after folding), for compact previews of the record. */
   max?: number;
 }) {
-  useLocale();
+  useMessage();
   const groups = foldActivity(entries).slice(0, max);
   if (!byDay)
     return (
@@ -497,25 +384,35 @@ function Entry({
   const first = group.entries[0]!;
   const [Icon, tone] = kindOf(first.action);
   const idea = !showIdea ? (
-    "the idea"
+    message("activity.theIdea")
   ) : first.idea ? (
-    <Link to="/ideas/$idea" params={{ idea: first.idea.slug }} className={styles.ideaLink}>
+    <Link to="/ideas/$idea" params={{ idea: first.idea.slug }} className={styles.ideaLink} dir="auto">
       {first.idea.title}
     </Link>
   ) : null;
   const when = first.occurredAt;
+  const description = describe(first, idea, group.entries.length);
   return (
     <li className={styles.entry}>
       <span className={cx(styles.icon, styles[tone])} aria-hidden>
         <Icon />
       </span>
       <p className={cx(styles.what, !showActor && styles.capital)}>
-        {showActor && (
-          <>
-            <Actors entries={group.entries} />{" "}
-          </>
+        {showActor ? (
+          <LocalizedText
+            id="activity.withActors"
+            components={{
+              0: (
+                <span>
+                  <Actors entries={group.entries} />
+                </span>
+              ),
+              1: <span>{description}</span>,
+            }}
+          />
+        ) : (
+          description
         )}
-        {describe(first, idea, group.entries.length)}
       </p>
       <time dateTime={when} title={formatDateTime(when)} className={styles.time}>
         {byDay && !isToday(when) ? clockTime(when) : shortAgo(when)}

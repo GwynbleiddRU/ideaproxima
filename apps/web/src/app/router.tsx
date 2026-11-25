@@ -16,6 +16,8 @@ import { peopleQueries } from "@/api/people";
 import { practiceQueries } from "@/api/practice";
 import { meQuery } from "@/api/session";
 import { signalQueries } from "@/api/signals";
+import { LocaleProvider } from "@/locales/react";
+import { loadExtendedEnglish } from "@/locales/runtime";
 import { NotFoundPage } from "@/pages/NotFoundPage";
 import { RouteError } from "./RouteError";
 import {
@@ -38,6 +40,11 @@ export interface RouterContext {
   queryClient: QueryClient;
 }
 
+async function withExtendedEnglish<T>(page: Promise<T>): Promise<T> {
+  const [module] = await Promise.all([page, loadExtendedEnglish()]);
+  return module;
+}
+
 /** A missing resource is a not-found page, not an error page. */
 async function orNotFound<T>(promise: Promise<T>): Promise<T> {
   try {
@@ -55,6 +62,7 @@ async function requireSession({ context, location }: { context: RouterContext; l
 }
 
 const rootRoute = createRootRouteWithContext<RouterContext>()({
+  shellComponent: LocaleProvider,
   component: Shell,
   notFoundComponent: NotFoundPage,
   errorComponent: RouteError,
@@ -63,7 +71,7 @@ const rootRoute = createRootRouteWithContext<RouterContext>()({
 const homeRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/",
-  component: lazyRouteComponent(() => import("@/pages/home/HomePage"), "HomePage"),
+  component: lazyRouteComponent(() => withExtendedEnglish(import("@/pages/home/HomePage")), "HomePage"),
 });
 
 const exploreRoute = createRoute({
@@ -77,7 +85,7 @@ const topicsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "topics",
   loader: ({ context }) => context.queryClient.ensureQueryData(catalogQueries.topics()),
-  component: lazyRouteComponent(() => import("@/pages/topics/TopicsPage"), "TopicsPage"),
+  component: lazyRouteComponent(() => withExtendedEnglish(import("@/pages/topics/TopicsPage")), "TopicsPage"),
 });
 
 const topicRoute = createRoute({
@@ -86,7 +94,7 @@ const topicRoute = createRoute({
   validateSearch: parseTopicSearch,
   loader: ({ context, params }) =>
     orNotFound(context.queryClient.ensureQueryData(catalogQueries.topic(params.slug))),
-  component: lazyRouteComponent(() => import("@/pages/topics/TopicPage"), "TopicPage"),
+  component: lazyRouteComponent(() => withExtendedEnglish(import("@/pages/topics/TopicPage")), "TopicPage"),
 });
 
 // ---------------------------------------------------------------- an idea and its views
@@ -153,7 +161,7 @@ const ideaHistoryRoute = createRoute({
     void context.queryClient.prefetchQuery(ideaQueries.revisions(params.idea));
     void context.queryClient.prefetchQuery(ideaQueries.stages(params.idea));
   },
-  component: lazyRouteComponent(() => import("@/pages/idea/HistoryTab"), "HistoryTab"),
+  component: lazyRouteComponent(() => withExtendedEnglish(import("@/pages/idea/HistoryTab")), "HistoryTab"),
 });
 
 const ideaEditRoute = createRoute({
@@ -162,14 +170,20 @@ const ideaEditRoute = createRoute({
   beforeLoad: requireSession,
   loader: ({ context, params }) =>
     orNotFound(context.queryClient.ensureQueryData(ideaQueries.detail(params.idea))),
-  component: lazyRouteComponent(() => import("@/pages/editor/EditIdeaPage"), "EditIdeaPage"),
+  component: lazyRouteComponent(
+    () => withExtendedEnglish(import("@/pages/editor/EditIdeaPage")),
+    "EditIdeaPage",
+  ),
 });
 
 const newIdeaRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "new",
   beforeLoad: requireSession,
-  component: lazyRouteComponent(() => import("@/pages/editor/NewIdeaPage"), "NewIdeaPage"),
+  component: lazyRouteComponent(
+    () => withExtendedEnglish(import("@/pages/editor/NewIdeaPage")),
+    "NewIdeaPage",
+  ),
 });
 
 // ---------------------------------------------------------------- knowledge, people, search
@@ -179,7 +193,10 @@ const claimRoute = createRoute({
   path: "claims/$claim",
   loader: ({ context, params }) =>
     orNotFound(context.queryClient.ensureQueryData(knowledgeQueries.claim(params.claim))),
-  component: lazyRouteComponent(() => import("@/pages/knowledge/ClaimPage"), "ClaimPage"),
+  component: lazyRouteComponent(
+    () => withExtendedEnglish(import("@/pages/knowledge/ClaimPage")),
+    "ClaimPage",
+  ),
 });
 
 const sourceRoute = createRoute({
@@ -187,7 +204,10 @@ const sourceRoute = createRoute({
   path: "sources/$source",
   loader: ({ context, params }) =>
     orNotFound(context.queryClient.ensureQueryData(knowledgeQueries.source(params.source))),
-  component: lazyRouteComponent(() => import("@/pages/knowledge/SourcePage"), "SourcePage"),
+  component: lazyRouteComponent(
+    () => withExtendedEnglish(import("@/pages/knowledge/SourcePage")),
+    "SourcePage",
+  ),
 });
 
 const personRoute = createRoute({
@@ -195,34 +215,40 @@ const personRoute = createRoute({
   path: "people/$handle",
   loader: ({ context, params }) =>
     orNotFound(context.queryClient.ensureQueryData(peopleQueries.profile(params.handle))),
-  component: lazyRouteComponent(() => import("@/pages/people/PersonPage"), "PersonPage"),
+  component: lazyRouteComponent(() => withExtendedEnglish(import("@/pages/people/PersonPage")), "PersonPage"),
 });
 
 const accountRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "account",
   beforeLoad: requireSession,
-  component: lazyRouteComponent(() => import("@/pages/people/AccountPage"), "AccountPage"),
+  component: lazyRouteComponent(
+    () => withExtendedEnglish(import("@/pages/people/AccountPage")),
+    "AccountPage",
+  ),
 });
 
 const searchRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "search",
   validateSearch: parseQuerySearch,
-  component: lazyRouteComponent(() => import("@/pages/search/SearchPage"), "SearchPage"),
+  component: lazyRouteComponent(() => withExtendedEnglish(import("@/pages/search/SearchPage")), "SearchPage"),
 });
 
 const activityRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "activity",
   validateSearch: parseActivitySearch,
-  component: lazyRouteComponent(() => import("@/pages/activity/ActivityPage"), "ActivityPage"),
+  component: lazyRouteComponent(
+    () => withExtendedEnglish(import("@/pages/activity/ActivityPage")),
+    "ActivityPage",
+  ),
 });
 
 const aboutRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "about",
-  component: lazyRouteComponent(() => import("@/pages/about/AboutPage"), "AboutPage"),
+  component: lazyRouteComponent(() => withExtendedEnglish(import("@/pages/about/AboutPage")), "AboutPage"),
 });
 
 const signInRoute = createRoute({

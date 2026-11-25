@@ -1,5 +1,5 @@
 import { vocabularyField } from "@/lib/vocabulary";
-import { useLocale } from "@/locales/react";
+import { LocalizedText, useMessage } from "@/locales/react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { useRef, useState, type FormEvent, type ReactNode } from "react";
@@ -10,7 +10,8 @@ import { catalogQueries, useTopicsQueryOptions } from "@/api/catalog";
 import { IdeaCard } from "@/components/IdeaCard";
 import { ClaimStatusBadge } from "@/components/status";
 import { cx } from "@/lib/cx";
-import { formatCount } from "@/locales/runtime";
+import type { MessageId } from "@/locales/messages";
+import { formatNumber } from "@/lib/format";
 import { Avatar } from "@/ui/Avatar";
 import { Button, ButtonLink } from "@/ui/Button";
 import { ChipLink } from "@/ui/Chip";
@@ -18,12 +19,12 @@ import { EmptyState, ErrorState, Skeleton } from "@/ui/Feedback";
 import styles from "./SearchPage.module.scss";
 
 type Kind = "all" | keyof SearchResults;
-const KINDS: { key: Kind; label: string }[] = [
-  { key: "all", label: "All" },
-  { key: "ideas", label: "Ideas" },
-  { key: "claims", label: "Claims" },
-  { key: "sources", label: "Sources" },
-  { key: "people", label: "People" },
+const KINDS: { key: Kind; label: MessageId }[] = [
+  { key: "all", label: "search.allTypes" },
+  { key: "ideas", label: "search.ideas" },
+  { key: "claims", label: "search.claims" },
+  { key: "sources", label: "search.sources" },
+  { key: "people", label: "search.people" },
 ];
 
 /** Marks the query's words (and words starting with them) in a text. Best effort: search itself also stems. */
@@ -49,6 +50,7 @@ function highlight(text: string, q: string): ReactNode {
 
 /** Search across ideas, claims, sources and people — the search box is the page. */
 export function SearchPage() {
+  const t = useMessage();
   const { q = "" } = useSearch({ from: "/search" });
   const navigate = useNavigate({ from: "/search" });
   const input = useRef<HTMLInputElement>(null);
@@ -68,8 +70,10 @@ export function SearchPage() {
 
   return (
     <div className={cx("container", styles.page)}>
-      <title>{q ? `“${q}” · Search · ideaproxima` : "Search · ideaproxima"}</title>
-      <h1 className="visually-hidden">Search the archive</h1>
+      <title>
+        {t("common.pageTitle", { title: q ? t("search.queryTitle", { query: q }) : t("nav.search") })}
+      </title>
+      <h1 className="visually-hidden">{t("nav.searchLabel")}</h1>
       <form role="search" onSubmit={submit} className={styles.box}>
         <Search aria-hidden className={styles.boxIcon} />
         <input
@@ -77,8 +81,8 @@ export function SearchPage() {
           type="search"
           value={value}
           onChange={(e) => setValue(e.target.value)}
-          placeholder="Ideas, claims, sources, people…"
-          aria-label="Search the archive"
+          placeholder={t("search.placeholder")}
+          aria-label={t("nav.searchLabel")}
           enterKeyHint="search"
           autoFocus
         />
@@ -86,7 +90,7 @@ export function SearchPage() {
           <button
             type="button"
             className={styles.clear}
-            aria-label="Clear the search"
+            aria-label={t("search.clearTheSearch")}
             onClick={() => {
               setValue("");
               input.current?.focus();
@@ -96,7 +100,7 @@ export function SearchPage() {
           </button>
         )}
         <Button type="submit" variant="primary" size="sm">
-          Search
+          {t("nav.search")}
         </Button>
       </form>
 
@@ -124,7 +128,7 @@ function Results({
   kind: Kind;
   onKind: (kind: Kind) => void;
 }) {
-  useLocale();
+  const t = useMessage();
   const topics = useQuery(useTopicsQueryOptions());
   const total = data.ideas.length + data.claims.length + data.sources.length + data.people.length;
   const count = (k: Kind) => (k === "all" ? total : data[k].length);
@@ -133,7 +137,7 @@ function Results({
 
   return (
     <>
-      <div className={styles.tabs} role="tablist" aria-label="Result types">
+      <div className={styles.tabs} role="tablist" aria-label={t("search.resultTypes")}>
         {KINDS.map(({ key, label }) => (
           <button
             key={key}
@@ -144,22 +148,22 @@ function Results({
             className={styles.tab}
             onClick={() => onKind(key)}
           >
-            {label} <span className={styles.tabCount}>{count(key)}</span>
+            {t(label)} <span className={styles.tabCount}>{formatNumber(count(key))}</span>
           </button>
         ))}
       </div>
 
       <div role="tabpanel" className={styles.results}>
         {total === 0 && (
-          <EmptyState icon={<Search />} title={`Nothing found for “${q}”`}>
-            Try fewer or different words. If the idea is not here yet, it may be yours to propose.
+          <EmptyState icon={<Search />} title={t("search.empty", { query: q })}>
+            {t("search.emptyHelp")}
           </EmptyState>
         )}
 
         {show("ideas") && (
           <section aria-labelledby="r-ideas">
             <h2 id="r-ideas" className={styles.group}>
-              Ideas
+              {t("search.ideas")}
             </h2>
             <ol className={styles.list} role="list">
               {data.ideas.map((idea) => (
@@ -174,7 +178,7 @@ function Results({
         {show("claims") && (
           <section aria-labelledby="r-claims">
             <h2 id="r-claims" className={styles.group}>
-              Claims
+              {t("search.claims")}
             </h2>
             <ol className={styles.list} role="list">
               {data.claims.map((c) => (
@@ -187,7 +191,7 @@ function Results({
                   </Link>
                   <span className={styles.resultMeta}>
                     <ClaimStatusBadge status={c.status} />
-                    Underpins {formatCount("count.idea", c.ideaCount)}
+                    {t("claimPage.underpinsCount", { count: c.ideaCount })}
                   </span>
                 </li>
               ))}
@@ -198,7 +202,7 @@ function Results({
         {show("sources") && (
           <section aria-labelledby="r-sources">
             <h2 id="r-sources" className={styles.group}>
-              Sources
+              {t("search.sources")}
             </h2>
             <ol className={styles.list} role="list">
               {data.sources.map((s) => (
@@ -227,7 +231,7 @@ function Results({
         {show("people") && (
           <section aria-labelledby="r-people">
             <h2 id="r-people" className={styles.group}>
-              People
+              {t("search.people")}
             </h2>
             <ol className={styles.list} role="list">
               {data.people.map((p) => (
@@ -244,34 +248,34 @@ function Results({
         )}
 
         {data.ideas.length === 0 && kind === "all" && (
-          <aside className={styles.noIdeas} aria-label="No matching ideas">
+          <aside className={styles.noIdeas} aria-label={t("search.noMatchingIdeas")}>
             <p className={styles.noIdeasTitle}>
-              <Lightbulb aria-hidden /> No idea mentions “{q}” yet.
+              <Lightbulb aria-hidden /> {t("search.noMatchingIdea", { query: q })}
             </p>
             <p>
               {topic ? (
-                <>
-                  Browse the{" "}
-                  <Link to="/topics/$slug" params={{ slug: topic.slug }} className="link">
-                    {topic.name}
-                  </Link>{" "}
-                  topic, or write the idea down yourself.
-                </>
+                <LocalizedText
+                  id="search.browseTopic"
+                  components={{
+                    0: (
+                      <Link to="/topics/$slug" params={{ slug: topic.slug }} className="link">
+                        {topic.name}
+                      </Link>
+                    ),
+                  }}
+                />
               ) : (
-                <>
-                  If you have one in mind, write it down — it does not need to be feasible or proven to be
-                  kept.
-                </>
+                <>{t("search.proposeHelp")}</>
               )}
             </p>
             <ButtonLink to="/new" variant="primary" size="sm">
-              <Plus /> Propose an idea
+              <Plus /> {t("nav.propose")}
             </ButtonLink>
           </aside>
         )}
 
         <p className={styles.tips}>
-          Tips: <code>"exact phrase"</code> · <code>water OR soil</code> · <code>nanorobots -medical</code>
+          <LocalizedText id="search.examples" components={{ 0: <code />, 1: <code />, 2: <code /> }} />
         </p>
       </div>
     </>
@@ -280,18 +284,19 @@ function Results({
 
 /** Before a query: ways in, so the empty page still leads somewhere. */
 function StartHere() {
+  const t = useMessage();
   const topics = useQuery(useTopicsQueryOptions());
   const active = (topics.data ?? []).filter((t) => !t.parentId && t.ideaCount > 0).slice(0, 8);
   return (
     <div className={styles.start}>
-      <p>Search titles, summaries, claim statements, source titles and names. Or start from a domain:</p>
+      <p>{t("search.intro")}</p>
       <div className={styles.chips}>
         {active.map((t) => (
           <ChipLink key={t.id} to="/topics/$slug" params={{ slug: t.slug }}>
             {t.name}
           </ChipLink>
         ))}
-        <ChipLink to="/explore">Explore all ideas</ChipLink>
+        <ChipLink to="/explore">{t("search.exploreAllIdeas")}</ChipLink>
       </div>
     </div>
   );

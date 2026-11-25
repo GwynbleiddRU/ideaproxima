@@ -290,9 +290,13 @@ so replaying a callback only repeats work that PostgreSQL rolled back.
 
 - Add new interface text to the English source in `apps/web/src/locales/messages.ts`. Use an explicit typed ID
   with `useMessage()` or `LocalizedText` for copy with links or emphasis. Note the context and any placeholders
-  in the catalogue. Vite compiles ICU messages into lazy locale chunks. The no-literal rule covers the shell,
-  the switcher, auth, home, explore, the idea layout and its six tabs, and their extracted shared reading
-  components. Extend it as each UI area is extracted.
+  in the catalogue. Vite compiles ICU messages into lazy locale chunks. The literal-text lint rule applies
+  to every directory under `apps/web/src` and checks JSX content and readable props. Reuse the catalogue
+  for labels held in configuration or returned by callbacks too. Pass a typed `toast.*` ID in mutation
+  metadata so the success toast uses the language active when the request finishes.
+- The home and history feeds and secondary pages load their extended English fallback with the route.
+  Keep copy used by the shell and the initial idea view in the main catalogue chunk. The group of deferred
+  namespaces is defined in `apps/web/localization-plugin.ts`.
 - Add a domain error reason and English message to [the source catalogue](../../packages/domain/src/errors.en.ts).
   Pass its named arguments as parameters to `DomainError`. Add validation copy to the English validation
   catalogue and map the Zod issue in the HTTP validation layer. Run `npm run i18n:compile` after changing an ICU

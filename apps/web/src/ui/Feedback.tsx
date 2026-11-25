@@ -1,3 +1,4 @@
+import { useMessage } from "@/locales/react";
 import type { ReactNode } from "react";
 import { AlertTriangle, RotateCw } from "lucide-react";
 import { errorMessage } from "@/api/http";
@@ -27,10 +28,11 @@ export function Skeleton({ lines = 3, className }: { lines?: number; className?:
   );
 }
 
-export function LoadingBlock({ label = "Loading…" }: { label?: string }) {
+export function LoadingBlock({ label }: { label?: string }) {
+  const t = useMessage();
   return (
     <div className={styles.loadingBlock}>
-      <Spinner label={label} />
+      <Spinner label={label ?? t("feedback.loading")} />
     </div>
   );
 }
@@ -59,13 +61,14 @@ export function EmptyState({
 }
 
 export function ErrorState({ error, onRetry }: { error: unknown; onRetry?: () => void }) {
+  const t = useMessage();
   return (
     <div className={styles.error} role="alert">
       <AlertTriangle aria-hidden size={18} />
       <span>{errorMessage(error)}</span>
       {onRetry && (
         <button type="button" className={styles.retry} onClick={onRetry}>
-          <RotateCw size={14} aria-hidden /> Try again
+          <RotateCw size={14} aria-hidden /> {t("feedback.tryAgain")}
         </button>
       )}
     </div>
@@ -80,6 +83,7 @@ export function FormError({
   error: unknown;
   describe?: (error: unknown) => string;
 }) {
+  useMessage();
   if (!error) return null;
   return (
     <p className={styles.formError} role="alert">

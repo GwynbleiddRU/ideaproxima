@@ -1,3 +1,4 @@
+import { useMessage } from "@/locales/react";
 import { useId, type ReactNode } from "react";
 import { cx } from "@/lib/cx";
 import styles from "./Field.module.scss";
@@ -32,6 +33,7 @@ export function Field({
   children: (props: ControlProps) => ReactNode;
   className?: string;
 }) {
+  const t = useMessage();
   const id = useId();
   const hintId = hint ? `${id}-hint` : undefined;
   const errorId = error ? `${id}-error` : undefined;
@@ -41,7 +43,7 @@ export function Field({
       <div className={styles.labelRow}>
         <label htmlFor={id} className={styles.label}>
           {label}
-          {optional && <span className={styles.optional}>optional</span>}
+          {optional && <span className={styles.optional}>{t("field.optional")}</span>}
         </label>
         {counter && <span className={styles.counter}>{counter}</span>}
       </div>

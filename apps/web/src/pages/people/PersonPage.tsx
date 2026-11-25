@@ -1,18 +1,20 @@
 import { vocabularyField } from "@/lib/vocabulary";
-import { useLocale } from "@/locales/react";
+import { LocalizedText, useMessage } from "@/locales/react";
 import { useInfiniteQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { getRouteApi, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { Settings } from "lucide-react";
+import type { MessageId } from "@/locales/messages";
 import type { ProfileDto } from "@ideaproxima/contracts";
 import { CAPACITY_INFO, INVOLVEMENT_STATUS_INFO, PERSON_ROLES, type PersonRole } from "@ideaproxima/domain";
+import { useTopicNames } from "@/api/catalog";
 import { peopleQueries, useSetActive, useSetRole } from "@/api/people";
 import { useSession } from "@/api/session";
 import { ActivityFeed } from "@/components/ActivityFeed";
 import { IdeaCard } from "@/components/IdeaCard";
 import { TimeAgo } from "@/components/meta";
 import { ReasonDialog } from "@/components/ReasonDialog";
-import { formatDate } from "@/lib/format";
+import { formatDate, formatNumber } from "@/lib/format";
 import { Avatar } from "@/ui/Avatar";
 import { Badge } from "@/ui/Badge";
 import { Button, ButtonLink } from "@/ui/Button";
@@ -23,41 +25,53 @@ import styles from "./people.module.scss";
 
 const route = getRouteApi("/people/$handle");
 
-const CONTRIBUTIONS: { key: keyof ProfileDto["contributions"]; one: string; many: string }[] = [
-  { key: "ideasProposed", one: "idea proposed", many: "ideas proposed" },
-  { key: "revisionsAccepted", one: "revision accepted", many: "revisions accepted" },
-  { key: "claims", one: "claim stated", many: "claims stated" },
-  { key: "evidence", one: "piece of evidence", many: "pieces of evidence" },
-  { key: "arguments", one: "argument", many: "arguments" },
-  { key: "evaluations", one: "evaluation", many: "evaluations" },
-  { key: "comments", one: "comment", many: "comments" },
-  { key: "initiatives", one: "initiative recorded", many: "initiatives recorded" },
-  { key: "usefulReceived", one: "time marked useful", many: "times marked useful" },
-];
+const CONTRIBUTIONS = [
+  { key: "ideasProposed", label: "person.contributions.ideasProposed" },
+  { key: "revisionsAccepted", label: "person.contributions.revisionsAccepted" },
+  { key: "claims", label: "person.contributions.claims" },
+  { key: "evidence", label: "person.contributions.evidence" },
+  { key: "arguments", label: "person.contributions.arguments" },
+  { key: "evaluations", label: "person.contributions.evaluations" },
+  { key: "comments", label: "person.contributions.comments" },
+  { key: "initiatives", label: "person.contributions.initiatives" },
+  { key: "usefulReceived", label: "person.contributions.usefulReceived" },
+] as const satisfies ReadonlyArray<{ key: keyof ProfileDto["contributions"]; label: MessageId }>;
+
+const personRoleLabel = {
+  member: "person.role.member",
+  moderator: "person.role.moderator",
+  admin: "person.role.admin",
+} as const;
+const personRoleOption = {
+  member: "person.roleOption.member",
+  moderator: "person.roleOption.moderator",
+  admin: "person.roleOption.admin",
+} as const;
 
 type Tab = "ideas" | "helping" | "activity";
 
 /** A contributor's intellectual portfolio: what they proposed, contributed and are involved in. */
 export function PersonPage() {
-  useLocale();
+  const t = useMessage();
   const { handle } = route.useParams();
   const profile = useSuspenseQuery(peopleQueries.profile(handle)).data;
   const { person } = profile;
   const session = useSession();
   const isMe = session.me?.id === person.id;
+  const topicNames = useTopicNames();
   const counts = CONTRIBUTIONS.filter(({ key }) => profile.contributions[key] > 0);
   const [tab, setTab] = useState<Tab>(
     profile.ideas.length || !profile.involvements.length ? "ideas" : "helping",
   );
   const tabs: { key: Tab; label: string; count?: number }[] = [
-    { key: "ideas", label: "Ideas", count: profile.ideas.length },
-    { key: "helping", label: "Helping with", count: profile.involvements.length },
-    { key: "activity", label: "Activity" },
+    { key: "ideas", label: t("person.ideas"), count: profile.ideas.length },
+    { key: "helping", label: t("person.helpingWith"), count: profile.involvements.length },
+    { key: "activity", label: t("nav.activity") },
   ];
 
   return (
     <div className="container">
-      <title>{`${person.displayName} · ideaproxima`}</title>
+      <title>{t("common.pageTitle", { title: person.displayName })}</title>
       <header className={styles.header}>
         <span className={styles.avatar}>
           <Avatar name={person.displayName} seed={person.handle} size={72} />
@@ -66,24 +80,25 @@ export function PersonPage() {
         <div className={styles.headerActions}>
           {isMe && (
             <ButtonLink to="/account" size="sm">
-              <Settings /> Edit profile
+              <Settings /> {t("person.editProfile")}
             </ButtonLink>
           )}
           {!isMe && <ModerationControls handle={person.handle} role={person.role} active={person.active} />}
         </div>
         <p className={styles.handle}>
           @{person.handle}
-          {person.affiliation && <> · {person.affiliation}</>} · joined {formatDate(person.createdAt)}
+          {person.affiliation && <> · {person.affiliation}</>}{" "}
+          {t("person.joinedOn", { date: formatDate(person.createdAt) })}
           {person.role !== "member" && (
             <>
               {" "}
-              <Badge tone="primary">{person.role}</Badge>
+              <Badge tone="primary">{t(personRoleLabel[person.role])}</Badge>
             </>
           )}
           {!person.active && (
             <>
               {" "}
-              <Badge tone="danger">Deactivated</Badge>
+              <Badge tone="danger">{t("person.deactivated")}</Badge>
             </>
           )}
         </p>
@@ -92,7 +107,7 @@ export function PersonPage() {
           <div className={styles.tags}>
             {person.capacities.length > 0 && (
               <p>
-                <span className={styles.tagLabel}>Can help with</span>
+                <span className={styles.tagLabel}>{t("person.canHelpWith")}</span>
                 {person.capacities.map((c) => (
                   <Badge key={c} tone="primary">
                     {vocabularyField("capacities", c, "label", CAPACITY_INFO[c].label)}
@@ -102,7 +117,7 @@ export function PersonPage() {
             )}
             {profile.expertise.length > 0 && (
               <p>
-                <span className={styles.tagLabel}>Expertise</span>
+                <span className={styles.tagLabel}>{t("person.expertise")}</span>
                 {profile.expertise.map((e) => (
                   <Link
                     key={e.topic.id}
@@ -110,8 +125,8 @@ export function PersonPage() {
                     params={{ slug: e.topic.slug }}
                     className={styles.expertiseTag}
                   >
-                    {e.topic.name}
-                    <span>{e.basis === "verified" ? "verified" : "self-declared"}</span>
+                    {topicNames?.get(e.topic.slug) ?? e.topic.name}
+                    <span>{e.basis === "verified" ? t("person.verified") : t("person.selfDeclared")}</span>
                   </Link>
                 ))}
               </p>
@@ -120,29 +135,26 @@ export function PersonPage() {
         )}
       </header>
 
-      <section className={styles.stats} aria-label="Recorded contributions">
+      <section className={styles.stats} aria-label={t("person.recordedContributions")}>
         {counts.length ? (
           <dl>
-            {counts.map(({ key, one, many }) => (
+            {counts.map(({ key, label }) => (
               <div key={key}>
-                <dt>{profile.contributions[key] === 1 ? one : many}</dt>
-                <dd>{profile.contributions[key]}</dd>
+                <dt>{t(label, { count: profile.contributions[key] })}</dt>
+                <dd>{formatNumber(profile.contributions[key])}</dd>
               </div>
             ))}
           </dl>
         ) : (
-          <p className={styles.muted}>No contributions recorded yet.</p>
+          <p className={styles.muted}>{t("person.noContributionsRecordedYet")}</p>
         )}
         <p className={styles.statsNote}>
-          Plain counts of what is in the record — not a measure of quality, influence or intelligence.
-          <InfoTip label="About these numbers">
-            Contribution influence (how strongly someone's evaluations count, per domain) will be computed
-            from demonstrated judgment, and explained here when it exists.
-          </InfoTip>
+          {t("person.contributionsDescription")}{" "}
+          <InfoTip label={t("person.aboutTheseNumbers")}>{t("person.contributionsHelp")}</InfoTip>
         </p>
       </section>
 
-      <div className={styles.tabs} role="tablist" aria-label="Profile sections">
+      <div className={styles.tabs} role="tablist" aria-label={t("person.profileSections")}>
         {tabs.map((t) => (
           <button
             key={t.key}
@@ -155,7 +167,9 @@ export function PersonPage() {
             onClick={() => setTab(t.key)}
           >
             {t.label}
-            {t.count !== undefined && t.count > 0 && <span className={styles.tabCount}>{t.count}</span>}
+            {t.count !== undefined && t.count > 0 && (
+              <span className={styles.tabCount}>{formatNumber(t.count)}</span>
+            )}
           </button>
         ))}
       </div>
@@ -169,8 +183,8 @@ export function PersonPage() {
               ))}
             </div>
           ) : (
-            <EmptyState compact title="No ideas proposed yet">
-              {isMe ? "An idea does not need to be feasible, proven or popular to be kept." : undefined}
+            <EmptyState compact title={t("person.noIdeasProposedYet")}>
+              {isMe ? t("person.anIdeaDoesNot") : undefined}
             </EmptyState>
           ))}
         {tab === "helping" &&
@@ -191,13 +205,13 @@ export function PersonPage() {
                       "label",
                       INVOLVEMENT_STATUS_INFO[i.status].label,
                     )}{" "}
-                    · since <TimeAgo iso={i.since} />
+                    <LocalizedText id="person.sinceDate" components={{ 0: <TimeAgo iso={i.since} /> }} />
                   </span>
                 </li>
               ))}
             </ul>
           ) : (
-            <EmptyState compact title="Not involved in any idea yet" />
+            <EmptyState compact title={t("person.notInvolvedInAny")} />
           ))}
         {tab === "activity" && <PersonActivity handle={person.handle} />}
       </div>
@@ -206,6 +220,7 @@ export function PersonPage() {
 }
 
 function PersonActivity({ handle }: { handle: string }) {
+  const t = useMessage();
   const activity = useInfiniteQuery(peopleQueries.activity(handle));
   const entries = activity.data?.pages.flatMap((p) => p.items) ?? [];
   return (
@@ -217,7 +232,7 @@ function PersonActivity({ handle }: { handle: string }) {
       )}
       {activity.hasNextPage && (
         <Button onClick={() => void activity.fetchNextPage()} loading={activity.isFetchingNextPage}>
-          Older activity
+          {t("person.olderActivity")}
         </Button>
       )}
     </div>
@@ -226,6 +241,7 @@ function PersonActivity({ handle }: { handle: string }) {
 
 /** Moderators act on members; admins on anyone (and change roles). Every action is logged publicly. */
 function ModerationControls({ handle, role, active }: { handle: string; role: PersonRole; active: boolean }) {
+  const t = useMessage();
   const { isModerator, isAdmin } = useSession();
   const setActive = useSetActive(handle);
   const setRole = useSetRole(handle);
@@ -236,26 +252,22 @@ function ModerationControls({ handle, role, active }: { handle: string; role: Pe
     <div className={styles.moderation}>
       {isAdmin && (
         <Segmented<PersonRole>
-          label="Role"
+          label={t("person.role")}
           size="sm"
           value={role}
           onChange={(r) => setRole.mutate(r)}
-          options={PERSON_ROLES.map((r) => ({ value: r, label: r[0]!.toUpperCase() + r.slice(1) }))}
+          options={PERSON_ROLES.map((r) => ({ value: r, label: t(personRoleOption[r]) }))}
         />
       )}
       <Button size="sm" variant={active ? "danger" : "secondary"} onClick={() => setConfirming(true)}>
-        {active ? "Deactivate account" : "Reactivate account"}
+        {active ? t("person.deactivateAccount") : t("person.reactivateAccount")}
       </Button>
       <ReasonDialog
         open={confirming}
         onClose={() => setConfirming(false)}
-        title={active ? "Deactivate this account" : "Reactivate this account"}
-        description={
-          active
-            ? "They will be signed out and unable to act. Their contributions stay, attributed. The reason is published."
-            : "They will be able to sign in and contribute again."
-        }
-        confirmLabel={active ? "Deactivate" : "Reactivate"}
+        title={active ? t("person.deactivateThisAccount") : t("person.reactivateThisAccount")}
+        description={active ? t("person.deactivateHelp") : t("person.reactivateHelp")}
+        confirmLabel={active ? t("person.deactivate") : t("person.reactivate")}
         danger={active}
         onConfirm={(reason) => setActive.mutateAsync({ active: !active, reason })}
       />

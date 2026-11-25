@@ -25,7 +25,7 @@ export function useProposeRelation(slug: string) {
   return useApiMutation(
     (input: ProposeRelationRequest) => http.post<RelationDto>("/relations", input),
     (relation) => [keys.idea(slug), keys.idea(relation.from.slug), keys.idea(relation.to.slug)],
-    { inlineErrors: true, success: "Connection recorded." },
+    { inlineErrors: true, success: "toast.connectionRecorded" },
   );
 }
 
@@ -33,6 +33,6 @@ export function useRetractRelation(slug: string) {
   return useApiMutation(
     (relationId: string) => http.post<{ ok: true }>(`/relations/${relationId}/retract`),
     [keys.idea(slug)],
-    { success: "Connection retracted." },
+    { success: "toast.connectionRetracted" },
   );
 }

@@ -1,5 +1,5 @@
 import { vocabularyField } from "@/lib/vocabulary";
-import { useLocale } from "@/locales/react";
+import { useMessage } from "@/locales/react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { useState, type FormEvent } from "react";
@@ -27,23 +27,28 @@ import { FormError } from "@/ui/Feedback";
 import styles from "./people.module.scss";
 
 export function AccountPage() {
+  const t = useMessage();
   const { me, email } = useSession();
   const logout = useLogout();
   const navigate = useNavigate();
   if (!me) return null;
   return (
     <div className="container">
-      <title>Account · ideaproxima</title>
+      <title>{t("common.pageTitle", { title: t("account.account") })}</title>
       <PageHeader
-        eyebrow="Account"
-        title="Your account"
-        lede={`Signed in as @${me.handle}${email ? ` (${email})` : ""}. Your profile is public; your email is not.`}
+        eyebrow={t("account.account")}
+        title={t("nav.account")}
+        lede={
+          email
+            ? t("account.signedInEmail", { handle: me.handle, email })
+            : t("account.signedIn", { handle: me.handle })
+        }
         actions={
           <Button
             onClick={() => logout.mutate(undefined, { onSuccess: () => void navigate({ to: "/" }) })}
             loading={logout.isPending}
           >
-            Sign out
+            {t("nav.signOut")}
           </Button>
         }
       />
@@ -60,7 +65,7 @@ export function AccountPage() {
 }
 
 function ProfileForm({ me }: { me: PersonDto }) {
-  useLocale();
+  const t = useMessage();
   const update = useUpdateProfile(me.handle);
   const [displayName, setDisplayName] = useState(me.displayName);
   const [affiliation, setAffiliation] = useState(me.affiliation);
@@ -80,10 +85,10 @@ function ProfileForm({ me }: { me: PersonDto }) {
   };
   return (
     <section className={styles.panel}>
-      <SectionHeading eyebrow="Public" title="Profile" />
+      <SectionHeading eyebrow={t("account.public")} title={t("account.profile")} />
       <form onSubmit={submit} className={forms.form}>
         <div className={forms.row}>
-          <Field label="Display name" error={errors.displayName}>
+          <Field label={t("account.displayName")} error={errors.displayName}>
             {(p) => (
               <input
                 {...p}
@@ -96,7 +101,7 @@ function ProfileForm({ me }: { me: PersonDto }) {
               />
             )}
           </Field>
-          <Field label="Affiliation" optional>
+          <Field label={t("account.affiliation")} optional>
             {(p) => (
               <input
                 {...p}
@@ -108,7 +113,11 @@ function ProfileForm({ me }: { me: PersonDto }) {
             )}
           </Field>
         </div>
-        <Field label="About you" optional counter={`${bio.length} / ${LIMITS.bio.max}`}>
+        <Field
+          label={t("account.aboutYou")}
+          optional
+          counter={t("common.counter", { count: bio.length, total: LIMITS.bio.max })}
+        >
           {(p) => (
             <textarea
               {...p}
@@ -121,7 +130,7 @@ function ProfileForm({ me }: { me: PersonDto }) {
           )}
         </Field>
         <div className={styles.capacityField}>
-          <p className={styles.label}>How you can help advance ideas</p>
+          <p className={styles.label}>{t("account.howYouCanHelp")}</p>
           <div className={styles.chips}>
             {CAPACITIES.map((c) => (
               <Chip
@@ -138,7 +147,7 @@ function ProfileForm({ me }: { me: PersonDto }) {
         <FormError error={update.error && !Object.keys(errors).length ? update.error : null} />
         <div className={forms.actions}>
           <Button type="submit" variant="primary" loading={update.isPending}>
-            Save profile
+            {t("account.saveProfile")}
           </Button>
         </div>
       </form>
@@ -147,8 +156,10 @@ function ProfileForm({ me }: { me: PersonDto }) {
 }
 
 function ExpertiseForm({ handle }: { handle: string }) {
+  const t = useMessage();
   const profile = useQuery(peopleQueries.profile(handle));
   const topics = useQuery(useTopicsQueryOptions());
+  const topicNames = new Map(topics.data?.map((topic) => [topic.slug, topic.name]));
   const declare = useDeclareExpertise(handle);
   const revoke = useRevokeExpertise(handle);
   const [topic, setTopic] = useState("");
@@ -167,28 +178,31 @@ function ExpertiseForm({ handle }: { handle: string }) {
   };
   return (
     <section className={styles.panel}>
-      <SectionHeading eyebrow="Domains" title="Expertise" />
-      <p className={styles.muted}>Self-declared until verified by a moderator. Shown on your profile.</p>
+      <SectionHeading eyebrow={t("account.domains")} title={t("account.expertise")} />
+      <p className={styles.muted}>{t("account.expertiseDescription")}</p>
       <ul className={styles.expertise} role="list">
-        {profile.data?.expertise.map((e) => (
-          <li key={e.topic.id}>
-            {e.topic.name}
-            <Badge tone={e.basis === "verified" ? "success" : "neutral"}>
-              {e.basis === "verified" ? "Verified" : "Self-declared"}
-            </Badge>
-            <Button
-              variant="quiet"
-              size="sm"
-              icon={<X />}
-              onClick={() => revoke.mutate(e.topic.slug)}
-              aria-label={`Remove ${e.topic.name}`}
-            />
-          </li>
-        ))}
+        {profile.data?.expertise.map((e) => {
+          const name = topicNames.get(e.topic.slug) ?? e.topic.name;
+          return (
+            <li key={e.topic.id}>
+              {name}
+              <Badge tone={e.basis === "verified" ? "success" : "neutral"}>
+                {e.basis === "verified" ? t("account.verifiedBadge") : t("account.selfDeclared")}
+              </Badge>
+              <Button
+                variant="quiet"
+                size="sm"
+                icon={<X />}
+                onClick={() => revoke.mutate(e.topic.slug)}
+                aria-label={t("account.removeExpertise", { topic: name })}
+              />
+            </li>
+          );
+        })}
       </ul>
       <form onSubmit={submit} className={forms.form}>
         <div className={forms.row}>
-          <Field label="Topic">
+          <Field label={t("explore.topic")}>
             {(p) => (
               <select
                 {...p}
@@ -197,7 +211,7 @@ function ExpertiseForm({ handle }: { handle: string }) {
                 onChange={(e) => setTopic(e.target.value)}
                 required
               >
-                <option value="">Choose a topic</option>
+                <option value="">{t("account.chooseATopic")}</option>
                 {topics.data?.map((t) => (
                   <option key={t.id} value={t.slug}>
                     {t.name}
@@ -206,7 +220,7 @@ function ExpertiseForm({ handle }: { handle: string }) {
               </select>
             )}
           </Field>
-          <Field label="Basis" optional hint="Degree, role, years of practice…">
+          <Field label={t("account.basis")} optional hint={t("account.expertiseBasisHint")}>
             {(p) => (
               <input
                 {...p}
@@ -221,7 +235,7 @@ function ExpertiseForm({ handle }: { handle: string }) {
         <FormError error={declare.error} />
         <div className={forms.actions}>
           <Button type="submit" loading={declare.isPending}>
-            Declare expertise
+            {t("account.declareExpertise")}
           </Button>
         </div>
       </form>
@@ -230,6 +244,7 @@ function ExpertiseForm({ handle }: { handle: string }) {
 }
 
 function PasswordForm() {
+  const t = useMessage();
   const change = useChangePassword();
   const [currentPassword, setCurrent] = useState("");
   const [newPassword, setNew] = useState("");
@@ -248,10 +263,10 @@ function PasswordForm() {
   };
   return (
     <section className={styles.panel}>
-      <SectionHeading eyebrow="Security" title="Password" />
+      <SectionHeading eyebrow={t("account.security")} title={t("auth.password")} />
       <form onSubmit={submit} className={forms.form}>
         <div className={forms.row}>
-          <Field label="Current password">
+          <Field label={t("account.currentPassword")}>
             {(p) => (
               <input
                 {...p}
@@ -265,8 +280,8 @@ function PasswordForm() {
             )}
           </Field>
           <Field
-            label="New password"
-            hint={`At least ${LIMITS.password.min} characters.`}
+            label={t("account.newPassword")}
+            hint={t("auth.passwordHint", { count: LIMITS.password.min })}
             error={errors.newPassword}
           >
             {(p) => (
@@ -287,7 +302,7 @@ function PasswordForm() {
         <FormError error={change.error && !errors.newPassword ? change.error : null} />
         <div className={forms.actions}>
           <Button type="submit" loading={change.isPending}>
-            Change password
+            {t("account.changePassword")}
           </Button>
         </div>
       </form>

@@ -34,7 +34,7 @@ export function useUpdateProfile(handle: string) {
   return useApiMutation(
     (input: UpdateProfileRequest) => http.patch<PersonDto>("/me", input),
     [keys.me, keys.person(handle)],
-    { inlineErrors: true, success: "Profile saved." },
+    { inlineErrors: true, success: "toast.profileSaved" },
   );
 }
 
@@ -42,7 +42,7 @@ export function useChangePassword() {
   return useApiMutation(
     (input: ChangePasswordRequest) => http.post<{ ok: true }>("/me/password", input),
     [],
-    { inlineErrors: true, success: "Password changed. Your other sessions were signed out." },
+    { inlineErrors: true, success: "toast.passwordChanged" },
   );
 }
 
@@ -50,7 +50,7 @@ export function useDeclareExpertise(handle: string) {
   return useApiMutation(
     (input: DeclareExpertiseRequest) => http.post<ExpertiseDto[]>("/me/expertise", input),
     [keys.person(handle)],
-    { inlineErrors: true, success: "Expertise declared." },
+    { inlineErrors: true, success: "toast.expertiseDeclared" },
   );
 }
 
@@ -74,6 +74,6 @@ export function useSetRole(handle: string) {
   return useApiMutation(
     (role: PersonRole) => http.put<PersonDto>(`/people/${handle}/role`, { role }),
     [keys.person(handle)],
-    { success: "Role changed. The change is recorded in the public activity log." },
+    { success: "toast.roleChanged" },
   );
 }

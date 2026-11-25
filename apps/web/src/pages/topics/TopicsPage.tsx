@@ -1,3 +1,4 @@
+import { useMessage } from "@/locales/react";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { useState, type FormEvent } from "react";
@@ -17,6 +18,7 @@ import { FormError } from "@/ui/Feedback";
 import styles from "./topics.module.scss";
 
 export function TopicsPage() {
+  const t = useMessage();
   const topics = useSuspenseQuery(useTopicsQueryOptions()).data;
   const { isAdmin } = useSession();
   const [creating, setCreating] = useState(false);
@@ -27,14 +29,14 @@ export function TopicsPage() {
 
   return (
     <div className="container">
-      <title>Topics · ideaproxima</title>
+      <title>{t("common.pageTitle", { title: t("nav.topics") })}</title>
       <PageHeader
-        title="Topics"
-        lede="Ideas span domains: each belongs to up to four topics, the first being its primary home."
+        title={t("nav.topics")}
+        lede={t("topics.lede")}
         actions={
           isAdmin && (
             <Button icon={<Plus />} onClick={() => setCreating(true)}>
-              New topic
+              {t("topics.newTopic")}
             </Button>
           )
         }
@@ -66,14 +68,14 @@ export function TopicsPage() {
               <div className={styles.latest}>
                 {empty ? (
                   <>
-                    <span className={styles.latestLabel}>No ideas yet.</span>
+                    <span className={styles.latestLabel}>{t("topics.noIdeasYet")}</span>
                     <Link to="/new" className={styles.invite}>
-                      Propose the first <ArrowRight aria-hidden />
+                      {t("topics.proposeTheFirst")} <ArrowRight aria-hidden />
                     </Link>
                   </>
                 ) : (
                   <>
-                    <span className={styles.latestLabel}>Newest</span>
+                    <span className={styles.latestLabel}>{t("topics.newest")}</span>
                     {topic.latestIdeas.map((idea) => (
                       <Link
                         key={idea.id}
@@ -105,6 +107,7 @@ function CreateTopicDialog({
   onClose: () => void;
   parents: { slug: string; name: string }[];
 }) {
+  const t = useMessage();
   const create = useCreateTopic();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -132,11 +135,11 @@ function CreateTopicDialog({
       open={open}
       onClose={onClose}
       size="sm"
-      title="New topic"
-      description="Topic changes are recorded in the public activity log."
+      title={t("topics.newTopic")}
+      description={t("topics.createDescription")}
     >
       <form onSubmit={submit} className={forms.form}>
-        <Field label="Name" error={errors.name}>
+        <Field label={t("auth.name")} error={errors.name}>
           {(p) => (
             <input
               {...p}
@@ -149,7 +152,7 @@ function CreateTopicDialog({
             />
           )}
         </Field>
-        <Field label="Description" optional>
+        <Field label={t("topics.description")} optional>
           {(p) => (
             <textarea
               {...p}
@@ -161,7 +164,7 @@ function CreateTopicDialog({
             />
           )}
         </Field>
-        <Field label="Nest under" optional>
+        <Field label={t("topics.nestUnder")} optional>
           {(p) => (
             <select
               {...p}
@@ -169,7 +172,7 @@ function CreateTopicDialog({
               value={parentSlug}
               onChange={(e) => setParentSlug(e.target.value)}
             >
-              <option value="">Top level</option>
+              <option value="">{t("topics.topLevel")}</option>
               {parents.map((t) => (
                 <option key={t.slug} value={t.slug}>
                   {t.name}
@@ -180,9 +183,9 @@ function CreateTopicDialog({
         </Field>
         <FormError error={create.error} />
         <div className={forms.actions}>
-          <Button onClick={onClose}>Cancel</Button>
+          <Button onClick={onClose}>{t("common.cancel")}</Button>
           <Button type="submit" variant="primary" loading={create.isPending}>
-            Create topic
+            {t("topics.createTopic")}
           </Button>
         </div>
       </form>

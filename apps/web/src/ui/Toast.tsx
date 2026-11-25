@@ -1,3 +1,4 @@
+import { useMessage } from "@/locales/react";
 import { useSyncExternalStore } from "react";
 import { CheckCircle2, Info, TriangleAlert, X } from "lucide-react";
 import { cx } from "@/lib/cx";
@@ -17,7 +18,7 @@ const listeners = new Set<() => void>();
 const emit = () => listeners.forEach((l) => l());
 
 function dismiss(id: number) {
-  items = items.filter((t) => t.id !== id);
+  items = items.filter((item) => item.id !== id);
   emit();
 }
 
@@ -37,6 +38,7 @@ export const toast = {
 const ICONS = { success: CheckCircle2, error: TriangleAlert, info: Info };
 
 export function Toaster() {
+  const t = useMessage();
   const list = useSyncExternalStore(
     (l) => {
       listeners.add(l);
@@ -46,20 +48,20 @@ export function Toaster() {
   );
   return (
     <div className={styles.viewport} aria-live="polite" aria-relevant="additions">
-      {list.map((t) => {
-        const Icon = ICONS[t.tone];
+      {list.map((item) => {
+        const Icon = ICONS[item.tone];
         return (
           <div
-            key={t.id}
-            className={cx(styles.toast, styles[t.tone])}
-            role={t.tone === "error" ? "alert" : "status"}
+            key={item.id}
+            className={cx(styles.toast, styles[item.tone])}
+            role={item.tone === "error" ? "alert" : "status"}
           >
             <Icon size={18} aria-hidden className={styles.icon} />
-            <p>{t.message}</p>
+            <p>{item.message}</p>
             <button
               type="button"
-              onClick={() => dismiss(t.id)}
-              aria-label="Dismiss"
+              onClick={() => dismiss(item.id)}
+              aria-label={t("toast.dismiss")}
               className={styles.dismiss}
             >
               <X size={14} />

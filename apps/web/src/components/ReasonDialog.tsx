@@ -1,3 +1,4 @@
+import { useMessage } from "@/locales/react";
 import { useState, type FormEvent, type ReactNode } from "react";
 import { LIMITS } from "@ideaproxima/domain";
 import { Button } from "@/ui/Button";
@@ -27,6 +28,7 @@ export function ReasonDialog({
   danger?: boolean;
   onConfirm: (reason: string) => Promise<unknown>;
 }) {
+  const t = useMessage();
   const [reason, setReason] = useState("");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<unknown>(null);
@@ -49,7 +51,7 @@ export function ReasonDialog({
   return (
     <Dialog open={open} onClose={onClose} title={title} description={description} size="sm">
       <form onSubmit={submit} className={forms.form}>
-        <Field label="Reason" hint="Recorded publicly with this action.">
+        <Field label={t("reason.reason")} hint={t("reason.publicHint")}>
           {(p) => (
             <textarea
               {...p}
@@ -66,7 +68,7 @@ export function ReasonDialog({
         </Field>
         <FormError error={error} />
         <div className={forms.actions}>
-          <Button onClick={onClose}>Cancel</Button>
+          <Button onClick={onClose}>{t("common.cancel")}</Button>
           <Button type="submit" variant={danger ? "danger" : "primary"} loading={pending}>
             {confirmLabel}
           </Button>

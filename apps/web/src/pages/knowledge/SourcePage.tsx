@@ -1,5 +1,5 @@
 import { vocabularyField } from "@/lib/vocabulary";
-import { useLocale } from "@/locales/react";
+import { LocalizedText, useMessage } from "@/locales/react";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { getRouteApi } from "@tanstack/react-router";
 import { ExternalLink } from "lucide-react";
@@ -13,26 +13,24 @@ const route = getRouteApi("/sources/$source");
 
 /** A publication, dataset or other source, registered once and cited as evidence wherever relevant. */
 export function SourcePage() {
-  useLocale();
+  const t = useMessage();
   const { source: id } = route.useParams();
   const source = useSuspenseQuery(knowledgeQueries.source(id)).data;
   const details: [string, string | number | null][] = [
-    ["Authors", source.authors],
-    ["Venue", source.venue],
-    ["Year", source.year],
+    [t("sourcePage.authors"), source.authors],
+    [t("sourcePage.venue"), source.venue],
+    [t("sourcePage.year"), source.year],
   ];
   return (
     <div className="container">
-      <title>{`${source.title} · ideaproxima`}</title>
+      <title>{t("common.pageTitle", { title: source.title })}</title>
       <header className={styles.header}>
-        <p className="eyebrow">Source</p>
+        <p className="eyebrow">{t("sourcePage.source")}</p>
         <div className={styles.badges}>
           <Badge tone="outline">
             {vocabularyField("sourceKinds", source.kind, "label", SOURCE_KIND_INFO[source.kind].label)}
           </Badge>
-          <Badge tone="primary">
-            Cited as evidence {source.citedBy} time{source.citedBy === 1 ? "" : "s"}
-          </Badge>
+          <Badge tone="primary">{t("sourcePage.citationCount", { count: source.citedBy })}</Badge>
         </div>
         <h1 className={styles.statement}>{source.title}</h1>
         <dl className={styles.details}>
@@ -46,7 +44,7 @@ export function SourcePage() {
             ))}
           {source.doi && (
             <div>
-              <dt>DOI</dt>
+              <dt>{t("idea.claim.doi")}</dt>
               <dd>
                 <a
                   href={`https://doi.org/${source.doi}`}
@@ -61,7 +59,7 @@ export function SourcePage() {
           )}
           {source.url && (
             <div>
-              <dt>Link</dt>
+              <dt>{t("idea.claim.link")}</dt>
               <dd>
                 <a href={source.url} target="_blank" rel="noopener noreferrer nofollow ugc" className="link">
                   {source.url} <ExternalLink size={12} aria-hidden />
@@ -72,13 +70,14 @@ export function SourcePage() {
         </dl>
         <MetaLine>
           <span>
-            Registered by <PersonLink person={source.registeredBy} />
+            <LocalizedText
+              id="sourcePage.registeredByPerson"
+              components={{ 0: <PersonLink person={source.registeredBy} /> }}
+            />
           </span>
           <TimeAgo iso={source.createdAt} />
         </MetaLine>
-        <p className={styles.explain}>
-          Sources are deduplicated by DOI and URL, so every claim citing this work points to the same record.
-        </p>
+        <p className={styles.explain}>{t("sourcePage.deduplicationHelp")}</p>
       </header>
     </div>
   );

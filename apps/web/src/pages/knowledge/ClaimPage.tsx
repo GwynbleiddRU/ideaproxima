@@ -1,5 +1,5 @@
 import { vocabularyField } from "@/lib/vocabulary";
-import { useLocale } from "@/locales/react";
+import { LocalizedText, useMessage } from "@/locales/react";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { getRouteApi, Link } from "@tanstack/react-router";
 import { useState } from "react";
@@ -27,7 +27,7 @@ const route = getRouteApi("/claims/$claim");
 
 /** One claim across every idea that rests on it, with all its evidence and arguments. */
 export function ClaimPage() {
-  useLocale();
+  const t = useMessage();
   const { claim: id } = route.useParams();
   const claim = useSuspenseQuery(knowledgeQueries.claim(id)).data;
   const gate = useAuthGate();
@@ -36,12 +36,14 @@ export function ClaimPage() {
 
   return (
     <div className="container">
-      <title>{`Claim: ${claim.statement.slice(0, 60)} · ideaproxima`}</title>
+      <title>
+        {t("common.pageTitle", { title: t("claimPage.title", { claim: claim.statement.slice(0, 60) }) })}
+      </title>
       <header className={styles.header}>
-        <p className="eyebrow">Claim</p>
+        <p className="eyebrow">{t("claimPage.claim")}</p>
         <div className={styles.badges}>
           <ClaimStatusBadge status={claim.derived.status} />
-          {claim.hidden && <Badge tone="warning">Hidden</Badge>}
+          {claim.hidden && <Badge tone="warning">{t("common.hidden")}</Badge>}
         </div>
         <h1 className={styles.statement}>{claim.statement}</h1>
         <p className={styles.explain}>
@@ -54,12 +56,13 @@ export function ClaimPage() {
         </p>
         <MetaLine>
           <span>
-            Stated by <PersonLink person={claim.createdBy} />
+            <LocalizedText
+              id="claimPage.statedByPerson"
+              components={{ 0: <PersonLink person={claim.createdBy} /> }}
+            />
           </span>
           <TimeAgo iso={claim.createdAt} />
-          <span>
-            Underpins {claim.ideaCount} idea{claim.ideaCount === 1 ? "" : "s"}
-          </span>
+          <span>{t("claimPage.underpinsCount", { count: claim.ideaCount })}</span>
         </MetaLine>
         <div className={styles.meters}>
           <RatingMeter dimension="support" summary={claim.derived.support} accent />
@@ -72,13 +75,13 @@ export function ClaimPage() {
             icon={<Plus />}
             onClick={() => gate(() => setDialog("evidence"))}
           >
-            Attach evidence
+            {t("idea.claim.attach")}
           </Button>
           <Button size="sm" icon={<Scale />} onClick={() => gate(() => setDialog("assess"))}>
-            Assess
+            {t("common.assess")}
           </Button>
           <Button size="sm" icon={<MessageSquarePlus />} onClick={() => gate(() => setDialog("argue"))}>
-            Argue
+            {t("claimPage.argue")}
           </Button>
           <ModerateButton kind="claim" id={claim.id} hidden={claim.hidden} />
         </div>
@@ -87,7 +90,10 @@ export function ClaimPage() {
       <div className={styles.layout}>
         <div className={styles.main}>
           <section>
-            <SectionHeading eyebrow="For and against" title={`Evidence (${claim.evidence.length})`} />
+            <SectionHeading
+              eyebrow={t("claimPage.forAndAgainst")}
+              title={t("common.countLabel", { label: t("claimPage.evidence"), count: claim.evidence.length })}
+            />
             {claim.evidence.length ? (
               <div className={styles.stack}>
                 {claim.evidence.map((e) => (
@@ -95,13 +101,19 @@ export function ClaimPage() {
                 ))}
               </div>
             ) : (
-              <EmptyState compact title="No evidence yet">
-                Until evidence is attached, this claim remains a hypothesis.
+              <EmptyState compact title={t("idea.claim.noEvidence")}>
+                {t("claimPage.noEvidenceHelp")}
               </EmptyState>
             )}
           </section>
           <section>
-            <SectionHeading eyebrow="Reasoning" title={`Arguments (${claim.arguments.length})`} />
+            <SectionHeading
+              eyebrow={t("claimPage.reasoning")}
+              title={t("common.countLabel", {
+                label: t("claimPage.arguments"),
+                count: claim.arguments.length,
+              })}
+            />
             {dialog === "argue" && (
               <div className={styles.panel}>
                 <ArgumentComposer
@@ -119,7 +131,7 @@ export function ClaimPage() {
           </section>
         </div>
         <aside className={styles.side}>
-          <SectionHeading eyebrow="Shared knowledge" title="Ideas resting on it" />
+          <SectionHeading eyebrow={t("claimPage.sharedKnowledge")} title={t("claimPage.ideasRestingOnIt")} />
           <ul className={styles.ideas} role="list">
             {claim.ideas.map((idea) => (
               <li key={idea.id}>
@@ -153,7 +165,7 @@ export function ClaimPage() {
         open={dialog === "assess"}
         onClose={() => setDialog(null)}
         target={{ kind: "claim", id: claim.id }}
-        subject="this claim"
+        subject={t("idea.claim.subject")}
         invalidate={invalidate}
       />
     </div>

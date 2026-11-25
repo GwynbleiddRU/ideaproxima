@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import type { GraphDto } from "@ideaproxima/contracts";
 import { ApiError, errorMessage } from "@/api/http";
 import { parseExploreSearch, parseGraphSearch, parseRedirectSearch } from "@/app/search-params";
@@ -7,6 +7,7 @@ import { foldActivity } from "@/lib/activity";
 import { diffLines, hasChanges } from "@/lib/diff";
 import { dayLabel, initials, shortAgo, timeAgo } from "@/lib/format";
 import { resolveLocale } from "@/locales/preferences";
+import { activateLocale } from "@/locales/runtime";
 import { layoutGraph } from "@/lib/graph-layout";
 import { renderMarkdown } from "@/lib/markdown";
 
@@ -103,6 +104,10 @@ describe("route search parsers", () => {
 });
 
 describe("errorMessage", () => {
+  beforeAll(async () => {
+    await activateLocale("en");
+  });
+
   it("names the fields a validation error is about", () => {
     const error = new ApiError(400, "validation_failed", "Invalid request.", {
       issues: [{ path: "source.kind", message: "Invalid option" }],

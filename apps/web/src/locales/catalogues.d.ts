@@ -7,3 +7,10 @@ declare module "virtual:web-catalogues" {
     translated: Messages;
   }>;
 }
+
+declare module "virtual:web-extended-english" {
+  import type { Messages } from "@lingui/core";
+
+  const messages: Messages;
+  export default messages;
+}

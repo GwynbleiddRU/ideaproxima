@@ -1,11 +1,11 @@
 import { vocabularyField } from "@/lib/vocabulary";
-import { useLocale } from "@/locales/react";
+import { useMessage } from "@/locales/react";
 import { useInfiniteQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { getRouteApi, Link } from "@tanstack/react-router";
 import { ArrowRight, Plus } from "lucide-react";
 import type { IdeaListItem, TopicRef } from "@ideaproxima/contracts";
 import { LENS_INFO, type LensKey } from "@ideaproxima/domain";
-import { useTopicQueryOptions } from "@/api/catalog";
+import { useTopicNames, useTopicQueryOptions } from "@/api/catalog";
 import { ideaQueries } from "@/api/ideas";
 import { IdeaCard } from "@/components/IdeaCard";
 import { formatCount } from "@/locales/runtime";
@@ -29,11 +29,12 @@ function relatedTopics(ideas: IdeaListItem[], exclude: Set<string>): (TopicRef &
 }
 
 export function TopicPage() {
-  useLocale();
+  const t = useMessage();
   const { slug } = route.useParams();
   const { lens: lensParam } = route.useSearch();
   const lens = lensParam ?? "newest";
   const topic = useSuspenseQuery(useTopicQueryOptions(slug)).data;
+  const topicNames = useTopicNames();
   const ideas = useInfiniteQuery(ideaQueries.list({ topic: slug, lens, limit: 12 }));
   const list = ideas.data?.pages.flatMap((p) => p.items) ?? [];
   const Icon = topicIcon(topic.slug);
@@ -41,10 +42,10 @@ export function TopicPage() {
 
   return (
     <div className="container">
-      <title>{`${topic.name} · ideaproxima`}</title>
+      <title>{t("common.pageTitle", { title: topic.name })}</title>
       <header className={styles.header}>
-        <nav className={styles.crumbs} aria-label="Breadcrumb">
-          <Link to="/topics">Topics</Link> /
+        <nav className={styles.crumbs} aria-label={t("topic.breadcrumb")}>
+          <Link to="/topics">{t("nav.topics")}</Link> /
         </nav>
         <span className={styles.headerIcon} aria-hidden>
           <Icon />
@@ -55,7 +56,7 @@ export function TopicPage() {
           <span className={styles.subtle}>· {formatCount("count.idea", topic.ideaCount)}</span>
         </p>
         <ButtonLink to="/new" variant="secondary" size="sm" className={styles.headerAction}>
-          <Plus /> Propose an idea here
+          <Plus /> {t("topic.proposeAnIdeaHere")}
         </ButtonLink>
       </header>
 
@@ -70,8 +71,8 @@ export function TopicPage() {
       )}
 
       <div className={styles.layout}>
-        <section aria-label={`Ideas in ${topic.name}`}>
-          <nav className={styles.lensTabs} aria-label="Order">
+        <section aria-label={t("topic.ideasIn", { topic: topic.name })}>
+          <nav className={styles.lensTabs} aria-label={t("topic.order")}>
             {TOPIC_LENSES.map((key) => (
               <Link
                 key={key}
@@ -108,24 +109,22 @@ export function TopicPage() {
             </ol>
           ) : (
             <EmptyState
-              title={topic.ideaCount ? "No ideas under this lens yet" : `No ideas in ${topic.name} yet`}
+              title={topic.ideaCount ? t("topic.lensEmpty") : t("topic.empty", { topic: topic.name })}
               action={
                 topic.ideaCount ? undefined : (
                   <ButtonLink to="/new" variant="primary">
-                    Propose the first
+                    {t("topic.proposeTheFirst")}
                   </ButtonLink>
                 )
               }
             >
-              {topic.ideaCount
-                ? "Assessment-based lenses only include ideas with enough independent ratings."
-                : "An idea does not need to be feasible, proven or popular to deserve preservation."}
+              {topic.ideaCount ? t("topic.lensEmptyHelp") : t("topic.emptyHelp")}
             </EmptyState>
           )}
           {ideas.hasNextPage && (
             <div className={styles.more}>
               <Button onClick={() => void ideas.fetchNextPage()} loading={ideas.isFetchingNextPage}>
-                Show more
+                {t("explore.more")}
               </Button>
             </div>
           )}
@@ -134,26 +133,32 @@ export function TopicPage() {
         {related.length > 0 && (
           <aside className={styles.related} aria-labelledby="related-title">
             <h2 id="related-title" className={styles.relatedTitle}>
-              Often together with
+              {t("topic.oftenTogetherWith")}
             </h2>
             <ul role="list">
-              {related.map((t) => {
-                const RelatedIcon = topicIcon(t.slug);
+              {related.map((relatedTopic) => {
+                const RelatedIcon = topicIcon(relatedTopic.slug);
                 return (
-                  <li key={t.id}>
-                    <Link to="/topics/$slug" params={{ slug: t.slug }} className={styles.relatedLink}>
+                  <li key={relatedTopic.id}>
+                    <Link
+                      to="/topics/$slug"
+                      params={{ slug: relatedTopic.slug }}
+                      className={styles.relatedLink}
+                    >
                       <span className={styles.relatedIcon} aria-hidden>
                         <RelatedIcon />
                       </span>
-                      {t.name}
-                      <span className={styles.subtle}>{t.shared} shared</span>
+                      {topicNames?.get(relatedTopic.slug) ?? relatedTopic.name}
+                      <span className={styles.subtle}>
+                        {t("topic.sharedCount", { count: relatedTopic.shared })}
+                      </span>
                     </Link>
                   </li>
                 );
               })}
             </ul>
             <Link to="/topics" className={styles.allTopics}>
-              All topics <ArrowRight aria-hidden />
+              {t("explore.allTopics")} <ArrowRight aria-hidden />
             </Link>
           </aside>
         )}

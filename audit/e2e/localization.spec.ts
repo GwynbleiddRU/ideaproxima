@@ -1,6 +1,7 @@
 import { AxeBuilder } from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
-import { IDEA, settle, watchErrors } from "./helpers";
+import type { ClaimDetailDto, IdeaClaimDto, IdeaDetail } from "@ideaproxima/contracts";
+import { DEMO, IDEA, settle, signIn, watchErrors } from "./helpers";
 
 const ideaPath = `/ideas/${IDEA.slug}`;
 
@@ -68,6 +69,7 @@ test("the account picker saves its preference and an explicit URL overrides it",
   await page.unroute("**/v1/me");
   await picker.getByRole("button", { name: "Apply language" }).click();
   await expect(page.locator("html")).toHaveAttribute("lang", "hi");
+  await expect(page.getByRole("heading", { name: "Profile", exact: true })).toBeVisible();
   const me = await (await page.request.get("/v1/me")).json();
   expect(me.preferences.locale).toBe("hi");
   await page.evaluate(() => localStorage.removeItem("ip-locale"));
@@ -119,6 +121,112 @@ test("the Arabic fixture reaches discovery, the idea layout and each idea tab", 
     await page.screenshot({ path: info.outputPath(`${path}.png`), fullPage: true });
   }
   expect(errors).toEqual([]);
+});
+
+test("the Arabic fixture reaches the remaining reading and editor screens", async ({ page }, info) => {
+  const errors = watchErrors(page);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.addInitScript(() => localStorage.setItem("ip-locale", "ar"));
+  await signIn(page);
+
+  const idea: IdeaDetail = await (await page.request.get("/v1" + ideaPath)).json();
+  const claims: IdeaClaimDto[] = await (await page.request.get("/v1" + ideaPath + "/claims")).json();
+  const claimId = claims[0]!.id;
+  const claim: ClaimDetailDto = await (await page.request.get("/v1/claims/" + claimId)).json();
+  const sourceId = claim.evidence.find((item) => item.source)?.source?.id;
+  expect(sourceId).toBeTruthy();
+
+  for (const [path, name, copy] of [
+    ["/new", "editor", "دوّنها قبل أن تضيع"],
+    [ideaPath + "/edit", "edit", IDEA.title],
+    ["/topics", "topics", "الموضوعات"],
+    ["/topics/" + idea.topics[0]!.slug, "topic", "اقترح فكرة هنا"],
+    ["/search?q=unmatchedfixture", "search", "لا نتائج عن «unmatchedfixture»"],
+    ["/activity?action=idea.", "activity", IDEA.title],
+    ["/people/" + DEMO.handle, "person", "المساهمات المسجلة"],
+    ["/claims/" + claimId, "claim", "ادعاء"],
+    ["/sources/" + sourceId, "source", "مصدر"],
+    ["/about", "about", "ذاكرة جماعية لمحاولات البشرية تخيل مستقبلها"],
+    ["/missing-fixture", "not-found", "لا يوجد شيء في الأرشيف هنا."],
+  ] as const) {
+    await page.goto(path);
+    const main = page.getByRole("main");
+    const localized =
+      name === "person"
+        ? main.getByRole("region", { name: copy })
+        : main.getByText(copy, { exact: true }).first();
+    await expect(localized).toBeVisible();
+    await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
+    if (name === "editor") {
+      await expect(page.getByPlaceholder("سم الفكرة")).toBeVisible();
+      await expect(page.getByLabel("In two or three sentences")).toBeVisible();
+    }
+    if (name === "activity") {
+      const row = page.getByRole("listitem").filter({ hasText: IDEA.title });
+      await expect(row.first()).toContainText("اقترح");
+      await expect(row.first().getByRole("link", { name: IDEA.title })).toBeVisible();
+    }
+    await settle(page);
+    await page.screenshot({ path: info.outputPath(name + ".png"), fullPage: true });
+  }
+  expect(errors).toEqual([]);
+});
+
+test("the Arabic fixture renders dialogs, mutation toasts and error feedback", async ({ page }, info) => {
+  const handle = "fixture-" + Date.now().toString(36);
+  const user = await page.request.post("/v1/auth/register", {
+    data: {
+      displayName: "Fixture Reader",
+      handle,
+      email: handle + "@example.test",
+      password: "strong-demo-password",
+      locale: "ar",
+    },
+  });
+  expect(user.ok()).toBeTruthy();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/account");
+  await expect(page.getByRole("heading", { name: "حسابك" })).toBeVisible();
+  await settle(page);
+  await page.screenshot({ path: info.outputPath("account.png"), fullPage: true });
+
+  const save = page.getByRole("button", { name: "احفظ الملف الشخصي" });
+  await save.click();
+  const notice = page.getByRole("status").filter({ hasText: "حُفظ الملف الشخصي." });
+  await expect(notice).toBeVisible();
+  await page.screenshot({ path: info.outputPath("toast.png") });
+  await notice.getByRole("button", { name: "إخفاء الإشعار" }).click();
+  await expect(notice).toHaveCount(0);
+
+  const profileUrl = "**/v1/me";
+  await page.route(profileUrl, (route) =>
+    route.request().method() === "PATCH"
+      ? route.fulfill({ status: 401, json: { error: { code: "unauthenticated", message: "Sign in." } } })
+      : route.continue(),
+  );
+  await save.click();
+  await expect(page.getByRole("alert")).toHaveText("سجّل الدخول للقيام بذلك.");
+  await page.screenshot({ path: info.outputPath("error.png") });
+  await page.unroute(profileUrl);
+
+  await page.goto(ideaPath);
+  await page.getByRole("button", { name: "Evaluate", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "قيّم «" + IDEA.title + "»" });
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByRole("button", { name: "إغلاق" })).toBeVisible();
+  await settle(page);
+  await page.screenshot({ path: info.outputPath("evaluate.png") });
+
+  const ideaUrl = "**/v1" + ideaPath;
+  await page.route(ideaUrl, (route) =>
+    route.fulfill({ status: 429, json: { error: { code: "rate_limited", message: "Try again." } } }),
+  );
+  await page.reload();
+  await expect(page.getByText("طلبات كثيرة جدًا. انتظر قليلًا وحاول مرة أخرى.")).toBeVisible();
+  await page.screenshot({ path: info.outputPath("route-error.png") });
+  await page.unroute(ideaUrl);
+  await page.getByRole("button", { name: "حاول مجددًا" }).click();
+  await expect(page.getByRole("heading", { name: IDEA.title, exact: true })).toBeVisible();
 });
 
 for (const colorScheme of ["light", "dark"] as const) {

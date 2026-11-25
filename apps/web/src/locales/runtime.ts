@@ -10,6 +10,18 @@ let request = 0;
 
 export const prepareLocale = loadCatalogue;
 
+let extendedEnglishLoaded = false;
+
+/** Lazy routes wait for this shared English fallback before rendering their secondary screens. */
+export async function loadExtendedEnglish() {
+  if (extendedEnglishLoaded) return;
+  const { default: messages } = await import("virtual:web-extended-english");
+  if (!extendedEnglishLoaded) {
+    english.load(DEFAULT_LOCALE, messages);
+    extendedEnglishLoaded = true;
+  }
+}
+
 export async function activateLocale(locale: Locale) {
   const selection = ++request;
   if (webI18n.locale === locale) return true;
@@ -17,10 +29,16 @@ export async function activateLocale(locale: Locale) {
   // A slow catalogue must not overwrite a more recent selection.
   if (selection !== request) return false;
   const info = localeInfo(locale);
-  english.loadAndActivate({ locale: DEFAULT_LOCALE, messages: catalogue.english });
+  // Lingui's load merges the fallback tables. Once loaded, extended messages survive locale changes.
+  if (!english.locale) {
+    english.load(DEFAULT_LOCALE, catalogue.english);
+    english.activate(DEFAULT_LOCALE);
+  }
   current = locale;
-  document.documentElement.lang = locale;
-  document.documentElement.dir = info.direction;
+  if (typeof document !== "undefined") {
+    document.documentElement.lang = locale;
+    document.documentElement.dir = info.direction;
+  }
   webI18n.loadAndActivate({ locale, locales: [intlLocale(locale)], messages: catalogue.translated });
   return true;
 }

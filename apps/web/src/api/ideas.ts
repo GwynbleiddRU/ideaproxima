@@ -83,7 +83,7 @@ export function useProposeIdea() {
   return useApiMutation(
     (input: ProposeIdeaRequest) => http.post<IdeaDetail>("/ideas", input),
     [keys.allIdeas, keys.topics],
-    { inlineErrors: true, success: "Your idea is in the archive." },
+    { inlineErrors: true, success: "toast.ideaProposed" },
   );
 }
 
@@ -109,7 +109,7 @@ export function useWithdrawRevision(slug: string) {
   return useApiMutation(
     (revisionId: string) => http.post<RevisionDto>(`${ideaPath(slug)}/revisions/${revisionId}/withdraw`),
     [keys.idea(slug)],
-    { success: "Proposal withdrawn." },
+    { success: "toast.proposalWithdrawn" },
   );
 }
 
@@ -117,7 +117,7 @@ export function useTransitionStage(slug: string) {
   return useApiMutation(
     (input: StageTransitionRequest) => http.post<StageTransitionDto>(`${ideaPath(slug)}/stages`, input),
     [keys.idea(slug), keys.allIdeas],
-    { inlineErrors: true, success: "Stage recorded." },
+    { inlineErrors: true, success: "toast.stageRecorded" },
   );
 }
 
@@ -125,6 +125,6 @@ export function useAppointSteward(slug: string) {
   return useApiMutation(
     (input: AppointStewardRequest) => http.post<StewardDto[]>(`${ideaPath(slug)}/stewards`, input),
     [keys.idea(slug)],
-    { inlineErrors: true, success: "Steward appointed." },
+    { inlineErrors: true, success: "toast.stewardAppointed" },
   );
 }

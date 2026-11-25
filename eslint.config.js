@@ -3,8 +3,10 @@ import reactHooks from "eslint-plugin-react-hooks";
 import tseslint from "typescript-eslint";
 
 const readableAttribute =
-  "JSXAttribute[name.name=/^(aria-label|aria-description|title|label|placeholder|hint|description|legend|closeLabel|eyebrow|lede|alt|confirmLabel)$/]";
-const literalLabel = "Literal[value=/\\S/]:not([value='https://'])";
+  "JSXAttribute[name.name=/^(aria-label|aria-description|title|label|placeholder|hint|description|legend|closeLabel|eyebrow|lede|alt|confirmLabel|submitLabel|cancelLabel|subject)$/]";
+const literalLabel = "Literal[value=/\\p{L}/u]";
+const renderedExpression = "JSXExpressionContainer:not(JSXAttribute > JSXExpressionContainer)";
+const literalTemplate = "TemplateElement[value.raw=/\\p{L}/u]";
 
 export default tseslint.config(
   {
@@ -38,27 +40,36 @@ export default tseslint.config(
     },
   },
   {
-    files: [
-      "apps/web/src/app/Shell.tsx",
-      "apps/web/src/pages/auth/**/*.tsx",
-      "apps/web/src/pages/home/**/*.tsx",
-      "apps/web/src/pages/explore/**/*.tsx",
-      "apps/web/src/pages/idea/{IdeaLayout,*Tab}.tsx",
-      "apps/web/src/components/{IdeaCard,Markdown,Stage,Ratings,RelationGraph}.tsx",
-      "apps/web/src/components/knowledge/{Arguments,ClaimCard,EvidenceItem}.tsx",
-      "apps/web/src/ui/Meter.tsx",
-      "apps/web/src/components/LanguageSwitcher.tsx",
-    ],
+    files: ["apps/web/src/**/*.{ts,tsx}"],
     rules: {
       "no-restricted-syntax": [
         "error",
-        { selector: "JSXText[value=/\\S/]", message: "Put visible copy in the English interface catalogue." },
+        {
+          selector: [
+            "JSXText[value=/\\p{L}/u]",
+            renderedExpression + " > " + literalLabel,
+            renderedExpression +
+              " > ConditionalExpression > :matches(" +
+              literalLabel +
+              ".consequent, " +
+              literalLabel +
+              ".alternate)",
+            renderedExpression + " > LogicalExpression > " + literalLabel + ".right",
+            renderedExpression + " > TemplateLiteral > " + literalTemplate,
+            renderedExpression +
+              " > ConditionalExpression > :matches(TemplateLiteral.consequent, TemplateLiteral.alternate) > " +
+              literalTemplate,
+            renderedExpression + " > LogicalExpression > TemplateLiteral.right > " + literalTemplate,
+          ].join(", "),
+          message: "Put visible copy in the English interface catalogue.",
+        },
         {
           selector: [
             `${readableAttribute} > ${literalLabel}`,
             `${readableAttribute} > JSXExpressionContainer > ${literalLabel}`,
-            `${readableAttribute} > JSXExpressionContainer > ConditionalExpression > :matches(Literal.consequent[value=/\\S/], Literal.alternate[value=/\\S/])`,
-            `${readableAttribute} > JSXExpressionContainer > TemplateLiteral > TemplateElement[value.raw=/\\p{L}/u]`,
+            `${readableAttribute} > JSXExpressionContainer > ConditionalExpression > :matches(${literalLabel}.consequent, ${literalLabel}.alternate)`,
+            `${readableAttribute} > JSXExpressionContainer > TemplateLiteral > ${literalTemplate}`,
+            `${readableAttribute} > JSXExpressionContainer > ConditionalExpression > :matches(TemplateLiteral.consequent, TemplateLiteral.alternate) > ${literalTemplate}`,
           ].join(", "),
           message: "Put visible and accessible labels in the English interface catalogue.",
         },
