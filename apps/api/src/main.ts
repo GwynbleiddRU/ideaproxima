@@ -1,5 +1,7 @@
 import "./load-env";
 import { serve } from "@hono/node-server";
+import { uniformWeights } from "@ideaproxima/domain";
+import { startWorker } from "./modules/jobs/runner";
 import { version } from "../package.json";
 import { createApp } from "./app";
 import { loadConfig } from "./config";
@@ -54,6 +56,7 @@ try {
             },
             db: { ...config.db, url: "[redacted]" },
             rateLimits: config.rateLimits,
+            jobs: config.jobs,
             passwordHash: config.passwordHash,
             log: { ...config.log, sentryDsn: sentry ? "[redacted]" : undefined },
           },
@@ -63,8 +66,13 @@ try {
     },
   );
   const servers = [server];
-  if (config.http.internalPort !== undefined) servers.push(startMetricsServer(config.http.internalPort));
-  lifecycle.watch(servers, database);
+  if (config.http.internalPort !== undefined)
+    servers.push(startMetricsServer(config.http.internalPort, database.db));
+  const worker =
+    config.jobs.mode === "inline"
+      ? await startWorker({ db: database.db, actor: null, weights: uniformWeights }, config.jobs, logger)
+      : undefined;
+  lifecycle.watch(servers, database, worker);
 } catch (error) {
   lifecycle.exitFatally(error, "startup");
 }

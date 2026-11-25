@@ -171,6 +171,8 @@ After a write, `refreshIdeaMetrics` recomputes the affected ideas' metrics insid
 never see stale or half-updated derived data. It costs O(evaluations of the idea) per write, which is fine at
 current scale. See scaling notes for the path to asynchronous recomputation.
 
+ADR-23 supplies the queue for the asynchronous mode planned in step 5. Signal writes still use the synchronous path.
+
 ### ADR-16 Concurrency: advisory locks per logical key
 
 Discovered by running the suite on real PostgreSQL (PGlite serialises everything and hid it): concurrent writes
@@ -275,6 +277,19 @@ serialisation failure once after rollback, while savepoints leave the retry to t
 The error reporter logs unexpected HTTP errors and fatal process errors using safe fields. An explicitly configured
 Sentry destination can receive those fields through a bounded transport loaded at startup.
 
+### ADR-23 Transactional background jobs
+
+A service enqueues through its transaction's database handle. A rollback discards the job with its fact.
+PostgreSQL and PGlite share the implementation. An atomic `FOR UPDATE SKIP LOCKED` claim gives a worker
+a 60-second lease. Settlement and extension require the same worker, attempt and a live lease. Handlers
+must tolerate redelivery after a crash between their side effect and completion.
+
+A partial unique index coalesces pending work per kind and key. A running job can have a pending successor.
+Enqueue, retry and recovery serialize entry into that index per key. An expired or unsuccessful attempt
+can retire in favour of pending work. A schedule advances its database slot and enqueues in one transaction.
+The API runs the poller inline by default. A dedicated worker uses the same registry and queue functions.
+These tables hold disposable operational state. The domain fact and its history survive job retention.
+
 ## How to extend safely
 
 - **New vocabulary value** (stage, relation type, stance kind, …): add it in `packages/domain/src/vocabulary/*`,
@@ -286,7 +301,7 @@ Sentry destination can receive those fields through a bounded transport loaded a
   projection → `recordActivity` → `refreshIdeaMetrics` if signals change), then a thin route. Add an integration
   test in `apps/api/test`, run `npm run docs:api`. Full recipe: `docs/developer/developer-guide.md`.
 - **New table:** add it under `src/db/schema/`, export it from `index.ts`, `npm run db:generate`, and decide its
-  tier (fact / projection / derived). If it is a fact, add it to the history guards in a new custom migration.
+  category (fact / projection / derived / operational). If it is a fact, add it to the history guards in a new custom migration.
 - **New derived metric or lens:** compute it in `modules/metrics/service.ts` (new metric key, same algorithm label,
   or a new algorithm label), and add a lens plan in `modules/ideas/queries.ts` plus `LENS_INFO` in the domain.
   Every lens must state honestly what it measures.

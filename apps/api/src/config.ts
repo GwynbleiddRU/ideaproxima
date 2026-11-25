@@ -63,6 +63,29 @@ const envSettings = z.object({
   DB_LOCK_TIMEOUT_MS: integer(0, 2_147_483_647).default(3_000),
   DB_IDLE_IN_TX_TIMEOUT_MS: integer(0, 2_147_483_647).default(10_000),
   DB_CONNECT_TIMEOUT_MS: integer(1, 2_147_483_647).default(5_000),
+  JOBS_MODE: z.enum(["inline", "worker", "off"]).default("inline"),
+  JOBS_CONCURRENCY: integer(1, 1024).default(4),
+  JOBS_QUEUES: z
+    .string()
+    .default("default")
+    .transform((value, ctx) => {
+      const seen = new Set<string>();
+      const queues = [];
+      for (const item of value.split(",")) {
+        const match = /^([a-z][a-z0-9_.-]*)(?:=([1-9]\d*))?$/.exec(item.trim());
+        if (!match || seen.has(match[1]!) || (match[2] && !Number.isSafeInteger(Number(match[2])))) {
+          ctx.addIssue({
+            code: "custom",
+            message: "expected distinct queue names with optional positive caps, e.g. default,moderation=2",
+          });
+          return z.NEVER;
+        }
+        seen.add(match[1]!);
+        queues.push({ name: match[1]!, cap: match[2] ? Number(match[2]) : undefined });
+      }
+      return queues;
+    }),
+  JOBS_STATEMENT_TIMEOUT_MS: integer(0, 2_147_483_647).default(60_000),
   PORT: integer(0, 65_535).default(3000),
   INTERNAL_PORT: integer(1, 65_535).optional(),
   SHUTDOWN_DELAY_MS: integer(0, 2_147_483_647).default(5_000),
@@ -210,7 +233,12 @@ export function loadConfig(
       format: values.LOG_FORMAT ?? (production ? "json" : "pretty"),
       sentryDsn: values.SENTRY_DSN,
     },
-    jobs: {},
+    jobs: {
+      mode: values.JOBS_MODE,
+      concurrency: values.JOBS_CONCURRENCY,
+      queues: values.JOBS_QUEUES,
+      statementTimeoutMs: values.JOBS_STATEMENT_TIMEOUT_MS,
+    },
     mail: {},
     i18n: {},
     moderation: {},

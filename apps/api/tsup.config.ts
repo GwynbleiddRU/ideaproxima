@@ -6,6 +6,8 @@ import { defineConfig } from "tsup";
 export default defineConfig({
   entry: {
     main: "src/main.ts",
+    worker: "src/worker.ts",
+    jobs: "scripts/jobs.ts",
     migrate: "scripts/migrate.ts",
     seed: "scripts/seed.ts",
     "set-role": "scripts/set-role.ts",

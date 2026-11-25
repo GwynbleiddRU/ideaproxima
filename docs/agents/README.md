@@ -63,7 +63,7 @@ is a product decision, not a refactor. Discuss it, then update the docs.
 6. **Lifecycle stages need proof.** The stage changes only through a recorded transition with a rationale. `tested`,
    `implemented` and `learned_from` require initiatives and outcomes on record (`assertStageTransition`).
 7. **Every write goes through a service that records an activity in the same transaction.** The ledger is how
-   history, contribution and moderation stay visible.
+   history, contribution and moderation stay visible. Enqueue work that follows a domain write in that same transaction.
 8. **One vocabulary.** Stages, dimensions, stance kinds, relation types etc. live in `packages/domain`. Database CHECK
    constraints are generated from the same constants. Do not duplicate vocabularies in the frontend; read them
    from `/v1/vocabulary` or import `@ideaproxima/domain`.

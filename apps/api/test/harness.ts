@@ -83,6 +83,7 @@ export async function createHarness(overrides: NodeJS.ProcessEnv = {}): Promise<
     db: database.db,
     config: loadConfig({
       NODE_ENV: "test",
+      JOBS_MODE: "off",
       SESSION_TTL_DAYS: "1",
       // The suite makes many requests from one "address"; rate limits get their own test.
       RATE_LIMIT_REQUESTS_PER_MINUTE: "0",

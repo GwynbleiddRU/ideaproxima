@@ -3,7 +3,7 @@
 Part of the [production-readiness program](README.md). Prompt for the implementing agent:
 `prompts/api/02-background-jobs-prompt.md`.
 
-| Status     | Not started                                                                                                                  |
+| Status     | Phase A done 2026-11-25. Phase B is next (step 5).                                                                           |
 | ---------- | ---------------------------------------------------------------------------------------------------------------------------- |
 | Depends on | [01](01-operational-foundations.md) (metrics, configuration, graceful shutdown)                                              |
 | Unblocks   | [04](04-accounts-and-trust.md) (e-mail), [07](07-moderation-core.md), [08](08-ai-moderation.md), [11](11-semantic-search.md) |
@@ -213,3 +213,48 @@ transaction").
   and must not be dropped there.
 - **Handlers that are not idempotent.** Review each new handler for this; add a test that runs it twice.
 - **`inline` mode hides worker-only bugs.** CI's Docker stack job runs with a separate `worker` service.
+
+## Implementation notes
+
+### Step 4 · Phase A · 2026-11-25
+
+Steps 1–3 were marked done and present on clean local `main` at `57d4f66`. The baseline `npm run check`
+passed with 168 tests, one PostgreSQL-only skip and all 66 endpoints covered. The checkout had the metric
+registry, validated configuration and shutdown lifecycle from plan 01. Signal writes still compute metrics
+under the idea lock. Production handlers, recurring maintenance and the Compose worker belong to step 5.
+
+| Check                                    | Result                                                                                                                                                                                                                                                               |
+| ---------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `npm run check`                          | Typecheck, lint, formatting, doc links, PGlite suite and production build passed. 177 tests passed, three PostgreSQL-only tests skipped, all 66 endpoints covered. Both `dist/worker.js` and `dist/jobs.js` built.                                                   |
+| `npm run test:pg`                        | PostgreSQL 17.12, 180 tests passed, all 66 endpoints covered.                                                                                                                                                                                                        |
+| Four concurrent workers, 500 due jobs    | 500 distinct IDs executed, 500 rows done, one attempt per row. A separate open-transaction test held one claim while a second worker claimed the next row.                                                                                                           |
+| Lease expiry and reclamation             | Two reclaimers produced one transition. The old attempt could neither settle, extend nor release the reclaimed job, even with the same worker ID. Expiring the final attempt dead-lettered the row. A pending successor survived reclamation of a coalesced refresh. |
+| Two workers, one overdue schedule slot   | One slot advance and one enqueue. Rolling back the winner restored the due slot and removed its job. Missed slots preserved the original cadence.                                                                                                                    |
+| `npx drizzle-kit generate` in `apps/api` | No schema changes after generating `0002_background_jobs.sql` and its snapshot.                                                                                                                                                                                      |
+
+The implementation lives in `apps/api/src/modules/jobs/`, `src/db/schema/jobs.ts`, the migration, the API and worker
+entry points, configuration, private metrics and process lifecycle. `scripts/jobs.ts` provides the bundled operator
+command. `test/jobs.test.ts` exercises both drivers. The harness selects `off`. After-commit observations in
+`modules/shared/context.ts` discard counters on rollback, including rolled-back savepoints and transaction retries.
+
+| Queue operation                                                                                                                                                          | Return value                                                                                                                  |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------- |
+| `enqueue(ctx: Ctx, job: NewJob)`                                                                                                                                         | `Promise<string \| null>` containing the new UUID or `null` for coalesced work.                                               |
+| `claimJobs(ctx: Ctx, worker: string, queues: readonly string[], limit: number)`                                                                                          | `Promise<Claim[]>`. Each claim carries the worker and attempt used for fencing.                                               |
+| `completeJob(ctx: Ctx, claim: Claim)`, `failJob(ctx: Ctx, claim: Claim, message: string)`, `extendLease(ctx: Ctx, claim: Claim)`, `releaseLease(ctx: Ctx, claim: Claim)` | `Promise<boolean>`. A false result means the claim lost ownership.                                                            |
+| `reclaimExpired(ctx: Ctx, limit = 32)`                                                                                                                                   | `Promise<number>` counting recovered, superseded and dead-lettered attempts.                                                  |
+| `initializeSchedules(ctx: Ctx, entries: readonly Schedule[])`, `runSchedule(ctx: Ctx, entry: Schedule)`                                                                  | Initialization returns `Promise<void>`. Running a slot returns `Promise<boolean>` indicating whether this worker enqueued it. |
+| `drainJobs(ctx: Ctx, registry = jobRegistry, queues = ["default"])`                                                                                                      | `Promise<number>` counting due attempts run in priority order.                                                                |
+
+In a disposable PostgreSQL database the bundled worker claimed an unregistered fixture kind, recorded its
+final failure and exited 0 through the SIGTERM handler (invoked via IPC on Windows). The bundled operator
+listed the dead letter, retried its ID, listed it as pending and purged zero ineligible rows.
+
+The operator grants one additional attempt on manual retry. Attempt numbers remain monotonic so a former
+claim cannot regain ownership. The private scrape reads queue gauges from the shared database. See the
+[operator commands and worker settings](../../developer/operations.md#background-jobs) and the
+[handler recipe](../../developer/developer-guide.md#add-a-job).
+
+**Next eligible row is step 5, plan 02 phase B**, using `prompts/api/02-background-jobs-prompt.md`.
+There is no owner decision outstanding for phase A. Take the same-workload refresh baseline before editing
+the metric writer, then record the upsert comparison and asynchronous staleness in phase B.

@@ -8,7 +8,22 @@ describe("runtime configuration", () => {
     expect(defaults.http).toMatchObject({ port: 3000, internalPort: undefined, cookieSecure: false });
     expect(defaults.db.url).toBe("pglite:./.data/pglite");
     expect(defaults.log).toEqual({ requests: true, level: "info", format: "pretty" });
-    expect(defaults).toMatchObject({ jobs: {}, mail: {}, i18n: {}, moderation: {} });
+    expect(defaults).toMatchObject({
+      jobs: {
+        mode: "inline",
+        concurrency: 4,
+        queues: [{ name: "default", cap: undefined }],
+        statementTimeoutMs: 60000,
+      },
+      mail: {},
+      i18n: {},
+      moderation: {},
+    });
+    expect(loadConfig({ JOBS_MODE: "worker", JOBS_QUEUES: "default,moderation=2" }).jobs.queues[1]).toEqual({
+      name: "moderation",
+      cap: 2,
+    });
+    expect(() => loadConfig({ JOBS_QUEUES: "default,default=2" })).toThrow(/JOBS_QUEUES/);
 
     const config = loadConfig({
       NODE_ENV: "test",

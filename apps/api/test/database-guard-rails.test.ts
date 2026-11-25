@@ -4,7 +4,7 @@ import { uniformWeights } from "@ideaproxima/domain";
 import { createApp } from "../src/app";
 import { loadConfig } from "../src/config";
 import { queryRows } from "../src/db/client";
-import { inTransaction } from "../src/modules/shared/context";
+import { afterCommit, inTransaction } from "../src/modules/shared/context";
 import { dbErrors } from "../src/observability/metrics";
 import { openTestDatabase } from "./database";
 
@@ -21,15 +21,19 @@ it.each([
     const { db } = database.handle;
     await db.execute(sql`create table retry_fixture (id integer primary key)`);
     const attempts: string[] = [];
+    const committed: string[] = [];
     await inTransaction({ db, actor: null, weights: uniformWeights }, async (tx) => {
       attempts.push("outer");
+      afterCommit(tx, () => committed.push("outer"));
       await tx.db.execute(sql`insert into retry_fixture (id) values (1)`);
       await inTransaction(tx, async (nested) => {
         attempts.push("nested");
+        afterCommit(nested, () => committed.push("nested"));
         if (attempts.length === 2) await nested.db.execute(failure);
       });
     });
     expect(attempts).toEqual(["outer", "nested", "outer", "nested"]);
+    expect(committed).toEqual(["outer", "nested"]);
     expect(await queryRows(db, sql`select retry_fixture.id from retry_fixture`)).toEqual([{ id: 1 }]);
   } finally {
     await database.dispose();

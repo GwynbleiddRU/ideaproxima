@@ -10,7 +10,8 @@ evidence, challenge and evaluate them while the platform keeps the full history.
 [`concept.txt`](concept.txt) is the product concept and the highest authority. When a document or the code
 disagrees with it, the concept wins.
 
-One deployable process and one PostgreSQL database, in an npm-workspaces monorepo:
+One deployable image and one PostgreSQL database, in an npm-workspaces monorepo. The API runs background jobs
+inline by default or delegates them to a dedicated worker process.
 
 ```text
 packages/domain      pure TypeScript: vocabulary, invariants, permission policy. No I/O

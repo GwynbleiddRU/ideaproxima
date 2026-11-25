@@ -15,21 +15,33 @@ export interface Ctx {
   actor: Actor | null;
   /** Evaluator weighting used by derived metrics. Baseline: uniform. The scoring system plugs in here. */
   weights: WeightPolicy;
-  [inTransactionScope]?: true;
+  [inTransactionScope]?: (() => void)[];
+}
+
+/** Publish process-local observations only after the outer transaction commits. */
+export function afterCommit(ctx: Ctx, observe: () => void) {
+  if (ctx[inTransactionScope]) ctx[inTransactionScope].push(observe);
+  else observe();
 }
 
 /** Replays the whole transaction once on a retryable SQLSTATE. Nested calls use savepoints. */
 export async function inTransaction<T>(ctx: Ctx, fn: (tx: Ctx) => Promise<T>): Promise<T> {
+  const observations: (() => void)[] = [];
   const attempt = () =>
-    ctx.db.transaction((tx) => fn({ ...ctx, db: tx as unknown as Database, [inTransactionScope]: true }));
-  if (ctx[inTransactionScope]) return attempt();
+    ctx.db.transaction((tx) =>
+      fn({ ...ctx, db: tx as unknown as Database, [inTransactionScope]: observations }),
+    );
+  let result: T;
   try {
-    return await attempt();
+    result = await attempt();
   } catch (error) {
-    if (!isRetryableTransactionError(sqlState(error))) throw error;
+    if (ctx[inTransactionScope] || !isRetryableTransactionError(sqlState(error))) throw error;
+    observations.length = 0;
+    await delay(randomInt(20, 51));
+    result = await attempt();
   }
-  await delay(randomInt(20, 51));
-  return attempt();
+  for (const observe of observations) afterCommit(ctx, observe);
+  return result;
 }
 
 export const isModerator = (ctx: Ctx): boolean =>

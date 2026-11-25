@@ -70,6 +70,34 @@ Invalid settings stop startup with one error listing the affected variables. Boo
 | `LOG_FORMAT`                     | `json` in production, else `pretty`             | Log format on stdout. Pretty formatting requires the development dependency; production-only installations emit JSON.                                                            |
 | `SENTRY_DSN`                     | unset                                           | Optional HTTP(S) DSN for forwarding redacted unexpected errors and fatal process events.                                                                                         |
 | `WEB_ROOT`                       | `apps/web/dist`, when it has been built         | Directory of the built web app to serve at `/`. `off` serves the API only (`GET /` then redirects to the `/v1` index).                                                           |
+| `JOBS_MODE`                      | `inline`                                        | Execute jobs in the API (`inline`), a dedicated process (`worker`), or only through explicit drains (`off`).                                                                     |
+| `JOBS_CONCURRENCY`               | `4`                                             | Maximum active handlers per worker process.                                                                                                                                      |
+| `JOBS_QUEUES`                    | `default`                                       | Comma-separated queue names with optional per-process caps, e.g. `default,moderation=2`.                                                                                         |
+| `JOBS_STATEMENT_TIMEOUT_MS`      | `60000`                                         | Dedicated worker and queue operator statement deadline. Inline handlers share the API database settings.                                                                         |
+
+## Background jobs
+
+For dedicated execution, apply the release migrations first. Set `JOBS_MODE=worker` on both processes,
+point them at the same PostgreSQL database, and start `node apps/api/dist/worker.js` alongside the API.
+Give each process its own private metrics port when sharing a network namespace. On termination the worker
+stops polling and drains its handlers. At the deadline it releases unfinished leases for reclamation.
+A crashed worker's leases expire after 60 seconds.
+
+Run the operator command against the same database. Listing shows the 100 newest matching IDs.
+A manual retry grants one additional attempt. Pending work with the same key covers the retry.
+
+```sh
+node apps/api/dist/jobs.js list --state failed
+node apps/api/dist/jobs.js retry <id>
+node apps/api/dist/jobs.js retry --kind <kind>
+node apps/api/dist/jobs.js purge
+```
+
+Purge removes completed jobs older than seven days and failed jobs older than 30 days, in batches of 500.
+The private listener exports `jobs_enqueued_total{kind}`, `jobs_finished_total{kind,outcome}` and
+`job_duration_seconds{kind}` per process. Each scrape also reads `jobs_pending`, `jobs_failed` and
+`jobs_oldest_pending_seconds` by queue from the shared database. Use one instance or the maximum across
+instances for these gauges. Oldest pending age starts when the job becomes due.
 
 ## Deploying with Docker
 

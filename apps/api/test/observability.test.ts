@@ -157,7 +157,7 @@ it("logs static assets at debug with byte counts and honours HEAD", async () => 
 it("serves metrics only on the internal listener and bounds public labels", async () => {
   const { app } = loggedApp({ RATE_LIMIT_REQUESTS_PER_MINUTE: "1" });
   const publicServer = serve({ fetch: app.fetch, hostname: "127.0.0.1", port: 0 });
-  const privateServer = startMetricsServer(0);
+  const privateServer = startMetricsServer(0, h.db);
   try {
     await Promise.all([once(publicServer, "listening"), once(privateServer, "listening")]);
     function url(server: typeof publicServer) {

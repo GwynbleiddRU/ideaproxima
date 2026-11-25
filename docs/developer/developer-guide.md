@@ -132,13 +132,14 @@ function. The service then, in order:
 
 `DomainError` codes are mapped to HTTP statuses in one place (`src/http/errors.ts`).
 
-**Three tiers of data:**
+**Data categories**
 
 | Tier        | Examples                                                                                    | Rule                                                                                                                 |
 | ----------- | ------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
 | Facts       | revisions, evaluations, stances, evidence, stage transitions, outcomes, the activity ledger | Append-only. Postgres triggers reject UPDATE/DELETE except supersession, withdrawal and moderation markers.          |
 | Projections | `ideas.title/summary/stage/…`, `idea_topics`                                                | Current state for querying, rewritten only by the service that appends the underlying fact, in the same transaction. |
 | Derived     | `idea_metrics`                                                                              | Written only by `modules/metrics`, labelled with an algorithm, disposable (`npm run metrics:rebuild`).               |
+| Operational | sessions, jobs, schedule slots                                                              | Mutable service state. Keep durable domain history in facts and the ledger.                                          |
 
 **Concurrency.** Writes that check before they insert (idempotent stances, ratings and involvements; "find or
 create" sources; slugs) and metric refreshes take **transaction-scoped advisory locks** per logical key
@@ -306,6 +307,20 @@ so replaying a callback only repeats work that PostgreSQL rolled back.
 | `npm run build` / `npm start`                           | Build `apps/web/dist` + `apps/api/dist` / run them: one process on :3000            |
 
 ## Common changes, step by step
+
+### Add a job
+
+1. Define the payload schema with zod and the handler in the module that owns the work. Register it once
+   with `jobRegistry.register(kind, schema, handler)` during startup for both the inline and dedicated worker.
+   The handler receives `(ctx, parsedPayload, claim)`. Use fixed kind and queue names for metric labels.
+2. Call `await enqueue(tx, { kind, payload, dedupeKey })` inside the fact's existing transaction.
+   Supply a dedupe key when one pending execution can cover every write for that key. The return value is
+   the inserted UUID or `null` when coalesced. Set `queue`, `priority`, `runAt` or `maxAttempts` as needed.
+3. Make the effect idempotent across retries. For work lasting over 60 seconds, call
+   `await extendLease(ctx, claim)` before expiry and stop if ownership is lost. For a recurring kind,
+   add a schedule with a unique name and a positive interval in milliseconds to `modules/jobs/schedules.ts`.
+4. Test the write rolling back, run the handler twice against the same effect, and call `await drainJobs(ctx)`
+   before asserting results. Named queues can be passed as the third argument. Use PostgreSQL to prove races.
 
 ### Add an endpoint
 
