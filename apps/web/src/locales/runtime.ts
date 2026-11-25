@@ -9,6 +9,7 @@ let current: Locale = DEFAULT_LOCALE;
 let request = 0;
 
 export const prepareLocale = loadCatalogue;
+type LocaleCatalogue = Awaited<ReturnType<typeof prepareLocale>>;
 
 let extendedEnglishLoaded = false;
 
@@ -24,10 +25,18 @@ export async function loadExtendedEnglish() {
 
 export async function activateLocale(locale: Locale) {
   const selection = ++request;
-  if (webI18n.locale === locale) return true;
+  if (webI18n.locale === locale) return;
   const catalogue = await loadCatalogue(locale);
   // A slow catalogue must not overwrite a more recent selection.
-  if (selection !== request) return false;
+  if (selection === request) setActiveLocale(locale, catalogue);
+}
+
+export function activatePreparedLocale(locale: Locale, catalogue: LocaleCatalogue) {
+  ++request;
+  if (webI18n.locale !== locale) setActiveLocale(locale, catalogue);
+}
+
+function setActiveLocale(locale: Locale, catalogue: LocaleCatalogue) {
   const info = localeInfo(locale);
   // Lingui's load merges the fallback tables. Once loaded, extended messages survive locale changes.
   if (!english.locale) {
@@ -40,7 +49,6 @@ export async function activateLocale(locale: Locale) {
     document.documentElement.dir = info.direction;
   }
   webI18n.loadAndActivate({ locale, locales: [intlLocale(locale)], messages: catalogue.translated });
-  return true;
 }
 
 export const activeLocale = () => current;

@@ -39,15 +39,19 @@ export function useSession() {
 
 export function useSaveLocale() {
   const queryClient = useQueryClient();
-  return useMutation({
+  const { mutateAsync } = useMutation({
     mutationFn: (locale: Locale) => http.patch<PersonDto>("/me", { locale }),
     meta: { inlineErrors: true },
-    onSuccess: (person, locale) => {
-      queryClient.setQueryData<MeResponse | null>(keys.me, (session) =>
-        session?.person.id === person.id ? { ...session, preferences: { locale } } : session,
-      );
-    },
   });
+
+  return async (locale: Locale, applySelection: () => void) => {
+    const person = await mutateAsync(locale);
+    // Update the browser's higher-priority preferences before session subscribers resolve the locale again.
+    applySelection();
+    queryClient.setQueryData<MeResponse | null>(keys.me, (session) =>
+      session?.person.id === person.id ? { ...session, preferences: { locale } } : session,
+    );
+  };
 }
 
 /** Signing in or out changes viewer-specific data everywhere (stances, permissions): refetch it all. */

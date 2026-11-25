@@ -68,15 +68,24 @@ test("the account picker saves its preference and an explicit URL overrides it",
   await expect(page.locator("html")).toHaveAttribute("lang", "ru");
   await page.unroute("**/v1/me");
   await picker.getByRole("button", { name: "Apply language" }).click();
+  await expect(picker).toHaveCount(0);
   await expect(page.locator("html")).toHaveAttribute("lang", "hi");
   await expect(page.getByRole("heading", { name: "Profile", exact: true })).toBeVisible();
   const me = await (await page.request.get("/v1/me")).json();
   expect(me.preferences.locale).toBe("hi");
-  await page.evaluate(() => localStorage.removeItem("ip-locale"));
   await page.goto("/account?hl=ja");
   await expect(page.locator("html")).toHaveAttribute("lang", "ja");
+  await page.getByRole("button", { name: "表示言語" }).last().click();
+  await picker.getByRole("radio", { name: /العربية/ }).check();
+  await picker.getByRole("button", { name: "Apply language" }).click();
+  await expect(picker).toHaveCount(0);
+  await expect(page).toHaveURL(/\/account\?hl=ar$/);
+  await expect(page.locator("html")).toHaveAttribute("lang", "ar");
+  await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
+  expect(await page.evaluate(() => localStorage.getItem("ip-locale"))).toBe("ar");
+  await page.evaluate(() => localStorage.removeItem("ip-locale"));
   await page.goto("/account");
-  await expect(page.locator("html")).toHaveAttribute("lang", "hi");
+  await expect(page.locator("html")).toHaveAttribute("lang", "ar");
 });
 
 test("the Arabic fixture reaches discovery, the idea layout and each idea tab", async ({ page }, info) => {

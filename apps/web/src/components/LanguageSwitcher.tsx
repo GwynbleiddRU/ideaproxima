@@ -5,7 +5,7 @@ import { useId, useState } from "react";
 import { useSaveLocale, useSession } from "@/api/session";
 import { writeLocalePreference } from "@/locales/preferences";
 import { useMessage } from "@/locales/react";
-import { activateLocale, activeLocale, prepareLocale } from "@/locales/runtime";
+import { activatePreparedLocale, activeLocale, prepareLocale } from "@/locales/runtime";
 import { Button } from "@/ui/Button";
 import { Dialog } from "@/ui/Dialog";
 import styles from "./LanguageSwitcher.module.scss";
@@ -13,7 +13,7 @@ import styles from "./LanguageSwitcher.module.scss";
 export function LanguageSwitcher({ settings = false }: { settings?: boolean }) {
   const t = useMessage();
   const { me } = useSession();
-  const save = useSaveLocale();
+  const saveLocale = useSaveLocale();
   const router = useRouter();
   const group = useId();
   const current = localeInfo(activeLocale());
@@ -26,17 +26,19 @@ export function LanguageSwitcher({ settings = false }: { settings?: boolean }) {
     setPending(true);
     setFailed(false);
     try {
-      await prepareLocale(selected);
-      if (me) await save.mutateAsync(selected);
-      if (await activateLocale(selected)) {
+      const catalogue = await prepareLocale(selected);
+      const applySelection = () => {
         writeLocalePreference(selected);
         const url = new URL(window.location.href);
         if (url.searchParams.has("hl")) {
           url.searchParams.set("hl", selected);
           router.history.replace(url.pathname + url.search + url.hash, router.history.location.state);
         }
-        setOpen(false);
-      }
+        activatePreparedLocale(selected, catalogue);
+      };
+      if (me) await saveLocale(selected, applySelection);
+      else applySelection();
+      setOpen(false);
     } catch {
       setFailed(true);
     } finally {
