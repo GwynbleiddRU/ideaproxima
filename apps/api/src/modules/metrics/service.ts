@@ -3,8 +3,7 @@
  *
  * Reads raw facts (evaluations, stances, revisions, knowledge counts), runs the provisional baseline algorithm
  * from @ideaproxima/domain with the configured WeightPolicy, and materialises the results in `idea_metrics`.
- * `refreshIdeaMetrics` is called synchronously after every write that affects an idea's signals; at larger scale
- * it can move to a queue without changing any caller (see docs/agents/architecture.md, "Scaling notes").
+ * Signal writers either compute immediately or enqueue a refresh in the transaction that recorded the fact.
  */
 import { and, eq, inArray, isNull, sql } from "drizzle-orm";
 import type { IdeaSignals } from "@ideaproxima/contracts";
@@ -25,6 +24,7 @@ import {
 import { queryRows, type Database } from "../../db/client";
 import { evaluations, ideaMetrics, ideaRevisions, ideas, ideaTopics, stances } from "../../db/schema";
 import { KNOWLEDGE_ACTIONS } from "../shared/activity";
+import { enqueue } from "../jobs/queue";
 import { inTransaction, type Ctx } from "../shared/context";
 import { lockKeys } from "../shared/locks";
 
@@ -111,23 +111,30 @@ export async function usefulCounts(db: Database, targetIds: readonly string[]): 
   return new Map(rows.filter((r) => r.targetId).map((r) => [r.targetId!, r.n]));
 }
 
-/** Recomputes and materialises every derived metric of the given ideas. Idempotent. */
+/** Called from the originating write. Acquire coalescing or computation locks in stable order. */
 export async function refreshIdeaMetrics(ctx: Ctx, ideaIds: readonly string[]): Promise<void> {
   const ids = [...new Set(ideaIds)].sort();
   if (!ids.length) return;
-  // Serialise refreshes per idea. A refresh then reads every fact committed by concurrent writers that refreshed
-  // before it (READ COMMITTED takes a new snapshot per statement), so the last refresh always sees everything,
-  // and two refreshes can never interleave their delete/insert of the same rows.
-  await inTransaction(ctx, async (tx) => {
+  if (ctx.metricsRefreshMode === "async") {
+    for (const ideaId of ids)
+      await enqueue(ctx, { kind: "metrics.refresh", payload: { ideaId }, dedupeKey: ideaId });
+    return;
+  }
+  await recomputeIdeaMetrics(ctx, ids);
+}
+
+/** Shared by synchronous writers, jobs and the operator rebuild. Returns the number of repaired rows. */
+export function recomputeIdeaMetrics(ctx: Ctx, ids: string[]): Promise<number> {
+  return inTransaction(ctx, async (tx) => {
     await lockKeys(
       tx,
       ids.map((id) => `metrics:${id}`),
     );
-    await computeAndStoreMetrics(tx, ids);
+    return computeAndStoreMetrics(tx, ids);
   });
 }
 
-async function computeAndStoreMetrics(ctx: Ctx, ids: string[]): Promise<void> {
+async function computeAndStoreMetrics(ctx: Ctx, ids: string[]): Promise<number> {
   const db = ctx.db;
 
   const [topicRows, evalRows, stanceRows, revisionRows, countRows] = await Promise.all([
@@ -245,15 +252,42 @@ async function computeAndStoreMetrics(ctx: Ctx, ids: string[]): Promise<void> {
     for (const key of COUNT_KEYS) push(`count.${key}`, c?.[key] ?? 0);
   }
 
-  await db.delete(ideaMetrics).where(inArray(ideaMetrics.ideaId, ids));
-  if (rows.length) await db.insert(ideaMetrics).values(rows);
+  // Share one desired key set between the upsert and the prune. JSON keeps large rebuild batches
+  // within the driver's bind-parameter limit. The two writes target disjoint keys.
+  const [result] = await queryRows<{ changed: number }>(
+    db,
+    sql`
+    with desired as (
+      select r."ideaId" as idea_id, r.metric, r.value, coalesce(r."sampleSize", 0) as sample_size,
+        r.dispersion, r.details, r.algorithm, r."computedAt" as computed_at
+      from jsonb_to_recordset(${JSON.stringify(rows)}::jsonb) as r("ideaId" uuid, metric text,
+        value float8, "sampleSize" int, dispersion float8, details jsonb, algorithm text, "computedAt" timestamptz)
+    ), written as (
+      insert into idea_metrics as m (idea_id, metric, value, sample_size, dispersion, details, algorithm, computed_at)
+      select d.idea_id, d.metric, d.value, d.sample_size, d.dispersion, d.details, d.algorithm, d.computed_at
+      from desired d
+      on conflict (idea_id, metric) do update set
+        (value, sample_size, dispersion, details, algorithm, computed_at) =
+        (excluded.value, excluded.sample_size, excluded.dispersion, excluded.details, excluded.algorithm, excluded.computed_at)
+      where (m.value, m.sample_size, m.dispersion, m.details, m.algorithm) is distinct from
+        (excluded.value, excluded.sample_size, excluded.dispersion, excluded.details, excluded.algorithm)
+      returning 1
+    ), removed as (
+      delete from idea_metrics m where m.idea_id in ${ids}
+        and not exists (select 1 from desired d where (d.idea_id, d.metric) = (m.idea_id, m.metric))
+      returning 1
+    )
+    select ((select count(*) from written) + (select count(*) from removed))::int as changed
+  `,
+  );
+  return result!.changed;
 }
 
 /** Recomputes metrics for every idea. Proves (and restores) the derivability of all derived data. */
 export async function rebuildAllIdeaMetrics(ctx: Ctx, batchSize = 200): Promise<number> {
   const all = await ctx.db.select({ id: ideas.id }).from(ideas);
   for (let i = 0; i < all.length; i += batchSize) {
-    await refreshIdeaMetrics(
+    await recomputeIdeaMetrics(
       ctx,
       all.slice(i, i + batchSize).map((r) => r.id),
     );

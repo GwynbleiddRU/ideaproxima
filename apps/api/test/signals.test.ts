@@ -5,6 +5,7 @@ import { uniformWeights } from "@ideaproxima/domain";
 import { queryRows } from "../src/db/client";
 import { ideaMetrics } from "../src/db/schema";
 import { rebuildAllIdeaMetrics } from "../src/modules/metrics/service";
+import { drainJobs } from "../src/modules/jobs/runner";
 import { createHarness, type Harness } from "./harness";
 
 let h: Harness;
@@ -61,6 +62,7 @@ describe("evaluations are append-only observations", () => {
     expect(all.body.items).toHaveLength(3);
     expect(all.body.items.find((e) => e.value === 2)?.supersededAt).toBeTruthy();
 
+    await drainJobs(h.ctx);
     const detail = await h.call<IdeaDetail>("GET", `/ideas/${idea.id}`);
     expect(detail.body.signals.ratings.impact).toEqual({ value: 1, mean: 5, dispersion: 0, n: 1 });
   });
@@ -80,11 +82,16 @@ describe("evaluations are append-only observations", () => {
   it("withdraws ratings without deleting them", async () => {
     const idea = await h.idea(users[0]!.token);
     await rate(users[3]!.token, idea.id, [{ dimension: "evidence", value: 4 }]);
+    await drainJobs(h.ctx);
+    expect(
+      (await h.call<IdeaDetail>("GET", `/ideas/${idea.id}`)).body.signals.ratings.evidence,
+    ).toBeDefined();
     const res = await h.call("POST", "/evaluations/withdraw", {
       token: users[3]!.token,
       body: { target: { kind: "idea", id: idea.id }, dimensions: ["evidence"] },
     });
     expect(res.body.current).toEqual([]);
+    await drainJobs(h.ctx);
     expect(
       (await h.call<IdeaDetail>("GET", `/ideas/${idea.id}`)).body.signals.ratings.evidence,
     ).toBeUndefined();
@@ -129,6 +136,7 @@ describe("stances", () => {
       sql`select count(*)::int as n from stances where idea_id = ${idea.id}`,
     );
     expect(row?.n).toBe(3); // important (retracted), plausible (displaced), doubtful (current)
+    await drainJobs(h.ctx);
     const detail = await h.call<IdeaDetail>("GET", `/ideas/${idea.id}`);
     expect(detail.body.signals.perspectives.doubtful).toEqual({ count: 1, share: 1 });
     expect(detail.body.signals.attention).toBe(0);
@@ -148,10 +156,12 @@ describe("popularity is not quality", () => {
       { dimension: "evidence", value: 5 },
       { dimension: "impact", value: 4 },
     ]);
+    await drainJobs(h.ctx);
     const before = (await h.call<IdeaDetail>("GET", `/ideas/${popular.id}`)).body.signals.ratings;
 
     for (const u of users) await h.call("PUT", `/ideas/${popular.id}/stances/important`, { token: u.token });
 
+    await drainJobs(h.ctx);
     const after = (await h.call<IdeaDetail>("GET", `/ideas/${popular.id}`)).body.signals;
     expect(after.attention).toBe(users.length);
     expect(after.ratings).toEqual(before);
@@ -175,6 +185,7 @@ describe("popularity is not quality", () => {
     const idea = await h.idea(users[0]!.token, { title: "A deeply divisive idea" });
     for (const [i, value] of [1, 5, 1, 5].entries())
       await rate(users[i + 1]!.token, idea.id, [{ dimension: "feasibility", value }]);
+    await drainJobs(h.ctx);
     const contested = await h.call<Page<IdeaListItem>>("GET", "/ideas?lens=contested");
     expect(contested.body.items[0]!.title).toBe("A deeply divisive idea");
     expect(contested.body.items[0]!.signals.contestation).toBe(0.5);
@@ -229,9 +240,10 @@ describe("derived metrics are disposable", () => {
       (await h.db.select().from(ideaMetrics).orderBy(asc(ideaMetrics.ideaId), asc(ideaMetrics.metric))).map(
         ({ computedAt: _c, ...rest }) => rest,
       );
+    await drainJobs(h.ctx);
     const before = await snapshot();
     await h.db.delete(ideaMetrics);
-    await rebuildAllIdeaMetrics({ db: h.db, actor: null, weights: uniformWeights });
+    await rebuildAllIdeaMetrics(h.ctx);
     expect(await snapshot()).toEqual(before);
   });
 
@@ -239,10 +251,10 @@ describe("derived metrics are disposable", () => {
     const idea = await h.idea(users[0]!.token, { title: "Weighting probe" });
     await rate(users[1]!.token, idea.id, [{ dimension: "impact", value: 5 }]);
     await rate(users[2]!.token, idea.id, [{ dimension: "impact", value: 1 }]);
+    await drainJobs(h.ctx);
     const heavy = users[1]!.id;
     await rebuildAllIdeaMetrics({
-      db: h.db,
-      actor: null,
+      ...h.ctx,
       weights: ({ evaluatorId }) => (evaluatorId === heavy ? 3 : 1),
     });
     const weighted = (await h.call<IdeaDetail>("GET", `/ideas/${idea.id}`)).body.signals.ratings.impact!;

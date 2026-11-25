@@ -311,7 +311,7 @@ so replaying a callback only repeats work that PostgreSQL rolled back.
 ### Add a job
 
 1. Define the payload schema with zod and the handler in the module that owns the work. Register it once
-   with `jobRegistry.register(kind, schema, handler)` during startup for both the inline and dedicated worker.
+   with `jobRegistry.register(kind, schema, handler)` in `modules/jobs/registry.ts` for both the inline and dedicated worker.
    The handler receives `(ctx, parsedPayload, claim)`. Use fixed kind and queue names for metric labels.
 2. Call `await enqueue(tx, { kind, payload, dedupeKey })` inside the fact's existing transaction.
    Supply a dedupe key when one pending execution can cover every write for that key. The return value is

@@ -82,7 +82,8 @@ Mutable by nature (not history): `people` profile fields, `accounts`, `topics`, 
 - **activities** — `occurred_at`, `actor_id`, `action` (dotted verb), `idea_ids uuid[]` (GIN; an action on a shared
   claim belongs to every idea using it), `subject_kind`, `subject_id`, `payload jsonb`. Fully append-only.
 - **idea_metrics** — key/value: (`idea_id`, `metric`) PK, `value`, `sample_size`, `dispersion`, `algorithm`,
-  `computed_at`, `details jsonb`. Index on (metric, value) for lens sorting.
+  `computed_at`, `details jsonb`. Index on (metric, value) for lens sorting. Refreshes preserve the timestamp
+  of each unchanged key and remove keys the algorithm no longer produces.
 
 Metric keys written by `baseline-v0`: `rating.<dimension>` (normalised mean, dispersion = normalised SD, n;
 details: raw mean/sd/weightSum), `attention`, `perspective.<stance>` (share; details: count), `completeness`,

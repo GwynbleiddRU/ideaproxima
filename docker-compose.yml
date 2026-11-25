@@ -1,4 +1,4 @@
-# The whole Ideaproxima stack in containers: PostgreSQL → a one-off migration job → the app (web interface + API).
+# PostgreSQL → a one-off migration job → the app (web interface + API) and its background worker.
 #
 #   docker compose up --build                   everything: http://localhost:3000 (API at /v1)
 #   docker compose --profile demo up --build    the same, plus the illustrative demo dataset
@@ -54,6 +54,8 @@ services:
     environment:
       DATABASE_URL: postgres://ideaproxima:ideaproxima@postgres:5432/ideaproxima
       NODE_ENV: production
+      JOBS_MODE: worker
+      METRICS_REFRESH_MODE: "${METRICS_REFRESH_MODE:-sync}"
       # Plain HTTP on localhost. Behind HTTPS in production, leave this unset (Secure cookies by default).
       COOKIE_SECURE: "false"
       ALLOW_INSECURE_COOKIES: "true"
@@ -62,6 +64,21 @@ services:
     depends_on:
       migrate:
         condition: service_completed_successfully
+    init: true
+    stop_grace_period: 40s
+
+  worker:
+    <<: *app-image
+    command: ["node", "apps/api/dist/worker.js"]
+    environment:
+      DATABASE_URL: postgres://ideaproxima:ideaproxima@postgres:5432/ideaproxima
+      JOBS_MODE: worker
+      INTERNAL_PORT: 9100
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "wget", "-qO", "/dev/null", "http://127.0.0.1:9100/metrics"]
     init: true
     stop_grace_period: 40s
 

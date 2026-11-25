@@ -26,7 +26,7 @@ npm run db:seed:demo   # migrations + base topics + an illustrative, clearly-lab
 npm run dev            # → http://localhost:3000, with hot reload for the web app and the API
 ```
 
-**With Docker only** (nothing else to install). PostgreSQL 17, then the migrations, then the app, from the production
+**With Docker only** (nothing else to install). PostgreSQL 17, then the migrations, then the app and worker from the production
 image:
 
 ```bash

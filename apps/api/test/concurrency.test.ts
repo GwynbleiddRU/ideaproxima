@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { sql } from "drizzle-orm";
 import type { IdeaDetail } from "@ideaproxima/contracts";
 import { queryRows } from "../src/db/client";
+import { drainJobs } from "../src/modules/jobs/runner";
 import { createHarness, type Harness } from "./harness";
 
 /**
@@ -46,6 +47,7 @@ describe("concurrency", () => {
       users.map((u) => h.call("PUT", `/ideas/${idea.id}/stances/important`, { token: u.token })),
     );
     expect(results.map((r) => r.status)).toEqual(Array(users.length).fill(200));
+    await drainJobs(h.ctx);
     const detail = await h.call<IdeaDetail>("GET", `/ideas/${idea.id}`);
     expect(detail.body.signals.attention).toBe(users.length);
   });
@@ -64,6 +66,7 @@ describe("concurrency", () => {
       ),
     );
     expect(results.map((r) => r.status)).toEqual(Array(users.length).fill(200));
+    await drainJobs(h.ctx);
     const detail = await h.call<IdeaDetail>("GET", `/ideas/${idea.id}`);
     expect(detail.body.signals.ratings.impact?.n).toBe(users.length);
     expect(detail.body.signals.counts.evaluators).toBe(users.length);

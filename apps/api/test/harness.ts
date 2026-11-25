@@ -2,12 +2,13 @@ import { appendFileSync } from "node:fs";
 import { isDeepStrictEqual } from "node:util";
 import { eq } from "drizzle-orm";
 import { ErrorResponse, matchEndpoint, type AuthResponse, type IdeaDetail } from "@ideaproxima/contracts";
-import type { PersonRole } from "@ideaproxima/domain";
+import { uniformWeights, type PersonRole } from "@ideaproxima/domain";
 import { createApp } from "../src/app";
 import { loadConfig } from "../src/config";
 import type { Database } from "../src/db/client";
 import { ensureBaseTopics } from "../src/db/reference-data";
 import { people } from "../src/db/schema";
+import type { Ctx } from "../src/modules/shared/context";
 import { openTestDatabase } from "./database";
 
 /**
@@ -18,6 +19,7 @@ import { openTestDatabase } from "./database";
  */
 export interface Harness {
   db: Database;
+  ctx: Ctx;
   driver: "pglite" | "postgres";
   call<T = any>(
     method: string,
@@ -79,19 +81,18 @@ export async function createHarness(overrides: NodeJS.ProcessEnv = {}): Promise<
   const testDb = await openTestDatabase();
   const database = testDb.handle;
   await ensureBaseTopics(database.db);
-  const app = createApp({
-    db: database.db,
-    config: loadConfig({
-      NODE_ENV: "test",
-      JOBS_MODE: "off",
-      SESSION_TTL_DAYS: "1",
-      // The suite makes many requests from one "address"; rate limits get their own test.
-      RATE_LIMIT_REQUESTS_PER_MINUTE: "0",
-      RATE_LIMIT_AUTH_PER_MINUTE: "0",
-      RATE_LIMIT_WRITES_PER_MINUTE: "0",
-      ...overrides,
-    }),
+  const config = loadConfig({
+    NODE_ENV: "test",
+    JOBS_MODE: "off",
+    METRICS_REFRESH_MODE: process.env.TEST_METRICS_REFRESH_MODE ?? "sync",
+    SESSION_TTL_DAYS: "1",
+    // The suite makes many requests from one "address"; rate limits get their own test.
+    RATE_LIMIT_REQUESTS_PER_MINUTE: "0",
+    RATE_LIMIT_AUTH_PER_MINUTE: "0",
+    RATE_LIMIT_WRITES_PER_MINUTE: "0",
+    ...overrides,
   });
+  const app = createApp({ db: database.db, config });
 
   const call: Harness["call"] = async (method, path, opts = {}) => {
     const headers: Record<string, string> = {};
@@ -111,6 +112,12 @@ export async function createHarness(overrides: NodeJS.ProcessEnv = {}): Promise<
   let n = 0;
   return {
     db: database.db,
+    ctx: {
+      db: database.db,
+      actor: null,
+      weights: uniformWeights,
+      metricsRefreshMode: config.jobs.metricsRefreshMode,
+    },
     driver: testDb.driver,
     call,
     async user(handle, role = "member") {

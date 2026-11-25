@@ -73,12 +73,11 @@ jobs:
           retention-days: 7
 
   stack:
-    name: Docker stack (image, migrations, app)
+    name: Docker stack (image, migrations, app, worker)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      # postgres → migrate (one-off job) → app; --wait returns once the app's health check passes.
-      - run: docker compose up --build --detach --wait app
+      - run: docker compose up --build --detach --wait app worker
         env:
           APP_COMMIT: ${{ github.sha }}
       - name: Smoke test
@@ -90,6 +89,12 @@ jobs:
           curl -fsS -H 'accept: text/html' http://localhost:3000/ | grep -q '<div id="root">'
           docker compose --profile demo run --rm demo-data
           curl -fsS http://localhost:3000/v1/ideas | grep -q '"items":\[{'
+          for attempt in {1..30}; do
+            completed=$(docker compose exec -T postgres psql -U ideaproxima -Atc "select count(distinct jobs.kind) from jobs where jobs.kind in ('sessions.purge','jobs.purge','metrics.reconcile') and jobs.state = 'done'")
+            [ "$completed" = 3 ] && break
+            sleep 1
+          done
+          test "$completed" = 3
       - if: failure()
         run: docker compose --profile demo logs
       - if: always()

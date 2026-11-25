@@ -71,6 +71,7 @@ Invalid settings stop startup with one error listing the affected variables. Boo
 | `SENTRY_DSN`                     | unset                                           | Optional HTTP(S) DSN for forwarding redacted unexpected errors and fatal process events.                                                                                         |
 | `WEB_ROOT`                       | `apps/web/dist`, when it has been built         | Directory of the built web app to serve at `/`. `off` serves the API only (`GET /` then redirects to the `/v1` index).                                                           |
 | `JOBS_MODE`                      | `inline`                                        | Execute jobs in the API (`inline`), a dedicated process (`worker`), or only through explicit drains (`off`).                                                                     |
+| `METRICS_REFRESH_MODE`           | `sync`                                          | Compute signals during the write, or set `async` to enqueue one pending refresh per affected idea.                                                                               |
 | `JOBS_CONCURRENCY`               | `4`                                             | Maximum active handlers per worker process.                                                                                                                                      |
 | `JOBS_QUEUES`                    | `default`                                       | Comma-separated queue names with optional per-process caps, e.g. `default,moderation=2`.                                                                                         |
 | `JOBS_STATEMENT_TIMEOUT_MS`      | `60000`                                         | Dedicated worker and queue operator statement deadline. Inline handlers share the API database settings.                                                                         |
@@ -82,6 +83,17 @@ point them at the same PostgreSQL database, and start `node apps/api/dist/worker
 Give each process its own private metrics port when sharing a network namespace. On termination the worker
 stops polling and drains its handlers. At the deadline it releases unfinished leases for reclamation.
 A crashed worker's leases expire after 60 seconds.
+
+Compose starts both processes after migration. The worker's private health check scrapes port 9100.
+Hourly schedules purge sessions expired or revoked over 30 days ago and apply job retention.
+Daily reconciliation samples up to 25 ideas, repairs their metrics and increments
+`metrics_reconcile_drift_total` once per repaired idea. Ideas with an outstanding refresh are skipped.
+
+In async mode the writer sees its stance or rating immediately. Aggregate signals and lens rankings
+catch up when the worker processes the idea. A new idea can have `signals.computedAt = null`;
+afterward this field reports the most recent change among its stored metric rows. Scrape the worker
+for refresh duration and drift, and monitor oldest pending age for backlog. The staleness target is p95
+below two seconds. Run the rebuild command for an immediate recomputation in either mode.
 
 Run the operator command against the same database. Listing shows the 100 newest matching IDs.
 A manual retry grants one additional attempt. Pending work with the same key covers the retry.
@@ -128,7 +140,7 @@ The image declares a `HEALTHCHECK` against `GET /readyz`, runs as the unprivileg
 `CORS_ORIGINS` is needed only for a client hosted on another origin; the bundled web app is same-origin.
 
 **The same layout locally:** `docker compose up --build` runs PostgreSQL, then a one-off `migrate` service (the release
-steps above), then the app once the migrations succeed. `--profile demo` adds the demo dataset. For production, the
+steps above), then the app and worker once the migrations succeed. `--profile demo` adds the demo dataset. For production, the
 compose file is a template rather than a deployment: replace the fixed credentials, drop the published PostgreSQL
 port, put HTTPS in front of the API and remove the local `COOKIE_SECURE` and `ALLOW_INSECURE_COOKIES` overrides.
 

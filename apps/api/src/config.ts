@@ -64,6 +64,7 @@ const envSettings = z.object({
   DB_IDLE_IN_TX_TIMEOUT_MS: integer(0, 2_147_483_647).default(10_000),
   DB_CONNECT_TIMEOUT_MS: integer(1, 2_147_483_647).default(5_000),
   JOBS_MODE: z.enum(["inline", "worker", "off"]).default("inline"),
+  METRICS_REFRESH_MODE: z.enum(["sync", "async"]).default("sync"),
   JOBS_CONCURRENCY: integer(1, 1024).default(4),
   JOBS_QUEUES: z
     .string()
@@ -235,6 +236,7 @@ export function loadConfig(
     },
     jobs: {
       mode: values.JOBS_MODE,
+      metricsRefreshMode: values.METRICS_REFRESH_MODE,
       concurrency: values.JOBS_CONCURRENCY,
       queues: values.JOBS_QUEUES,
       statementTimeoutMs: values.JOBS_STATEMENT_TIMEOUT_MS,

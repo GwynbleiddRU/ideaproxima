@@ -15,6 +15,7 @@ export interface Ctx {
   actor: Actor | null;
   /** Evaluator weighting used by derived metrics. Baseline: uniform. The scoring system plugs in here. */
   weights: WeightPolicy;
+  metricsRefreshMode?: "sync" | "async";
   [inTransactionScope]?: (() => void)[];
 }
 

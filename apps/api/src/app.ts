@@ -102,7 +102,12 @@ export function createApp(deps: AppDeps) {
       ? header.slice(7).trim()
       : getCookie(c, SESSION_COOKIE);
     const session = token && /^[A-Za-z0-9_-]{43}$/.test(token) ? await resolveSession(deps.db, token) : null;
-    c.set("ctx", { db: deps.db, actor: session?.actor ?? null, weights });
+    c.set("ctx", {
+      db: deps.db,
+      actor: session?.actor ?? null,
+      weights,
+      metricsRefreshMode: config.jobs.metricsRefreshMode,
+    });
     c.set("sessionId", session?.sessionId ?? null);
     await next();
   });

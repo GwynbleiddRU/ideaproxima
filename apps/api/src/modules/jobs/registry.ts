@@ -1,4 +1,7 @@
-import type { z } from "zod";
+import { z } from "zod";
+import { purgeSessions } from "../identity/purge";
+import { reconcileMetrics, refreshMetricsJob } from "../metrics/jobs";
+import { purgeJobs } from "./operator";
 import type { Ctx } from "../shared/context";
 import type { Claim } from "./queue";
 
@@ -24,3 +27,10 @@ export class JobRegistry {
 }
 
 export const jobRegistry = new JobRegistry();
+const emptyPayload = z.strictObject({});
+jobRegistry.register("sessions.purge", emptyPayload, purgeSessions);
+jobRegistry.register("jobs.purge", emptyPayload, async (ctx) => {
+  await purgeJobs(ctx);
+});
+jobRegistry.register("metrics.reconcile", emptyPayload, reconcileMetrics);
+jobRegistry.register("metrics.refresh", z.strictObject({ ideaId: z.uuid() }), refreshMetricsJob);

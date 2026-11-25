@@ -11,6 +11,7 @@ describe("runtime configuration", () => {
     expect(defaults).toMatchObject({
       jobs: {
         mode: "inline",
+        metricsRefreshMode: "sync",
         concurrency: 4,
         queues: [{ name: "default", cap: undefined }],
         statementTimeoutMs: 60000,
@@ -24,6 +25,7 @@ describe("runtime configuration", () => {
       cap: 2,
     });
     expect(() => loadConfig({ JOBS_QUEUES: "default,default=2" })).toThrow(/JOBS_QUEUES/);
+    expect(() => loadConfig({ METRICS_REFRESH_MODE: "later" })).toThrow(/METRICS_REFRESH_MODE/);
 
     const config = loadConfig({
       NODE_ENV: "test",

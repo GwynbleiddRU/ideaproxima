@@ -10,7 +10,12 @@ export interface Schedule {
   kind: string;
   payload?: unknown;
 }
-export const schedules: readonly Schedule[] = [];
+const hour = 60 * 60 * 1000;
+export const schedules: readonly Schedule[] = [
+  { name: "sessions.purge", kind: "sessions.purge", every: hour },
+  { name: "jobs.purge", kind: "jobs.purge", every: hour },
+  { name: "metrics.reconcile", kind: "metrics.reconcile", every: 24 * hour },
+];
 
 export async function initializeSchedules(ctx: Ctx, entries: readonly Schedule[]) {
   for (const { name, every } of entries) {

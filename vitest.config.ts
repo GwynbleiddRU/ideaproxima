@@ -7,7 +7,20 @@ export default defineConfig({
   // The web app's "@/…" imports (apps/web/vite.config.ts), for its unit tests.
   resolve: { alias: { "@": fileURLToPath(new URL("./apps/web/src", import.meta.url)) } },
   test: {
-    include: ["packages/*/test/**/*.test.ts", "apps/*/test/**/*.test.ts"],
+    projects: [
+      {
+        extends: true,
+        test: { name: "default", include: ["packages/*/test/**/*.test.ts", "apps/*/test/**/*.test.ts"] },
+      },
+      {
+        extends: true,
+        test: {
+          name: "async metrics",
+          include: ["apps/api/test/signals.test.ts", "apps/api/test/concurrency.test.ts"],
+          env: { TEST_METRICS_REFRESH_MODE: "async" },
+        },
+      },
+    ],
     environment: "node",
     // Integration tests each boot an in-memory PGlite (WASM Postgres) and run all migrations.
     testTimeout: 30_000,

@@ -165,13 +165,17 @@ cannot drift apart. Client-side, schemas are non-strict (unknown fields ignored)
 _Revisit if:_ the catalogue becomes a bottleneck. Generating routes from it would remove the remaining duplication
 (path strings), at the cost of framework coupling.
 
-### ADR-15 Synchronous metric refresh
+### ADR-15 Metric refresh and consistency
 
-After a write, `refreshIdeaMetrics` recomputes the affected ideas' metrics inside the same transaction. Readers
-never see stale or half-updated derived data. It costs O(evaluations of the idea) per write, which is fine at
-current scale. See scaling notes for the path to asynchronous recomputation.
+By default, `refreshIdeaMetrics` recomputes the affected ideas inside the fact's transaction. In
+`METRICS_REFRESH_MODE=async`, it enqueues one `metrics.refresh` per affected idea in that transaction
+(ADR-23). A pending refresh covers subsequent writes. Writes during execution can enqueue a successor.
+Both paths and the operator rebuild use the same computation and per-idea lock. It upserts changed values
+and removes obsolete keys atomically. Unchanged rows keep their timestamps.
 
-ADR-23 supplies the queue for the asynchronous mode planned in step 5. Signal writes still use the synchronous path.
+Async stance and evaluation responses still include the writer's current state. Idea signals and lens
+rankings can lag until the worker catches up. `signals.computedAt` is the latest change timestamp among the
+stored keys, or null before the first refresh. The rebuild command completes its work in either mode.
 
 ### ADR-16 Concurrency: advisory locks per logical key
 
@@ -310,8 +314,8 @@ These tables hold disposable operational state. The domain fact and its history 
 
 ## Scaling notes (apply when needed, not before)
 
-- `refreshIdeaMetrics` reads all current evaluations of the affected ideas. Move it to a job queue (a `jobs` table
-  with `SKIP LOCKED` workers is enough) once writes per idea get heavy. Callers do not change.
+- Consider async refresh at sustained rates above five signal writes per second on one idea, or when write
+  p95 exceeds 150 ms and PostgreSQL shows metric lock waits. Measure write-to-visible lag against the 2 s p95 target.
 - Lens pagination is offset-based on materialised metrics. Switch hot lenses to keyset on `(value, idea_id)`.
 - Evidence counts per idea are subqueries over `idea_claims` → `evidence`. Materialise them if idea pages slow down.
 - Graph traversal is a recursive CTE capped at depth 4. Add a closure table or a graph-analytics sidecar only if

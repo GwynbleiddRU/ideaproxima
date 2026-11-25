@@ -3,7 +3,7 @@
 Part of the [production-readiness program](README.md). Prompt for the implementing agent:
 `prompts/api/02-background-jobs-prompt.md`.
 
-| Status     | Phase A done 2026-11-25. Phase B is next (step 5).                                                                           |
+| Status     | Done 2026-11-25. Phases A and B (steps 4–5) complete.                                                                        |
 | ---------- | ---------------------------------------------------------------------------------------------------------------------------- |
 | Depends on | [01](01-operational-foundations.md) (metrics, configuration, graceful shutdown)                                              |
 | Unblocks   | [04](04-accounts-and-trust.md) (e-mail), [07](07-moderation-core.md), [08](08-ai-moderation.md), [11](11-semantic-search.md) |
@@ -255,6 +255,47 @@ claim cannot regain ownership. The private scrape reads queue gauges from the sh
 [operator commands and worker settings](../../developer/operations.md#background-jobs) and the
 [handler recipe](../../developer/developer-guide.md#add-a-job).
 
-**Next eligible row is step 5, plan 02 phase B**, using `prompts/api/02-background-jobs-prompt.md`.
+**At the step 4 handoff the next eligible row was step 5, plan 02 phase B**, using `prompts/api/02-background-jobs-prompt.md`.
 There is no owner decision outstanding for phase A. Take the same-workload refresh baseline before editing
 the metric writer, then record the upsert comparison and asynchronous staleness in phase B.
+
+### Step 5 · Phase B · 2026-11-25
+
+Steps 1–4 were marked done on clean local `main` at `e6f463b`. The baseline `npm run check` passed
+with 177 PGlite tests, three PostgreSQL-only skips and all 66 endpoints covered. Phase A had already
+delivered the worker, queue API, operator purge, metrics registry, ADR-23 and transaction guarantees.
+Its production registry and schedules were empty. The metric writer still replaced every row per refresh.
+
+The request context now carries the configured refresh mode. The owning handlers in `modules/identity`,
+`modules/jobs` and `modules/metrics` share one registry across inline workers, dedicated workers and
+test drains. The queue signatures in the step 4 table still apply. The existing service entry point is
+`refreshIdeaMetrics(ctx: Ctx, ideaIds: readonly string[]): Promise<void>`. The worker, reconciliation,
+synchronous writes and operator rebuild use `recomputeIdeaMetrics(ctx: Ctx, ids: string[]): Promise<number>`;
+the count includes inserted, changed and removed rows. The daily sample size is 25 ideas. A pending
+or running refresh excludes that idea from the drift count. Compose and the CI stack job start a separate worker.
+
+| Verification                     | Result                                                                                                                                                                                                                                                                                                                                      |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Repository and schema            | `npm run check` passed, including typecheck, lint, formatting, doc links, 200 PGlite tests (three PostgreSQL-only skips), all 66 endpoints and the production build. `npx drizzle-kit generate` in `apps/api` reported no schema changes.                                                                                                   |
+| PostgreSQL 17.12                 | `npm run test:pg` passed all 203 tests and all 66 endpoints. Four workers processed 500 distinct jobs once each. Two schedulers claimed one slot once. Lease recovery and stale-attempt fencing passed.                                                                                                                                     |
+| Rollback, redelivery and rebuild | Rolling back a stance removed its fact, activity and pending refresh. Two committed stance changes coalesced into one refresh. All four production handlers tolerated repeat delivery. Signals and concurrency suites ran in both modes on both drivers. Drained metrics matched a rebuild and the alternate weight policy preserved facts. |
+| Isolated Compose stack           | `up --build --detach --wait app worker` and the CI smoke script passed locally on ports 13005/15435. The app and worker were healthy, demo seeding succeeded, and each of the three recurring kinds completed. The smoke image had a separate local tag. Hosted CI awaits a push.                                                           |
+
+**Single-idea refresh on PostgreSQL 17.12.** Each run created a fresh migrated database on the same
+local server. One account created one idea, rated impact 4 and took the important stance, producing
+18 metric rows. After ten warm-ups, 100 sequential synchronous calls refreshed the unchanged idea.
+Elapsed time includes the transaction, lock, reads and materialisation. Percentiles use nearest rank.
+
+| Writer                              |   Median |      p95 | Rows replaced or updated per unchanged refresh |
+| ----------------------------------- | -------: | -------: | ---------------------------------------------: |
+| Step 4 delete and insert            | 14.92 ms | 16.31 ms |                        18 deleted, 18 inserted |
+| Step 5 conditional upsert and prune | 12.79 ms | 13.93 ms |                                              0 |
+
+**Async visibility on the separate Compose worker.** One HTTP client alternated 20 stance additions
+and retractions on one idea. Each write returned the new viewer state. From receipt of that response,
+the client polled idea detail every 75 ms until attention matched. Observed median was 282 ms, p95
+299 ms and maximum 1,216 ms. These local observations include polling delay and reflect a light queue.
+
+**Next numbered row is step 6, plan 05 phase A**, using `prompts/api/05-localization-prompt.md`
+with GPT-6.2 Sol at medium reasoning effort. Decision 2 belongs to the owner: the twelve locales
+and which must be released for launch. The working default in plan 05 is twelve beta locales.

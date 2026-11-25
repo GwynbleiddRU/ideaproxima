@@ -211,7 +211,7 @@ it("stops polling, drains active handlers and releases fenced leases at the dead
   });
   await enqueue(ctx, input);
   await enqueue(ctx, input);
-  const worker = await startWorker(ctx, config.jobs, createLogger(config.log), registry);
+  const worker = await startWorker(ctx, config.jobs, createLogger(config.log), registry, []);
   const old = await running;
   const stopped = worker.stop();
   try {
