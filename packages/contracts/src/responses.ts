@@ -15,6 +15,7 @@
  *  - Schemas are non-strict for clients: unknown fields are ignored, so additive API changes never break them.
  */
 import { z } from "zod";
+import { LocaleTag } from "./requests";
 import {
   ARGUMENT_STANCES,
   CAPACITIES,
@@ -61,17 +62,28 @@ export type Page<T> = { items: T[]; nextCursor: string | null };
 export const page = <T extends z.ZodType>(item: T) =>
   z.object({ items: z.array(item), nextCursor: z.string().nullable() });
 
+export const ValidationIssue = named(
+  "ValidationIssue",
+  z.object({
+    path: z.string(),
+    code: z.string(),
+    message: z.string(),
+    params: z.record(z.string(), z.unknown()),
+  }),
+);
+export type ValidationIssue = z.infer<typeof ValidationIssue>;
+
 export const ErrorResponse = named(
   "Error",
   z.object({
     error: z.object({
       code: z.string(),
       message: z.string(),
-      details: z.unknown().optional(),
+      details: z.looseObject({ reason: z.string(), issues: z.array(ValidationIssue).optional() }),
       requestId: z.string().optional(),
     }),
   }),
-  "Every error. `code` is stable and machine-readable; `message` is for humans; `details` is code-specific; `requestId` correlates the response with server logs.",
+  "Every error. `code` is stable and machine-readable; `message` is for humans; `details.reason` is stable and more specific than `code`. Other detail fields are reason-specific; `requestId` correlates the response with server logs.",
 );
 export type ErrorResponse = z.infer<typeof ErrorResponse>;
 
@@ -95,6 +107,7 @@ export const ApiIndexResponse = named(
       openapi: z.string(),
       health: z.string(),
       vocabulary: z.string(),
+      locales: z.string(),
       ideas: z.string(),
       topics: z.string(),
       search: z.string(),
@@ -174,13 +187,19 @@ export const PersonDto = named(
 );
 export type PersonDto = z.infer<typeof PersonDto>;
 
-export const MeResponse = named("Me", z.object({ person: PersonDto, email: z.string() }));
+const Preferences = z.object({ locale: LocaleTag.nullable() });
+
+export const MeResponse = named(
+  "Me",
+  z.object({ person: PersonDto, email: z.string(), preferences: Preferences }),
+);
 export type MeResponse = z.infer<typeof MeResponse>;
 
 export const AuthResponse = named(
   "Auth",
   z.object({
     person: PersonDto,
+    preferences: Preferences,
     token: z.string().describe("Session token. Also set as the HttpOnly `ip_session` cookie."),
     expiresAt: timestamp,
   }),
@@ -207,6 +226,27 @@ export const TopicDto = named(
   }),
 );
 export type TopicDto = z.infer<typeof TopicDto>;
+
+export const LocaleDto = named(
+  "Locale",
+  z.object({
+    tag: LocaleTag,
+    name: z.string(),
+    direction: z.enum(["ltr", "rtl"]),
+    status: z.enum(["released", "beta"]),
+  }),
+);
+export type LocaleDto = z.infer<typeof LocaleDto>;
+
+export const TopicTranslationDto = named(
+  "TopicTranslation",
+  z.object({
+    locale: LocaleTag,
+    name: z.string(),
+    description: z.string(),
+  }),
+);
+export type TopicTranslationDto = z.infer<typeof TopicTranslationDto>;
 
 export const TopicDetailDto = named("TopicDetail", TopicDto.extend({ children: z.array(TopicDto) }));
 export type TopicDetailDto = z.infer<typeof TopicDetailDto>;
@@ -669,6 +709,7 @@ const VocabularyEntry = z.looseObject({
 export const VocabularyResponse = named(
   "Vocabulary",
   z.object({
+    locale: LocaleTag,
     stages: z.array(VocabularyEntry),
     sections: z.array(VocabularyEntry),
     claimRoles: z.array(VocabularyEntry),

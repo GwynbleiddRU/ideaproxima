@@ -24,6 +24,7 @@
     "@hono/node-server": "^2.1.8",
     "@ideaproxima/contracts": "0.1.0",
     "@ideaproxima/domain": "0.1.0",
+    "@ideaproxima/i18n": "0.1.0",
     "drizzle-orm": "^0.45.2",
     "hono": "^4.10.0",
     "pino": "10.4.0",

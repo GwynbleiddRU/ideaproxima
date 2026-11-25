@@ -3,7 +3,7 @@
 Part of the [production-readiness program](README.md). Prompt for the implementing agent:
 `prompts/api/05-localization-prompt.md`.
 
-| Status     | Not started                                                                                                                                   |
+| Status     | Phase A complete (step 6, 2026-11-25). Phase B next, with owner approval of mock-ups before interface implementation.                         |
 | ---------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
 | Depends on | [01](01-operational-foundations.md) (configuration, logs); phase D on every interface change before step 38                                   |
 | Unblocks   | Every later plan's strings and error reasons; [06](06-multilingual-content-and-search.md); localised e-mail in [04](04-accounts-and-trust.md) |
@@ -259,3 +259,44 @@ languages": how to add a message, a language, a vocabulary term), `docs/user/use
 1. The twelve languages (default above) and which are required to be `released` at launch.
 2. Who reviews each language.
 3. Digits in Arabic: Latin (default) or Arabic-Indic.
+
+## Implementation notes
+
+### Phase A, step 6
+
+The checkout started on clean `main` at `e29459e`. Steps 1–5 were marked done and their commits were present:
+`13e916b`, `0b237de`, `57d4f66`, `e6f463b`, and `e29459e`. The baseline repository check passed with
+200 PGlite tests, three PostgreSQL-only skips, and all 66 endpoints exercised.
+
+Owner decision 2 is pending. Phase A uses `en`, `zh-Hans`, `es`, `ar`, `pt-BR`, `id`, `fr`, `ja`, `ru`,
+`de`, `hi`, and `ko` as beta, with Latin digits configured for Arabic. The Russian sample covers one
+vocabulary label, one topic, three error messages and one validation message. Missing catalogue entries use
+English source text or the canonical topic text. Full translation drafts and release checks belong to phase D.
+
+- `packages/i18n` contains locale metadata and negotiation, the shared translator, catalogue overlays and
+  the English glossary. Lingui 6.12 formats precompiled ICU messages. The compiler is a development
+  dependency. The engine floor is Node 22.19, which CI exercises.
+- The generated vocabulary contains 309 strings, including the relation by-direction fields named `forward`
+  and `inverse` in the checkout. [The English error catalogue](../../../packages/domain/src/errors.en.ts)
+  lists all 91 typed entries, including stage proof sentences. Error status and code remain stable. The
+  envelope adds `details.reason`, named parameters and coded validation issues.
+- The contract adds `GET /v1/locales`, locale negotiation for vocabulary and topic reads, and an admin
+  translation upsert. It adds `preferences.locale` to `GET /v1/me`, registration responses and login
+  responses. `PATCH /v1/me` accepts a canonical locale or null and keeps its existing profile response.
+  Login and registration supply the saved preference to the web session cache in the same response.
+- The session query reads the preference through the account primary key. Topic reads join the requested
+  locale by the composite translation key. The seed preserves operator edits on rerun. Identical admin
+  retries share a single ledger entry. Anonymous variants vary by language and credentials.
+  Signed-in catalogue responses and error responses use `no-store`.
+
+| Verification                 | Evidence                                                                                                                                                                                                                                                                                                                                        |
+| ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Catalogue and API generation | `npm run i18n:extract`, `npm run i18n:compile` and `npm run docs:api` passed. Tests enforce freshness of both catalogues and the generated API reference.                                                                                                                                                                                       |
+| Repository check             | `npm run check` passed. 211 PGlite tests passed, three PostgreSQL-only tests skipped, and all 68 endpoints were exercised and contract-checked.                                                                                                                                                                                                 |
+| PostgreSQL 17.12             | `npm run test:pg` passed all 214 tests and all 68 endpoints on an isolated Compose database. Drizzle reported no schema changes after generating the migration.                                                                                                                                                                                 |
+| Browser audit                | `npm run test:e2e` passed all 54 Chromium checks, including accessibility in both themes. First-visit JavaScript was 138.2 KB for home, 125.4 KB for explore and 155.7 KB for the audited idea, under the 160 KB budget.                                                                                                                        |
+| Locale scenarios             | Tests covered explicit, saved, anonymous and invalid preferences, English fallback, concurrent Russian and English vocabulary and errors, and shared-cache hits with each locale or a missing header arriving first. They also covered seed replay, admin permission, an idempotent translation write and locale-neutral idea topic references. |
+
+Step 7 (phase B) is the next sequence row. It can begin with the Lingui browser spike and mock-ups for the
+switcher, a right-to-left idea page, and CJK and Indic typography. Obtain owner approval of those mock-ups
+before implementing the web interface changes. See `prompts/api/05-localization-prompt.md`.

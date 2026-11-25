@@ -43,7 +43,8 @@ export function useLogin() {
   return useMutation({
     mutationFn: (input: LoginRequest) => http.post<AuthResponse>("/auth/login", input),
     meta: { inlineErrors: true },
-    onSuccess: (auth, input) => change({ person: auth.person, email: input.email.trim().toLowerCase() }),
+    onSuccess: (auth, input) =>
+      change({ person: auth.person, email: input.email.trim().toLowerCase(), preferences: auth.preferences }),
   });
 }
 
@@ -52,7 +53,8 @@ export function useRegister() {
   return useMutation({
     mutationFn: (input: RegisterRequest) => http.post<AuthResponse>("/auth/register", input),
     meta: { inlineErrors: true },
-    onSuccess: (auth, input) => change({ person: auth.person, email: input.email.trim().toLowerCase() }),
+    onSuccess: (auth, input) =>
+      change({ person: auth.person, email: input.email.trim().toLowerCase(), preferences: auth.preferences }),
   });
 }
 

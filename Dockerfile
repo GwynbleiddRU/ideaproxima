@@ -17,6 +17,7 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 COPY packages/domain/package.json packages/domain/
 COPY packages/contracts/package.json packages/contracts/
+COPY packages/i18n/package.json packages/i18n/
 COPY apps/api/package.json apps/api/
 COPY apps/web/package.json apps/web/
 RUN --mount=type=cache,target=/root/.npm npm ci --ignore-scripts
@@ -35,6 +36,7 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 COPY packages/domain/package.json packages/domain/
 COPY packages/contracts/package.json packages/contracts/
+COPY packages/i18n/package.json packages/i18n/
 COPY apps/api/package.json apps/api/
 COPY apps/web/package.json apps/web/
 # Production dependencies of the API only: the web app is bundled, so its packages are all dev dependencies.

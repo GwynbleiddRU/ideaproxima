@@ -1,3 +1,4 @@
+import type { Locale } from "@ideaproxima/i18n";
 import type { AppConfig } from "../config";
 import type { Ctx } from "../modules/shared/context";
 import type { ErrorReporter } from "../observability/errors";
@@ -6,6 +7,7 @@ export type AppEnv = {
   Variables: {
     ctx: Ctx;
     sessionId: string | null;
+    locale?: Locale;
     config: AppConfig;
     errorReporter: ErrorReporter;
     webRoute?: "static" | "web";

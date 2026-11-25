@@ -83,21 +83,21 @@ by most of them.
 ## Where the platform stands
 
 The foundation is unusually strong for its size: append-only facts enforced by database triggers, an executable
-contract (66 endpoints, every response checked against its schema, every endpoint exercised), one permission
+contract (68 endpoints, every response checked against its schema, every endpoint exercised), one permission
 policy, correct concurrency proven on real PostgreSQL, and a stateless process. None of that needs rework.
 
 What is missing is everything around it. The [audit](api-audit.md) records 58 findings (53 from the API audit,
 5 from the 2026-11-18 review of the web delivery), 20 of which block a public launch:
 
-| Area             | State today                                                                                                                             |
-| ---------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| Abuse protection | Two in-memory fixed-window limits; reads unlimited; the client address can be forged; no bot friction                                   |
-| Accounts         | E-mail and password only: no verification, no recovery, no second factor                                                                |
-| Moderation       | One endpoint that hides six kinds of content; no reports, queue, appeals or automation; hidden text leaks through the activity feed     |
-| Languages        | English only: interface, vocabulary, errors, search stemming, URL slugs                                                                 |
-| Scale            | Metrics refresh synchronously by default, with coalesced async refresh available. Lists and offset pagination await plan 09.            |
-| Operations       | Logs, private metrics, probes, drain, DB deadlines and a worker running maintenance schedules. Releases and restore drills are pending. |
-| Public web       | Every page is the same shell with status 200; no link previews; no policy pages; browser errors unseen; Chrome-only tests               |
+| Area             | State today                                                                                                                                          |
+| ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Abuse protection | Two in-memory fixed-window limits; reads unlimited; the client address can be forged; no bot friction                                                |
+| Accounts         | E-mail and password only: no verification, no recovery, no second factor                                                                             |
+| Moderation       | One endpoint that hides six kinds of content; no reports, queue, appeals or automation; hidden text leaks through the activity feed                  |
+| Languages        | Localised API catalogues and errors with beta defaults and English fallback. The interface, search stemming and URL slugs still use English defaults |
+| Scale            | Metrics refresh synchronously by default, with coalesced async refresh available. Lists and offset pagination await plan 09.                         |
+| Operations       | Logs, private metrics, probes, drain, DB deadlines and a worker running maintenance schedules. Releases and restore drills are pending.              |
+| Public web       | Every page is the same shell with status 200; no link previews; no policy pages; browser errors unseen; Chrome-only tests                            |
 
 ## Target state
 
@@ -175,7 +175,7 @@ Updated by whoever finishes a step: `Not started`, `In progress`, `Waiting for t
 | 3    | 01   | B     | Liveness and readiness, drain on shutdown, database guard rails, error reporter                            | —                     | Done 2026-11-25 |
 | 4    | 02   | A     | Job queue, worker, schedules, `JOBS_MODE`                                                                  | —                     | Done 2026-11-25 |
 | 5    | 02   | B     | Purges, asynchronous metric refresh, compose worker service                                                | —                     | Done 2026-11-25 |
-| 6    | 05   | A     | `packages/i18n`, error reasons, localised vocabulary, topics and errors, `/v1/locales`                     | Decision 2            | Not started     |
+| 6    | 05   | A     | `packages/i18n`, error reasons, localised vocabulary, topics and errors, `/v1/locales`                     | Decision 2            | Done 2026-11-25 |
 | 7    | 05   | B     | Web localisation runtime, language switcher, right-to-left, script fonts; shell and auth pages extracted   | Mock-ups              | Not started     |
 | 8    | 05   | C1    | Interface extraction: home, explore, the idea page and its tabs                                            | —                     | Not started     |
 | 9    | 05   | C2    | Interface extraction: editor, topics, search, activity, people, account, dialogs                           | —                     | Not started     |

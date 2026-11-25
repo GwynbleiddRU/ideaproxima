@@ -66,7 +66,8 @@ is a product decision, not a refactor. Discuss it, then update the docs.
    history, contribution and moderation stay visible. Enqueue work that follows a domain write in that same transaction.
 8. **One vocabulary.** Stages, dimensions, stance kinds, relation types etc. live in `packages/domain`. Database CHECK
    constraints are generated from the same constants. Do not duplicate vocabularies in the frontend; read them
-   from `/v1/vocabulary` or import `@ideaproxima/domain`.
+   from `/v1/vocabulary` or import `@ideaproxima/domain`. English labels stay in the domain; run `npm run i18n:extract`
+   after changing them. `packages/i18n` overlays translations by stable key.
 9. **One permission policy.** Every authorization decision goes through `authorize()` in
    `packages/domain/src/rules/permissions.ts`.
 10. **The contract is executable.** Every route is declared in `packages/contracts/src/endpoints.ts` with its request

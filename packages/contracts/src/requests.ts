@@ -33,6 +33,18 @@ const text = (min: number, max: number) => z.string().trim().min(min).max(max);
 const optionalText = (max: number) => z.string().trim().max(max).optional();
 const isoDate = z.iso.date();
 
+// The API owns the supported locale list and validates persisted preferences against it.
+export const LocaleTag = z
+  .string()
+  .max(35)
+  .regex(/^[A-Za-z]{2,8}(?:-[A-Za-z0-9]{1,8})*$/);
+export const LocaleQuery = z.object({
+  locale: z
+    .string()
+    .optional()
+    .describe("Preferred language tag. Unsupported tags fall through to request negotiation."),
+});
+
 // ---------------------------------------------------------------- auth & people
 
 export const RegisterRequest = z.object({
@@ -46,6 +58,7 @@ export const RegisterRequest = z.object({
   displayName: text(LIMITS.displayName.min, LIMITS.displayName.max),
   email: z.email().trim().toLowerCase(),
   password: z.string().min(LIMITS.password.min).max(LIMITS.password.max),
+  locale: LocaleTag.optional().describe("A supported locale tag from GET /v1/locales."),
 });
 export type RegisterRequest = z.infer<typeof RegisterRequest>;
 
@@ -60,6 +73,7 @@ export const UpdateProfileRequest = z.object({
   bio: optionalText(LIMITS.bio.max),
   affiliation: optionalText(200),
   capacities: z.array(z.enum(CAPACITIES)).max(CAPACITIES.length).optional(),
+  locale: LocaleTag.nullable().optional().describe("A supported locale tag, or null to resume negotiation."),
 });
 export type UpdateProfileRequest = z.infer<typeof UpdateProfileRequest>;
 
@@ -147,7 +161,10 @@ export const AddClaimRequest = z
     /** The contributor's own assessment, recorded as an ordinary evaluation of the claim. */
     assessment: ClaimAssessmentInput.optional(),
   })
-  .refine((v) => !!v.claimId !== !!v.statement, { message: "Provide exactly one of claimId or statement." })
+  .refine((v) => !!v.claimId !== !!v.statement, {
+    message: "Provide exactly one of claimId or statement.",
+    params: { reason: "claim_reference" },
+  })
   .describe("Provide exactly one of `claimId` (link an existing claim) or `statement` (state a new one).");
 export type AddClaimRequest = z.infer<typeof AddClaimRequest>;
 
@@ -178,6 +195,7 @@ export const AttachEvidenceRequest = z
   })
   .refine((v) => [v.sourceId, v.source, v.outcomeId].filter(Boolean).length === 1, {
     message: "Provide exactly one of sourceId, source or outcomeId.",
+    params: { reason: "evidence_basis" },
   })
   .describe(
     "Provide exactly one basis: `sourceId`, `source` (registered or matched by DOI/URL) or `outcomeId`.",
@@ -326,6 +344,12 @@ export type RevisionsQuery = z.infer<typeof RevisionsQuery>;
 
 // ---------------------------------------------------------------- catalog administration
 
+export const TopicTranslationRequest = z.object({
+  name: text(1, 80),
+  description: text(0, 500),
+});
+export type TopicTranslationRequest = z.infer<typeof TopicTranslationRequest>;
+
 export const CreateTopicRequest = z.object({
   name: text(2, 80),
   description: optionalText(1_000),
@@ -384,6 +408,7 @@ for (const [id, schema] of Object.entries({
   PostCommentRequest,
   ModerationRequest,
   CreateTopicRequest,
+  TopicTranslationRequest,
 })) {
   requestRegistry.add(schema, { id });
 }

@@ -93,7 +93,10 @@ it("admits one active and one waiting login, returns 503 on overflow and recover
     const replies = await Promise.all([login(email), login(email), login(email)]);
     expect(replies.map((reply) => reply.status).sort()).toEqual([401, 401, 503]);
     const busy = replies.find((reply) => reply.status === 503)!;
-    expect(busy.body.error.code).toBe("unavailable");
+    expect(busy.body.error).toMatchObject({
+      code: "unavailable",
+      details: { reason: "password_service_busy" },
+    });
     expect(busy.headers.get("Retry-After")).toBe("1");
     expect(queueDepth.mock.calls).toEqual([[1], [0]]);
     expect((await login(email)).status).toBe(401);

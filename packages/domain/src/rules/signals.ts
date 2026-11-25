@@ -32,30 +32,34 @@ export function validateRatings(
   ratings: readonly RatingInput[],
 ): ValidRating[] {
   if (ratings.length === 0) {
-    throw new DomainError("validation_failed", "An evaluation must rate at least one dimension.");
+    throw new DomainError("validation_failed", "ratings_required");
   }
   const seen = new Set<string>();
   return ratings.map((r) => {
     if (!isDimensionKey(r.dimension)) {
-      throw new DomainError("validation_failed", `Unknown evaluation dimension "${r.dimension}".`);
+      throw new DomainError("validation_failed", "unknown_dimension", { dimension: r.dimension });
     }
     const def = DIMENSIONS[r.dimension];
     if (!(def.appliesTo as readonly string[]).includes(target)) {
-      throw new DomainError("validation_failed", `Dimension "${r.dimension}" does not apply to a ${target}.`);
+      throw new DomainError("validation_failed", "dimension_not_applicable", {
+        dimension: r.dimension,
+        target,
+      });
     }
     if (seen.has(r.dimension)) {
-      throw new DomainError("validation_failed", `Dimension "${r.dimension}" was rated twice.`);
+      throw new DomainError("validation_failed", "dimension_rated_twice", { dimension: r.dimension });
     }
     seen.add(r.dimension);
     const scale = def.scale;
     if (scale.kind === "binary") {
       if (r.value !== 1)
-        throw new DomainError("validation_failed", `"${r.dimension}" only accepts the value 1.`);
+        throw new DomainError("validation_failed", "binary_rating_value", { dimension: r.dimension });
     } else if (!Number.isInteger(r.value) || r.value < scale.min || r.value > scale.max) {
-      throw new DomainError(
-        "validation_failed",
-        `"${r.dimension}" must be an integer from ${scale.min} to ${scale.max}.`,
-      );
+      throw new DomainError("validation_failed", "rating_out_of_range", {
+        dimension: r.dimension,
+        min: scale.min,
+        max: scale.max,
+      });
     }
     return { dimension: r.dimension, value: r.value, confidence: r.confidence ?? null };
   });

@@ -22,6 +22,13 @@
       "when": 1795565345956,
       "tag": "0002_background_jobs",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1795590820958,
+      "tag": "0003_pink_micromacro",
+      "breakpoints": true
     }
   ]
 }

@@ -11,6 +11,7 @@ import { SESSION_COOKIE, type AppEnv } from "./http/env";
 import { errorResponse, handleError } from "./http/errors";
 import { clientAddress } from "./http/client-address";
 import { rateLimit } from "./http/rate-limit";
+import { setRequestLocale } from "./http/locale";
 import { addProbes } from "./http/probes";
 import { catalogRoutes } from "./http/routes/catalog";
 import { identityRoutes } from "./http/routes/identity";
@@ -43,7 +44,7 @@ const WRITE_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
  * `app.request()` without opening a port.
  *
  * Middleware order matters: request identity → observability → security headers → web app files → CORS → body size limit → network
- * limit → session resolution → auth and write limits → routes. API middleware only runs under /v1.
+ * limit → session and locale resolution → auth and write limits → routes. API middleware only runs under /v1.
  * Versioning: additive changes (new fields, endpoints) stay in
  * v1; breaking changes get /v2 alongside, sharing the same services.
  */
@@ -78,7 +79,7 @@ export function createApp(deps: AppDeps) {
     bodyLimit({
       maxSize: http.maxBodyBytes,
       onError: (c) =>
-        errorResponse(c, 413, "payload_too_large", `Request body exceeds ${http.maxBodyBytes} bytes.`),
+        errorResponse(c, 413, "payload_too_large", "request_body_too_large", { maximum: http.maxBodyBytes }),
     }),
   );
 
@@ -109,6 +110,7 @@ export function createApp(deps: AppDeps) {
       metricsRefreshMode: config.jobs.metricsRefreshMode,
     });
     c.set("sessionId", session?.sessionId ?? null);
+    setRequestLocale(c, session?.locale);
     await next();
   });
 
@@ -134,14 +136,7 @@ export function createApp(deps: AppDeps) {
   );
 
   app.onError(handleError);
-  app.notFound((c) =>
-    errorResponse(
-      c,
-      404,
-      "not_found",
-      "No such endpoint. The API is served under /v1; GET /v1 lists its entry points.",
-    ),
-  );
+  app.notFound((c) => errorResponse(c, 404, "not_found", "unknown_endpoint"));
 
   // Without a web app (API-only deployments), send people who open the server in a browser to the API index.
   // With one, the web middleware answers `/` first.

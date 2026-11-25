@@ -58,6 +58,7 @@ export const PATH_PARAMS: Record<string, string> = {
   handle: "Person handle.",
   topic: "Topic slug.",
   slug: "Topic slug.",
+  locale: "Supported locale tag from GET /v1/locales.",
   kind: "Stance kind: important, worth_researching, plausible, doubtful, ready_now.",
   capacity: "Capacity: research, engineering, funding, entrepreneurship, policy, organizing, communication.",
 };
@@ -95,6 +96,14 @@ export const ENDPOINTS = {
     summary: "This API as an OpenAPI 3.1 document",
     response: OpenApiDocument,
   },
+  locales: {
+    method: "GET",
+    path: "/v1/locales",
+    tag: "Catalog",
+    auth: "public",
+    summary: "List supported product languages",
+    response: z.array(Res.LocaleDto),
+  },
   vocabulary: {
     method: "GET",
     path: "/v1/vocabulary",
@@ -103,6 +112,7 @@ export const ENDPOINTS = {
     summary: "The product vocabulary",
     description:
       "Every vocabulary with labels, descriptions, rating scales and lens explanations. Render labels from here instead of hard-coding them.",
+    query: Req.LocaleQuery,
     response: Res.VocabularyResponse,
   },
   listTopics: {
@@ -111,6 +121,7 @@ export const ENDPOINTS = {
     tag: "Catalog",
     auth: "public",
     summary: "List topics",
+    query: Req.LocaleQuery,
     response: z.array(Res.TopicDto),
   },
   createTopic: {
@@ -131,7 +142,18 @@ export const ENDPOINTS = {
     tag: "Catalog",
     auth: "public",
     summary: "Get a topic with its child topics",
+    query: Req.LocaleQuery,
     response: Res.TopicDetailDto,
+  },
+  putTopicTranslation: {
+    method: "PUT",
+    path: "/v1/topics/:slug/translations/:locale",
+    tag: "Catalog",
+    auth: "member",
+    who: "Admins.",
+    summary: "Add or replace a topic translation",
+    body: Req.TopicTranslationRequest,
+    response: Res.TopicTranslationDto,
   },
   search: {
     method: "GET",
@@ -208,7 +230,7 @@ export const ENDPOINTS = {
     path: "/v1/me",
     tag: "Identity",
     auth: "member",
-    summary: "Update your profile",
+    summary: "Update your profile or saved language",
     body: Req.UpdateProfileRequest,
     response: Res.PersonDto,
   },

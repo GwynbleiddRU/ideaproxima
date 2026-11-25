@@ -1,0 +1,18 @@
+{
+  "name": "@ideaproxima/i18n",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Product locale metadata, catalogue lookup and message formatting.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./locales": "./src/locales.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@ideaproxima/domain": "0.1.0",
+    "@lingui/core": "6.12.0"
+  }
+}

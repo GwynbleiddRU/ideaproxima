@@ -73,8 +73,7 @@ export async function proposeRelation(ctx: Ctx, input: ProposeRelationRequest): 
           isNull(ideaRelations.retractedAt),
         ),
       );
-    if (dup)
-      throw new DomainError("conflict", "This relation already exists. Evaluate its validity instead.");
+    if (dup) throw new DomainError("conflict", "relation_exists");
     const [created] = await tx.db
       .insert(ideaRelations)
       .values({ ...edge, rationale: input.rationale ?? "", proposedBy: ctx.actor!.id })
@@ -93,7 +92,7 @@ export async function proposeRelation(ctx: Ctx, input: ProposeRelationRequest): 
 export async function retractRelation(ctx: Ctx, relationId: string): Promise<void> {
   await inTransaction(ctx, async (tx) => {
     const [rel] = await tx.db.select().from(ideaRelations).where(eq(ideaRelations.id, relationId));
-    if (!rel || rel.retractedAt) throw notFound("Relation");
+    if (!rel || rel.retractedAt) throw notFound("relation_not_found");
     const stewards = [
       ...(await currentStewardIds(tx.db, rel.fromIdeaId)),
       ...(await currentStewardIds(tx.db, rel.toIdeaId)),

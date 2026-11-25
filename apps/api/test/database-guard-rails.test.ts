@@ -57,7 +57,9 @@ it("stops after two attempts and returns the documented retry response", async (
     expect(attempts).toBe(2);
     expect(response.status).toBe(503);
     expect(response.headers.get("Retry-After")).toBe("1");
-    expect(await response.json()).toMatchObject({ error: { code: "unavailable" } });
+    expect(await response.json()).toMatchObject({
+      error: { code: "unavailable", details: { reason: "database_retry_required" } },
+    });
   } finally {
     await database.dispose();
   }
@@ -102,7 +104,11 @@ it.skipIf(!process.env.TEST_DATABASE_URL)(
         expect(response.status).toBe(503);
         expect(response.headers.get("Retry-After")).toBe("1");
         expect(await response.json()).toMatchObject({
-          error: { code: "unavailable", requestId: "timeout-test-id" },
+          error: {
+            code: "unavailable",
+            requestId: "timeout-test-id",
+            details: { reason: "database_timeout" },
+          },
         });
       };
       await assertTimeout("/statement-fixture");

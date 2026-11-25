@@ -38,7 +38,7 @@ export type IdeaRow = typeof ideas.$inferSelect;
 export async function findIdea(ctx: Ctx, ref: string): Promise<IdeaRow> {
   const where = isUuid(ref) ? eq(ideas.id, ref) : eq(ideas.slug, ref.toLowerCase());
   const [idea] = await ctx.db.select().from(ideas).where(where).limit(1);
-  if (!idea || (idea.hiddenAt && !isModerator(ctx))) throw notFound("Idea");
+  if (!idea || (idea.hiddenAt && !isModerator(ctx))) throw notFound("idea_not_found");
   return idea;
 }
 
@@ -49,7 +49,7 @@ export async function findIdea(ctx: Ctx, ref: string): Promise<IdeaRow> {
  */
 export async function lockIdea(ctx: Ctx, ideaId: string): Promise<IdeaRow> {
   const [idea] = await ctx.db.select().from(ideas).where(eq(ideas.id, ideaId)).for("no key update");
-  if (!idea || (idea.hiddenAt && !isModerator(ctx))) throw notFound("Idea");
+  if (!idea || (idea.hiddenAt && !isModerator(ctx))) throw notFound("idea_not_found");
   return idea;
 }
 
@@ -394,7 +394,7 @@ export async function getRevision(ctx: Ctx, ideaRef: string, revisionId: string)
     .select()
     .from(ideaRevisions)
     .where(and(eq(ideaRevisions.ideaId, idea.id), eq(ideaRevisions.id, revisionId)));
-  if (!row) throw notFound("Revision");
+  if (!row) throw notFound("revision_not_found");
   return (await revisionDtos(ctx.db, [row]))[0]!;
 }
 

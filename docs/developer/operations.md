@@ -17,7 +17,7 @@ How to configure, deploy, run and maintain the Ideaproxima API.
 
 ## What runs in production
 
-- **One stateless process** (Node.js ≥ 22.18): `apps/api/dist/main.js`. On `PORT` it serves the API at `/v1` and the
+- **One stateless process** (Node.js ≥ 22.19): `apps/api/dist/main.js`. On `PORT` it serves the API at `/v1` and the
   built web app (`apps/web/dist`) outside `/v1`. The web app's files are read once at startup and served from
   memory, brotli- or gzip-compressed: hashed assets (`/assets/*`) with `Cache-Control: immutable` for a year, the
   HTML shell with `no-cache` and a Content-Security-Policy. A CDN or reverse proxy in front may cache `/assets/*`

@@ -303,6 +303,12 @@ function describe(e: ActivityDto, idea: ReactNode | null, count: number): ReactN
     }
     case "topic.created":
       return <>created the topic “{str(p.slug)}”</>;
+    case "topic.translation_updated":
+      return (
+        <>
+          updated the {str(p.locale)} translation of “{str(p.slug)}”
+        </>
+      );
     case "person.registered":
       return "joined the archive";
     case "person.profile_updated":

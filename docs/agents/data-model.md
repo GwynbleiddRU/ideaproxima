@@ -12,7 +12,7 @@ This document explains the _shape_ and the _guarantees_.
 | **Derived**     | Computed from facts by an algorithm              | Disposable; rebuilt any time                                                          | `idea_metrics`                                                                                           |
 | **Operational** | State needed to run the service                  | Mutable and eligible for cleanup                                                      | `sessions`, `jobs`, `job_schedules`; rate-limit counters currently live in memory                        |
 
-Mutable by nature (not history): `people` profile fields, `accounts`, `topics`, `initiatives.status`
+Mutable by nature (not history): `people` profile fields, `accounts`, `topics`, `topic_translations`, `initiatives.status`
 (status _history_ is in the ledger), `hidden_at` flags (moderation _history_ is in the ledger).
 
 ## Tables
@@ -21,9 +21,11 @@ Mutable by nature (not history): `people` profile fields, `accounts`, `topics`, 
 
 - **people** — public identity. `handle` (unique), `display_name`, `bio`, `affiliation`, `capacities text[]`
   (CHECK ⊆ vocabulary), `role` (member/moderator/admin), `deactivated_at`.
-- **accounts** — `person_id` PK, `email` (unique, lowercased), `password_hash` (scrypt), `email_verified_at`.
+- **accounts** — `person_id` PK, `email` (unique, lowercased), `password_hash` (scrypt), `email_verified_at`, and a nullable product `locale` preference.
 - **sessions** — `token_hash` (unique, SHA-256), `expires_at`, `revoked_at`.
 - **topics** — `slug` (unique), `name`, `description`, `parent_id` (hierarchy), `position`.
+- **topic_translations** — `(topic_id, locale)` PK, translated `name` and `description`. The catalog service
+  overlays this text on topic reads. The canonical `topics` row supplies fallback and names in idea references.
 - **person_expertise** — person × topic × `basis` (self_declared | verified), `verified_by`, `created_at`,
   `revoked_at`. Partial unique: one current row per (person, topic, basis).
 

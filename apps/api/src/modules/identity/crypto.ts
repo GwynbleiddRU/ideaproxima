@@ -22,7 +22,7 @@ async function derive(password: string, salt: Buffer, n: number, r: number, p: n
   if (active < limits.concurrency) {
     active++;
   } else {
-    if (waiting.length >= limits.queue) throw new DomainError("unavailable", "Password service is busy.");
+    if (waiting.length >= limits.queue) throw new DomainError("unavailable", "password_service_busy");
     await new Promise<void>((resolve) => {
       waiting.push(resolve);
       passwordHashQueueDepth.set(waiting.length);

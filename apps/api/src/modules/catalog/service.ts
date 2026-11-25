@@ -1,9 +1,18 @@
-import { asc, eq, sql } from "drizzle-orm";
-import type { IdeaRef, TopicDto } from "@ideaproxima/contracts";
-import * as domain from "@ideaproxima/domain";
-import { DomainError, authorize, notFound, slugify, type IdeaStage } from "@ideaproxima/domain";
+import { and, asc, eq, sql } from "drizzle-orm";
+import type { IdeaRef, TopicDto, TopicTranslationDto, TopicTranslationRequest } from "@ideaproxima/contracts";
+import { localizeVocabulary, type Locale } from "@ideaproxima/i18n";
+import {
+  DomainError,
+  authorize,
+  notFound,
+  productVocabulary,
+  slugify,
+  type IdeaStage,
+} from "@ideaproxima/domain";
 import { queryRows } from "../../db/client";
-import { topics } from "../../db/schema";
+import { topics, topicTranslations } from "../../db/schema";
+import { lockKey } from "../shared/locks";
+import { requireLocale } from "../shared/locales";
 import { recordActivity } from "../shared/activity";
 import { inTransaction, type Ctx } from "../shared/context";
 
@@ -28,9 +37,16 @@ const topicDto = (t: TopicRow, ideaCount = 0, latestIdeas: IdeaRef[] = []): Topi
  * bare `"id"`, which inside a correlated subquery silently binds to the inner table — that is how topic counts
  * once read 0 everywhere.
  */
-export async function listTopics(ctx: Ctx): Promise<TopicDto[]> {
+export async function listTopics(ctx: Ctx, locale: Locale): Promise<TopicDto[]> {
   const [rows, counts, latest] = await Promise.all([
-    ctx.db.select().from(topics).orderBy(asc(topics.position), asc(topics.name)),
+    ctx.db
+      .select({ topic: topics, name: topicTranslations.name, description: topicTranslations.description })
+      .from(topics)
+      .leftJoin(
+        topicTranslations,
+        and(eq(topicTranslations.topicId, topics.id), eq(topicTranslations.locale, locale)),
+      )
+      .orderBy(asc(topics.position), asc(topics.name)),
     queryRows<{ topic_id: string; n: number }>(
       ctx.db,
       sql`select t.id as topic_id, count(distinct it.idea_id)::int as n
@@ -59,13 +75,23 @@ export async function listTopics(ctx: Ctx): Promise<TopicDto[]> {
   const count = new Map(counts.map((c) => [c.topic_id, c.n]));
   const newest = new Map<string, IdeaRef[]>();
   for (const { topic_id, ...idea } of latest) newest.set(topic_id, [...(newest.get(topic_id) ?? []), idea]);
-  return rows.map((t) => topicDto(t, count.get(t.id) ?? 0, newest.get(t.id) ?? []));
+  return rows.map(({ topic, name, description }) =>
+    topicDto(
+      { ...topic, name: name ?? topic.name, description: description ?? topic.description },
+      count.get(topic.id) ?? 0,
+      newest.get(topic.id) ?? [],
+    ),
+  );
 }
 
-export async function getTopic(ctx: Ctx, slug: string): Promise<TopicDto & { children: TopicDto[] }> {
-  const all = await listTopics(ctx);
+export async function getTopic(
+  ctx: Ctx,
+  slug: string,
+  locale: Locale,
+): Promise<TopicDto & { children: TopicDto[] }> {
+  const all = await listTopics(ctx, locale);
   const topic = all.find((t) => t.slug === slug);
-  if (!topic) throw notFound("Topic");
+  if (!topic) throw notFound("topic_not_found");
   return { ...topic, children: all.filter((t) => t.parentId === topic.id) };
 }
 
@@ -77,11 +103,11 @@ export async function createTopic(
   return inTransaction(ctx, async (tx) => {
     const slug = input.slug ?? slugify(input.name, 60);
     const [dup] = await tx.db.select({ id: topics.id }).from(topics).where(eq(topics.slug, slug));
-    if (dup) throw new DomainError("conflict", "A topic with that slug exists.");
+    if (dup) throw new DomainError("conflict", "topic_slug_taken");
     let parentId: string | null = null;
     if (input.parentSlug) {
       const [parent] = await tx.db.select().from(topics).where(eq(topics.slug, input.parentSlug));
-      if (!parent) throw new DomainError("validation_failed", "Unknown parent topic.");
+      if (!parent) throw new DomainError("validation_failed", "unknown_parent_topic");
       parentId = parent.id;
     }
     const [row] = await tx.db
@@ -97,43 +123,40 @@ export async function createTopic(
   });
 }
 
-/**
- * The full product vocabulary as data, so a client can render every label, description, scale anchor and lens
- * explanation from the same source the server validates against.
- */
-export function vocabulary() {
-  return {
-    stages: domain.IDEA_STAGES.map((key) => ({ key, ...domain.IDEA_STAGE_INFO[key] })),
-    sections: domain.IDEA_SECTIONS.map((key) => ({ key, ...domain.IDEA_SECTION_INFO[key] })),
-    claimRoles: domain.CLAIM_ROLES.map((key) => ({ key, ...domain.CLAIM_ROLE_INFO[key] })),
-    consequenceDepths: domain.CONSEQUENCE_DEPTHS.map((key) => ({
-      key,
-      ...domain.CONSEQUENCE_DEPTH_INFO[key],
-    })),
-    claimStatuses: domain.CLAIM_STATUSES.map((key) => ({ key, ...domain.CLAIM_STATUS_INFO[key] })),
-    evidenceStances: domain.EVIDENCE_STANCES.map((key) => ({ key, ...domain.EVIDENCE_STANCE_INFO[key] })),
-    sourceKinds: domain.SOURCE_KINDS.map((key) => ({ key, ...domain.SOURCE_KIND_INFO[key] })),
-    argumentStances: domain.ARGUMENT_STANCES.map((key) => ({ key, ...domain.ARGUMENT_STANCE_INFO[key] })),
-    commentKinds: domain.COMMENT_KINDS,
-    dimensions: domain.DIMENSION_KEYS.map((key) => ({ key, ...domain.DIMENSIONS[key] })),
-    confidenceLevels: domain.CONFIDENCE_LEVELS,
-    stanceKinds: domain.STANCE_KINDS.map((key) => ({ key, ...domain.STANCE_KIND_INFO[key] })),
-    capacities: domain.CAPACITIES.map((key) => ({ key, ...domain.CAPACITY_INFO[key] })),
-    involvementStatuses: domain.INVOLVEMENT_STATUSES.map((key) => ({
-      key,
-      ...domain.INVOLVEMENT_STATUS_INFO[key],
-    })),
-    relationTypes: domain.RELATION_TYPES.map((key) => ({ key, ...domain.RELATION_TYPE_INFO[key] })),
-    initiativeKinds: domain.INITIATIVE_KINDS.map((key) => ({ key, ...domain.INITIATIVE_KIND_INFO[key] })),
-    initiativeStatuses: domain.INITIATIVE_STATUSES.map((key) => ({
-      key,
-      ...domain.INITIATIVE_STATUS_INFO[key],
-    })),
-    outcomeResults: domain.OUTCOME_RESULTS.map((key) => ({ key, ...domain.OUTCOME_RESULT_INFO[key] })),
-    revisionStatuses: domain.REVISION_STATUSES.map((key) => ({ key, ...domain.REVISION_STATUS_INFO[key] })),
-    lenses: domain.LENS_KEYS.map((key) => ({ key, ...domain.LENS_INFO[key] })),
-    minRatingsForConfidence: domain.MIN_RATINGS_FOR_CONFIDENCE,
-    metricsAlgorithm: domain.BASELINE_ALGORITHM,
-    limits: domain.LIMITS,
-  };
+export async function putTopicTranslation(
+  ctx: Ctx,
+  slug: string,
+  tag: string,
+  text: TopicTranslationRequest,
+): Promise<TopicTranslationDto> {
+  authorize(ctx.actor, "topic.manage");
+  const locale = requireLocale(tag);
+  return inTransaction(ctx, async (tx) => {
+    await lockKey(tx, "topic-translation", slug, locale);
+    const [topic] = await tx.db.select({ id: topics.id }).from(topics).where(eq(topics.slug, slug));
+    if (!topic) throw notFound("topic_not_found");
+    const changed = await tx.db
+      .insert(topicTranslations)
+      .values({ topicId: topic.id, locale, ...text })
+      .onConflictDoUpdate({
+        target: [topicTranslations.topicId, topicTranslations.locale],
+        set: text,
+        setWhere: sql`${topicTranslations.name} is distinct from ${text.name} or ${topicTranslations.description} is distinct from ${text.description}`,
+      })
+      .returning({ topicId: topicTranslations.topicId });
+    if (changed.length) {
+      await recordActivity(tx, {
+        action: "topic.translation_updated",
+        subject: { kind: "topic", id: topic.id },
+        payload: { slug, locale },
+      });
+    }
+    return { locale, ...text };
+  });
+}
+
+const sourceVocabulary = productVocabulary();
+
+export function vocabulary(locale: Locale) {
+  return { locale, ...localizeVocabulary(sourceVocabulary, locale) };
 }

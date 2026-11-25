@@ -54,7 +54,8 @@ async function resolveTopicIds(db: Database, slugs: readonly string[]): Promise<
     .where(inArray(topics.slug, [...slugs]));
   const bySlug = new Map(rows.map((r) => [r.slug, r.id]));
   const missing = slugs.filter((s) => !bySlug.has(s));
-  if (missing.length) throw new DomainError("validation_failed", `Unknown topic(s): ${missing.join(", ")}.`);
+  if (missing.length)
+    throw new DomainError("validation_failed", "unknown_idea_topics", { topics: missing.join(", ") });
   return slugs.map((s) => bySlug.get(s)!);
 }
 
@@ -189,7 +190,7 @@ export async function submitRevision(
       .select()
       .from(ideaRevisions)
       .where(and(eq(ideaRevisions.id, input.baseRevisionId), eq(ideaRevisions.ideaId, idea.id)));
-    if (!base) throw new DomainError("validation_failed", "baseRevisionId does not belong to this idea.");
+    if (!base) throw new DomainError("validation_failed", "revision_wrong_idea");
     const [current] = await tx.db
       .select()
       .from(ideaRevisions)
@@ -197,14 +198,15 @@ export async function submitRevision(
     if (publish && base.id !== current!.id) {
       throw new DomainError(
         "conflict",
-        `The idea changed since you started editing (now at revision #${current!.number}).`,
+        "revision_base_changed",
+        { number: current!.number },
         {
           currentRevisionId: current!.id,
         },
       );
     }
     if (sameIdeaContent(content, current!.content)) {
-      throw new DomainError("validation_failed", "This revision does not change anything.");
+      throw new DomainError("validation_failed", "revision_unchanged");
     }
     const topicIds = await resolveTopicIds(tx.db, content.topics);
     const [{ n } = { n: 0 }] = await tx.db
@@ -245,7 +247,7 @@ async function getRevisionDto(db: Database, ideaId: string, revisionId: string):
     .select()
     .from(ideaRevisions)
     .where(and(eq(ideaRevisions.id, revisionId), eq(ideaRevisions.ideaId, ideaId)));
-  if (!rows.length) throw notFound("Revision");
+  if (!rows.length) throw notFound("revision_not_found");
   return (await revisionDtos(db, rows))[0]!;
 }
 
@@ -269,17 +271,15 @@ export async function decideRevision(
       .select()
       .from(ideaRevisions)
       .where(and(eq(ideaRevisions.id, revisionId), eq(ideaRevisions.ideaId, idea.id)));
-    if (!revision) throw notFound("Revision");
+    if (!revision) throw notFound("revision_not_found");
     if (revision.status !== "proposed") {
-      throw new DomainError("invariant_violated", `This revision was already ${revision.status}.`);
+      throw new DomainError("invariant_violated", "revision_already_reviewed", { status: revision.status });
     }
     const accept = input.decision === "accept";
     if (accept && revision.baseRevisionId !== idea.currentRevisionId) {
-      throw new DomainError(
-        "conflict",
-        "The idea has changed since this revision was proposed. It must be re-proposed against the current revision.",
-        { currentRevisionId: idea.currentRevisionId },
-      );
+      throw new DomainError("conflict", "proposal_base_changed", undefined, {
+        currentRevisionId: idea.currentRevisionId,
+      });
     }
     await tx.db
       .update(ideaRevisions)
@@ -318,10 +318,9 @@ export async function withdrawRevision(ctx: Ctx, ideaRef: string, revisionId: st
       .select()
       .from(ideaRevisions)
       .where(and(eq(ideaRevisions.id, revisionId), eq(ideaRevisions.ideaId, idea.id)));
-    if (!revision) throw notFound("Revision");
+    if (!revision) throw notFound("revision_not_found");
     authorize(ctx.actor, "contribution.withdraw", { isCreator: revision.authorId === ctx.actor?.id });
-    if (revision.status !== "proposed")
-      throw new DomainError("invariant_violated", "Only pending proposals can be withdrawn.");
+    if (revision.status !== "proposed") throw new DomainError("invariant_violated", "proposal_not_pending");
     await tx.db
       .update(ideaRevisions)
       .set({ status: "withdrawn", decidedBy: ctx.actor!.id, decidedAt: sql`now()` })
@@ -349,8 +348,8 @@ export async function appointSteward(
     const stewardIds = await currentStewardIds(tx.db, idea.id);
     authorize(ctx.actor, "idea.steward.appoint", { isSteward: stewardIds.includes(ctx.actor?.id ?? "") });
     const [person] = await tx.db.select().from(people).where(eq(people.handle, input.handle));
-    if (!person || person.deactivatedAt) throw notFound("Person");
-    if (stewardIds.includes(person.id)) throw new DomainError("conflict", "Already a steward of this idea.");
+    if (!person || person.deactivatedAt) throw notFound("person_not_found");
+    if (stewardIds.includes(person.id)) throw new DomainError("conflict", "already_steward");
     const [row] = await tx.db
       .insert(ideaStewards)
       .values({ ideaId: idea.id, personId: person.id, role: "steward", grantedBy: ctx.actor!.id })
@@ -399,8 +398,7 @@ export async function transitionStage(
         .select({ id: initiatives.id })
         .from(initiatives)
         .where(and(eq(initiatives.id, input.initiativeId), eq(initiatives.ideaId, idea.id)));
-      if (!initiative)
-        throw new DomainError("validation_failed", "initiativeId does not belong to this idea.");
+      if (!initiative) throw new DomainError("validation_failed", "initiative_wrong_idea");
     }
     assertStageTransition({
       from: idea.stage,

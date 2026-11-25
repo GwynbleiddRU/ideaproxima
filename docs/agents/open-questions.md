@@ -28,8 +28,9 @@ default is fine; record the decision here and in the relevant document.
    _Default:_ if evidence matters, state it as a claim on the idea.
 10. **Topic limits and hierarchy depth.** _Default:_ 1–4 topics per idea; hierarchy of any depth, but filters include
     only direct children.
-11. **Idea language and translation.** The archive is global; content has no `language` field. _Default:_ none.
-    Adding `language` to `IdeaContent` needs no migration; add a projection column if filtering is needed.
+11. **Idea language and translation.** Product-language negotiation and API catalogues are implemented in
+    [plan 05](production/05-localization.md). Idea content has no language field yet. [Plan 06](production/06-multilingual-content-and-search.md)
+    covers content language and search. The launch locale set and release status are owner decision 2.
 12. **Licensing of contributions.** Data dumps for researchers (a public good) need an explicit licence (e.g.
     CC BY-SA). _Default:_ unspecified. Decide before public launch, and record acceptance per account.
 13. **AI-assisted contributions.** The concept implies AI help must be labelled and never counted as human

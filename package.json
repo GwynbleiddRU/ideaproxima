@@ -6,11 +6,12 @@
   "workspaces": [
     "packages/domain",
     "packages/contracts",
+    "packages/i18n",
     "apps/api",
     "apps/web"
   ],
   "engines": {
-    "node": ">=22.18"
+    "node": ">=22.19"
   },
   "scripts": {
     "dev": "tsx scripts/dev.ts",
@@ -26,6 +27,8 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "i18n:compile": "tsx scripts/i18n/compile-messages.ts",
+    "i18n:extract": "tsx scripts/i18n/extract-vocabulary.ts",
     "docs:api": "tsx scripts/generate-api-docs.ts",
     "docs:check": "tsx scripts/check-doc-links.ts",
     "db:up": "docker compose up -d postgres",
@@ -39,6 +42,7 @@
   "devDependencies": {
     "@axe-core/playwright": "^4.14.0",
     "@eslint/js": "^9.39.0",
+    "@lingui/message-utils": "6.12.0",
     "@playwright/test": "1.63.0",
     "@types/node": "^24.0.0",
     "eslint": "^9.39.0",

@@ -26,7 +26,8 @@ export async function moderate(ctx: Ctx, input: ModerationRequest): Promise<{ hi
   return inTransaction(ctx, async (tx) => {
     const target = await resolveTarget(tx, input.target.kind, input.target.id);
     const hide = input.action === "hide";
-    if (target.hidden === hide) throw new DomainError("conflict", hide ? "Already hidden." : "Not hidden.");
+    if (target.hidden === hide)
+      throw new DomainError("conflict", hide ? "already_hidden" : "already_visible");
     const table = TABLES[input.target.kind];
     await tx.db
       .update(table)

@@ -50,7 +50,10 @@ export const identityRoutes = new Hono<AppEnv>()
     deleteCookie(c, SESSION_COOKIE, { path: "/" });
     return c.json({ ok: true });
   })
-  .get("/me", async (c) => c.json(await identity.getMe(c.get("ctx"))))
+  .get("/me", async (c) => {
+    c.header("Cache-Control", "private, no-store");
+    return c.json(await identity.getMe(c.get("ctx")));
+  })
   .patch("/me", async (c) =>
     c.json(await identity.updateProfile(c.get("ctx"), await jsonBody(c, UpdateProfileRequest))),
   )

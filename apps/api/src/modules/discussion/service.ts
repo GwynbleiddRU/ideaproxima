@@ -56,13 +56,13 @@ export async function postComment(ctx: Ctx, ideaRef: string, input: PostCommentR
         .from(comments)
         .where(eq(comments.id, input.parentId));
       if (!parent || parent.ideaId !== idea.id)
-        throw new DomainError("validation_failed", "parentId is not a comment on this idea.");
+        throw new DomainError("validation_failed", "comment_parent_wrong_idea");
     }
     const anchor = input.anchor;
     if (anchor) {
       const table = anchor.kind === "claim" ? claims : anchor.kind === "evidence" ? evidence : argumentsTable;
       const [found] = await tx.db.select({ id: table.id }).from(table).where(eq(table.id, anchor.id));
-      if (!found) throw new DomainError("validation_failed", `Unknown ${anchor.kind} anchor.`);
+      if (!found) throw new DomainError("validation_failed", "unknown_comment_anchor", { kind: anchor.kind });
     }
     const [created] = await tx.db
       .insert(comments)

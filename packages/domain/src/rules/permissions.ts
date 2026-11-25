@@ -81,6 +81,6 @@ export function authorize(
   action: Action,
   ctx: PermissionContext = {},
 ): asserts actor is Actor {
-  if (!actor) throw new DomainError("unauthenticated", "Sign in to do this.");
-  if (!can(actor, action, ctx)) throw new DomainError("forbidden", `Not allowed: ${action}.`);
+  if (!actor) throw new DomainError("unauthenticated", "sign_in_required");
+  if (!can(actor, action, ctx)) throw new DomainError("forbidden", "action_forbidden", { action });
 }

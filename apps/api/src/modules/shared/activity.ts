@@ -11,6 +11,7 @@ export const ACTIVITY_ACTIONS = [
   "expertise.declared",
   "expertise.revoked",
   "topic.created",
+  "topic.translation_updated",
   "idea.proposed",
   "revision.published",
   "revision.proposed",

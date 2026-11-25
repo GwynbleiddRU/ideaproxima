@@ -24,7 +24,7 @@ export interface Harness {
   call<T = any>(
     method: string,
     path: string,
-    opts?: { body?: unknown; token?: string },
+    opts?: { body?: unknown; token?: string; headers?: Record<string, string> },
   ): Promise<{ status: number; headers: Headers; body: T }>;
   user(handle: string, role?: PersonRole): Promise<{ token: string; id: string; handle: string }>;
   idea(
@@ -95,7 +95,7 @@ export async function createHarness(overrides: NodeJS.ProcessEnv = {}): Promise<
   const app = createApp({ db: database.db, config });
 
   const call: Harness["call"] = async (method, path, opts = {}) => {
-    const headers: Record<string, string> = {};
+    const headers: Record<string, string> = { ...opts.headers };
     if (opts.body !== undefined) headers["content-type"] = "application/json";
     if (opts.token) headers.authorization = `Bearer ${opts.token}`;
     const res = await app.request(`/v1${path}`, {

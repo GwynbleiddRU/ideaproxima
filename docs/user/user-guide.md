@@ -424,6 +424,11 @@ a source, a counterargument) belongs in an argument, evidence or claim, where ot
 Researchers and integrators can use the API without any interface. The base path is `/v1`. The complete list of
 endpoints with every field is the [API reference](../developer/api-reference.md).
 
+Use `GET /v1/locales` to find supported product languages. To preview one, add `?locale=ru` to vocabulary or
+topic requests, or send an `Accept-Language` header. Accounts can save a preference through `PATCH /v1/me`.
+Available translations appear in the requested language. Vocabulary and errors use English for missing
+translations. Topics use their canonical text. The API leaves contributions in the language their authors used.
+
 ```bash
 # Discover: the most neglected ideas in environment
 curl "http://localhost:3000/v1/ideas?lens=neglected&topic=environment"

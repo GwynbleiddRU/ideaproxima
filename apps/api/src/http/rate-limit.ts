@@ -36,13 +36,10 @@ export function rateLimit(options: {
       rateLimitDecisions.inc({ policy: options.name, outcome: "denied" });
       const retryAfter = Math.max(1, Math.ceil((entry.resetAt - now) / 1000));
       c.header("Retry-After", String(retryAfter));
-      return errorResponse(
-        c,
-        429,
-        "rate_limited",
-        `Too many requests (${options.name}). Try again in ${retryAfter}s.`,
-        { retryAfterSeconds: retryAfter },
-      );
+      return errorResponse(c, 429, "rate_limited", "too_many_requests", {
+        policy: options.name,
+        retryAfterSeconds: retryAfter,
+      });
     }
     rateLimitDecisions.inc({ policy: options.name, outcome: "allowed" });
     await next();

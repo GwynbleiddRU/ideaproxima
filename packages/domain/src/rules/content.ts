@@ -1,4 +1,5 @@
 import { DomainError } from "../errors";
+import type { ErrorParams, ErrorReason } from "../errors.en";
 import { IDEA_SECTIONS, type IdeaSectionKey } from "../vocabulary/knowledge";
 
 /** Single source of truth for content limits; the API contracts import these. */
@@ -59,19 +60,19 @@ export function normalizeIdeaContent(input: IdeaContent): IdeaContent {
 }
 
 export function assertIdeaContent(c: IdeaContent): void {
-  const fail = (m: string) => {
-    throw new DomainError("validation_failed", m);
+  const fail = (reason: ErrorReason, params: ErrorParams) => {
+    throw new DomainError("validation_failed", reason, params);
   };
   if (c.title.length < LIMITS.ideaTitle.min || c.title.length > LIMITS.ideaTitle.max)
-    fail(`Title must be ${LIMITS.ideaTitle.min}–${LIMITS.ideaTitle.max} characters.`);
+    fail("idea_title_length", LIMITS.ideaTitle);
   if (c.summary.length < LIMITS.ideaSummary.min || c.summary.length > LIMITS.ideaSummary.max)
-    fail(`Summary must be ${LIMITS.ideaSummary.min}–${LIMITS.ideaSummary.max} characters.`);
+    fail("idea_summary_length", LIMITS.ideaSummary);
   if (c.topics.length < LIMITS.topicsPerIdea.min || c.topics.length > LIMITS.topicsPerIdea.max)
-    fail(`An idea belongs to ${LIMITS.topicsPerIdea.min}–${LIMITS.topicsPerIdea.max} topics.`);
-  if (c.tags.length > LIMITS.tagsPerIdea.max) fail(`At most ${LIMITS.tagsPerIdea.max} tags.`);
+    fail("idea_topic_count", LIMITS.topicsPerIdea);
+  if (c.tags.length > LIMITS.tagsPerIdea.max) fail("idea_tag_count", { max: LIMITS.tagsPerIdea.max });
   for (const [key, text] of Object.entries(c.sections)) {
-    if (!(IDEA_SECTIONS as readonly string[]).includes(key)) fail(`Unknown section "${key}".`);
-    if ((text ?? "").length > LIMITS.section.max) fail(`Section "${key}" is too long.`);
+    if (!(IDEA_SECTIONS as readonly string[]).includes(key)) fail("unknown_idea_section", { section: key });
+    if ((text ?? "").length > LIMITS.section.max) fail("idea_section_too_long", { section: key });
   }
 }
 

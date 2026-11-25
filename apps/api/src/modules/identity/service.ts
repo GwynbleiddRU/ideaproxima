@@ -12,11 +12,13 @@ import type {
   UpdateProfileRequest,
 } from "@ideaproxima/contracts";
 import type { PersonRole } from "@ideaproxima/domain";
+import { isLocale, type Locale } from "@ideaproxima/i18n";
 import { DomainError, authorize, isValidHandle, notFound, type Actor } from "@ideaproxima/domain";
 import { queryRows, type Database } from "../../db/client";
 import { accounts, ideas, involvements, people, personExpertise, sessions, topics } from "../../db/schema";
 import { recordActivity } from "../shared/activity";
 import { inTransaction, type Ctx } from "../shared/context";
+import { requireLocale } from "../shared/locales";
 import { ideaRefs, iso } from "../shared/refs";
 import { listIdeaItems } from "../ideas/queries";
 import { hashPassword, hashToken, newSessionToken, verifyPassword } from "./crypto";
@@ -48,11 +50,18 @@ export async function createSession(db: Database, personId: string, ttlDays: num
 export async function resolveSession(
   db: Database,
   token: string,
-): Promise<{ actor: Actor; sessionId: string } | null> {
+): Promise<{ actor: Actor; sessionId: string; locale: Locale | null } | null> {
   const [row] = await db
-    .select({ sessionId: sessions.id, id: people.id, role: people.role, deactivatedAt: people.deactivatedAt })
+    .select({
+      sessionId: sessions.id,
+      id: people.id,
+      role: people.role,
+      deactivatedAt: people.deactivatedAt,
+      locale: accounts.locale,
+    })
     .from(sessions)
     .innerJoin(people, eq(people.id, sessions.personId))
+    .leftJoin(accounts, eq(accounts.personId, sessions.personId))
     .where(
       and(
         eq(sessions.tokenHash, hashToken(token)),
@@ -62,7 +71,11 @@ export async function resolveSession(
     )
     .limit(1);
   if (!row || row.deactivatedAt) return null;
-  return { sessionId: row.sessionId, actor: { id: row.id, role: row.role, active: true } };
+  return {
+    sessionId: row.sessionId,
+    actor: { id: row.id, role: row.role, active: true },
+    locale: savedLocale(row.locale),
+  };
 }
 
 /** Revokes every session of a person, optionally keeping one (the caller's own). */
@@ -93,11 +106,11 @@ export async function changePassword(
   currentSessionId: string | null,
   input: ChangePasswordRequest,
 ): Promise<void> {
-  if (!ctx.actor) throw new DomainError("unauthenticated", "Sign in to do this.");
+  if (!ctx.actor) throw new DomainError("unauthenticated", "sign_in_required");
   const actorId = ctx.actor.id;
   const [account] = await ctx.db.select().from(accounts).where(eq(accounts.personId, actorId));
   if (!account || !(await verifyPassword(input.currentPassword, account.passwordHash))) {
-    throw new DomainError("forbidden", "The current password is not correct.");
+    throw new DomainError("forbidden", "incorrect_current_password");
   }
   const passwordHash = await hashPassword(input.newPassword);
   await inTransaction(ctx, async (tx) => {
@@ -120,13 +133,9 @@ export async function setPersonActive(
   return inTransaction(ctx, async (tx) => {
     const target = await findPersonByHandle(tx.db, handle);
     authorize(ctx.actor, "person.moderate", { targetRole: target.role });
-    if (target.id === ctx.actor.id)
-      throw new DomainError("invariant_violated", "You cannot moderate your own account.");
+    if (target.id === ctx.actor.id) throw new DomainError("invariant_violated", "self_account_moderation");
     if (!target.deactivatedAt === active) {
-      throw new DomainError(
-        "conflict",
-        active ? "The account is already active." : "The account is already deactivated.",
-      );
+      throw new DomainError("conflict", active ? "account_already_active" : "account_already_deactivated");
     }
     const [updated] = await tx.db
       .update(people)
@@ -152,7 +161,7 @@ export async function assignRole(ctx: Ctx, handle: string, role: PersonRole): Pr
   const actorId = ctx.actor.id;
   const target = await findPersonByHandle(ctx.db, handle);
   if (target.id === actorId) {
-    throw new DomainError("invariant_violated", "You cannot change your own role (ask another admin).");
+    throw new DomainError("invariant_violated", "self_role_change");
   }
   return applyRole(ctx, handle, role);
 }
@@ -190,41 +199,49 @@ export async function revokeSession(db: Database, sessionId: string): Promise<vo
     .where(eq(sessions.id, sessionId));
 }
 
+const savedLocale = (tag: string | null): Locale | null => (tag && isLocale(tag) ? tag : null);
+
 // ---------------------------------------------------------------- registration & login
 
 export async function register(ctx: Ctx, input: RegisterRequest, ttlDays: number): Promise<AuthResponse> {
-  if (!isValidHandle(input.handle)) throw new DomainError("validation_failed", "Invalid handle.");
+  if (!isValidHandle(input.handle)) throw new DomainError("validation_failed", "invalid_handle");
+  const locale = input.locale === undefined ? null : requireLocale(input.locale);
   const passwordHash = await hashPassword(input.password);
   return inTransaction(ctx, async (tx) => {
     const [emailTaken] = await tx.db
       .select({ id: accounts.personId })
       .from(accounts)
       .where(eq(accounts.email, input.email));
-    if (emailTaken) throw new DomainError("conflict", "That email is already registered.");
+    if (emailTaken) throw new DomainError("conflict", "email_taken");
     const [handleTaken] = await tx.db
       .select({ id: people.id })
       .from(people)
       .where(eq(people.handle, input.handle));
-    if (handleTaken) throw new DomainError("conflict", "That handle is taken.");
+    if (handleTaken) throw new DomainError("conflict", "handle_taken");
 
     const [person] = await tx.db
       .insert(people)
       .values({ handle: input.handle, displayName: input.displayName })
       .returning();
-    await tx.db.insert(accounts).values({ personId: person!.id, email: input.email, passwordHash });
+    await tx.db.insert(accounts).values({ personId: person!.id, email: input.email, passwordHash, locale });
     const actorCtx: Ctx = { ...tx, actor: { id: person!.id, role: person!.role, active: true } };
     await recordActivity(actorCtx, {
       action: "person.registered",
       subject: { kind: "person", id: person!.id },
     });
     const session = await createSession(tx.db, person!.id, ttlDays);
-    return { person: personDto(person!), token: session.token, expiresAt: iso(session.expiresAt) };
+    return {
+      person: personDto(person!),
+      token: session.token,
+      expiresAt: iso(session.expiresAt),
+      preferences: { locale },
+    };
   });
 }
 
 export async function login(ctx: Ctx, input: LoginRequest, ttlDays: number): Promise<AuthResponse> {
   const [row] = await ctx.db
-    .select({ person: people, passwordHash: accounts.passwordHash })
+    .select({ person: people, passwordHash: accounts.passwordHash, locale: accounts.locale })
     .from(accounts)
     .innerJoin(people, eq(people.id, accounts.personId))
     .where(eq(accounts.email, input.email))
@@ -232,28 +249,38 @@ export async function login(ctx: Ctx, input: LoginRequest, ttlDays: number): Pro
   const active = row && !row.person.deactivatedAt;
   const matches = await verifyPassword(input.password, active ? row.passwordHash : undefined);
   if (!active || !matches) {
-    throw new DomainError("unauthenticated", "Wrong email or password.");
+    throw new DomainError("unauthenticated", "wrong_credentials");
   }
   const session = await createSession(ctx.db, row.person.id, ttlDays);
-  return { person: personDto(row.person), token: session.token, expiresAt: iso(session.expiresAt) };
+  return {
+    person: personDto(row.person),
+    token: session.token,
+    expiresAt: iso(session.expiresAt),
+    preferences: { locale: savedLocale(row.locale) },
+  };
 }
 
 // ---------------------------------------------------------------- me & profiles
 
 export async function getMe(ctx: Ctx): Promise<MeResponse> {
-  if (!ctx.actor) throw new DomainError("unauthenticated", "Sign in to do this.");
+  if (!ctx.actor) throw new DomainError("unauthenticated", "sign_in_required");
   const [row] = await ctx.db
-    .select({ person: people, email: accounts.email })
+    .select({ person: people, email: accounts.email, locale: accounts.locale })
     .from(people)
     .innerJoin(accounts, eq(accounts.personId, people.id))
     .where(eq(people.id, ctx.actor.id));
-  if (!row) throw notFound("Person");
-  return { person: personDto(row.person), email: row.email };
+  if (!row) throw notFound("person_not_found");
+  return {
+    person: personDto(row.person),
+    email: row.email,
+    preferences: { locale: savedLocale(row.locale) },
+  };
 }
 
 export async function updateProfile(ctx: Ctx, input: UpdateProfileRequest): Promise<PersonDto> {
-  if (!ctx.actor) throw new DomainError("unauthenticated", "Sign in to do this.");
+  if (!ctx.actor) throw new DomainError("unauthenticated", "sign_in_required");
   const actorId = ctx.actor.id;
+  const locale = typeof input.locale === "string" ? requireLocale(input.locale) : input.locale;
   return inTransaction(ctx, async (tx) => {
     const changes: Partial<typeof people.$inferInsert> = {};
     if (input.displayName !== undefined) changes.displayName = input.displayName;
@@ -270,13 +297,16 @@ export async function updateProfile(ctx: Ctx, input: UpdateProfileRequest): Prom
         payload: { fields: Object.keys(changes) },
       });
     }
+    if (locale !== undefined) {
+      await tx.db.update(accounts).set({ locale }).where(eq(accounts.personId, actorId));
+    }
     return personDto(person!);
   });
 }
 
 async function findPersonByHandle(db: Database, handle: string): Promise<PersonRow> {
   const [person] = await db.select().from(people).where(eq(people.handle, handle.toLowerCase()));
-  if (!person) throw notFound("Person");
+  if (!person) throw notFound("person_not_found");
   return person;
 }
 
@@ -356,7 +386,7 @@ export async function declareExpertise(ctx: Ctx, input: DeclareExpertiseRequest)
   const actorId = ctx.actor.id;
   return inTransaction(ctx, async (tx) => {
     const [topic] = await tx.db.select().from(topics).where(eq(topics.slug, input.topic));
-    if (!topic) throw new DomainError("validation_failed", `Unknown topic "${input.topic}".`);
+    if (!topic) throw new DomainError("validation_failed", "unknown_expertise_topic", { topic: input.topic });
     const [existing] = await tx.db
       .select({ id: personExpertise.id })
       .from(personExpertise)
@@ -388,7 +418,7 @@ export async function revokeExpertise(ctx: Ctx, topicSlug: string): Promise<Expe
   const actorId = ctx.actor.id;
   return inTransaction(ctx, async (tx) => {
     const [topic] = await tx.db.select().from(topics).where(eq(topics.slug, topicSlug));
-    if (!topic) throw notFound("Topic");
+    if (!topic) throw notFound("topic_not_found");
     const revoked = await tx.db
       .update(personExpertise)
       .set({ revokedAt: sql`now()` })

@@ -9,7 +9,8 @@ app), one PostgreSQL database, and packages with strict dependency direction:
 packages/domain      pure TypeScript. Vocabulary, invariants, permission policy, provisional metrics.
       ▲              No I/O, no dependencies. Imported by the API, scripts and the web app (labels, limits).
       │
-packages/contracts   zod request AND response schemas, the endpoint catalogue, the OpenAPI builder.
+packages/i18n        → domain. Locale metadata, negotiation, and translated catalogues for the API.
+packages/contracts   → domain. zod schemas, the endpoint catalogue, and the OpenAPI builder.
       ▲              The API boundary. The web app imports its types (not its runtime schemas).
       │
 apps/api             Hono HTTP layer → module services → Drizzle → Postgres (or PGlite). Serves apps/web/dist.
@@ -45,7 +46,7 @@ revisions, stewardship, lifecycle, lenses), `knowledge` (claims, sources, eviden
 3. The service opens a transaction (`inTransaction`), checks `authorize(...)`, enforces domain rules from
    `@ideaproxima/domain`, writes the fact, writes any projection, appends to the activity ledger, refreshes derived
    metrics for affected ideas, and returns a DTO.
-4. Errors are `DomainError`s with stable codes. `src/http/errors.ts` is the single place that maps codes to HTTP
+4. Errors are `DomainError`s with stable codes and reasons. `src/http/errors.ts` is the single place that maps codes to HTTP
    statuses. Postgres constraint violations that slip through (e.g. races) map to 409/422/400.
 
 ## Decision log (ADRs)
@@ -293,6 +294,18 @@ Enqueue, retry and recovery serialize entry into that index per key. An expired 
 can retire in favour of pending work. A schedule advances its database slot and enqueues in one transaction.
 The API runs the poller inline by default. A dedicated worker uses the same registry and queue functions.
 These tables hold disposable operational state. The domain fact and its history survive job retention.
+
+### ADR-24 Product language is negotiated at the API boundary
+
+English vocabulary and error source messages live in the domain. The i18n workspace overlays vocabulary strings
+by stable key and formats precompiled ICU messages with Lingui. The contract depends only on the domain and
+describes locale tags and coded errors. The API validates saved preferences against the supported locale list.
+
+Catalogue reads and error messages resolve a supported query override, the signed-in account's preference,
+then `Accept-Language` and English. Localised reads vary on `Accept-Language`, `Cookie` and `Authorization`.
+Signed-in catalogue reads and all error responses are excluded from shared caches. Topic translations are
+mutable catalogue rows. Idea references keep canonical topic names. An administrator's translation change
+records its topic and locale in the ledger. [Localisation plan](production/05-localization.md)
 
 ## How to extend safely
 

@@ -77,7 +77,12 @@ it("correlates one 500 with redacted logs for IPv4 and IPv6, and uses route patt
     expect(response.status).toBe(500);
     expect(response.headers.get("X-Request-Id")).toBe(requestId);
     expect(await response.json()).toEqual({
-      error: { code: "internal_error", message: "Something went wrong.", requestId },
+      error: {
+        code: "internal_error",
+        message: "Something went wrong.",
+        requestId,
+        details: { reason: "internal_failure" },
+      },
     });
     const lines = logs.splice(0);
     expect(lines).toHaveLength(2);

@@ -4,6 +4,7 @@ import {
   index,
   integer,
   pgTable,
+  primaryKey,
   text,
   uniqueIndex,
   uuid,
@@ -62,6 +63,7 @@ export const accounts = pgTable(
     email: text("email").notNull(),
     passwordHash: text("password_hash").notNull(),
     emailVerifiedAt: tstz("email_verified_at"),
+    locale: text("locale"),
     createdAt: createdAt(),
   },
   (t) => [uniqueIndex("accounts_email_key").on(t.email)],
@@ -102,6 +104,19 @@ export const topics = pgTable(
     createdAt: createdAt(),
   },
   (t) => [uniqueIndex("topics_slug_key").on(t.slug), index("topics_parent_idx").on(t.parentId)],
+);
+
+export const topicTranslations = pgTable(
+  "topic_translations",
+  {
+    topicId: uuid("topic_id")
+      .notNull()
+      .references(() => topics.id),
+    locale: text("locale").notNull(),
+    name: text("name").notNull(),
+    description: text("description").notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.topicId, t.locale] })],
 );
 
 /**

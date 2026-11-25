@@ -11,16 +11,17 @@ companion.
 3. [Architecture in brief](#architecture-in-brief)
 4. [The web app](#the-web-app)
 5. [API conventions](#api-conventions)
-6. [Everyday commands](#everyday-commands)
-7. [Common changes, step by step](#common-changes-step-by-step)
-8. [Testing](#testing)
-9. [Database and migrations](#database-and-migrations)
-10. [Code conventions](#code-conventions)
-11. [Troubleshooting](#troubleshooting)
+6. [Text and languages](#text-and-languages)
+7. [Everyday commands](#everyday-commands)
+8. [Common changes, step by step](#common-changes-step-by-step)
+9. [Testing](#testing)
+10. [Database and migrations](#database-and-migrations)
+11. [Code conventions](#code-conventions)
+12. [Troubleshooting](#troubleshooting)
 
 ## Prerequisites and setup
 
-- **Node.js ≥ 22.18** (CI runs 22 and 24) and npm.
+- **Node.js ≥ 22.19** (CI runs 22 and 24) and npm.
 - **Docker** (optional): to run the whole stack in containers, to develop or test against a real PostgreSQL
   server, or to build the production image. Local development needs no database server: it uses
   [PGlite](https://pglite.dev), which is real Postgres compiled to WASM, running in-process.
@@ -82,6 +83,7 @@ packages/domain/               pure domain: vocabulary, invariants, permission p
   src/vocabulary/              stages, sections, claim roles/statuses, dimensions, stances, relation types, lenses…
   src/rules/                   content rules, lifecycle rules, relation rules, rating rules, permissions
   src/metrics/baseline.ts      provisional derived metrics ("baseline-v0") and the WeightPolicy seam
+packages/i18n/                 locale negotiation, ICU messages and catalogue overlays
 packages/contracts/            the API boundary
   src/requests.ts              zod request schemas (validated by the server, reusable by clients)
   src/responses.ts             zod response schemas (+ inferred types)
@@ -236,7 +238,9 @@ is [`api/openapi.json`](api/openapi.json) and is also served live at `GET /v1/op
   `:revision`, `:evidence`, …) must be UUIDs; anything else is a 404. `:idea` accepts an id or a slug, people are
   addressed by `:handle`, topics by `:slug`, and stances/involvements by their vocabulary key (`:kind`,
   `:capacity`).
-- **Errors** use `{ "error": { "code", "message", "details"?, "requestId"? } }`. The API echoes a valid
+- **Errors** use `{ "error": { "code", "message", "details", "requestId"? } }`. Use `details.reason` for stable
+  branching and `message` for display. Validation issues carry a field path, code, message and parameters.
+  The API echoes a valid
   `X-Request-Id` or generates a UUIDv7 and sends it in the response header and error envelope.
 
   | Status | `code`               | Meaning                                                                                   |
@@ -281,6 +285,21 @@ the same redacted fields.
 `inTransaction()` replays the entire outer transaction once after a deadlock or a serialisation failure,
 with 20–50 ms of jitter. Nested calls create savepoints. Keep irreversible I/O outside transaction callbacks
 so replaying a callback only repeats work that PostgreSQL rolled back.
+
+## Text and languages
+
+- Add a domain error reason and English message to [the source catalogue](../../packages/domain/src/errors.en.ts).
+  Pass its named arguments as parameters to `DomainError`. Add validation copy to the English validation
+  catalogue and map the Zod issue in the HTTP validation layer. Run `npm run i18n:compile` after changing an ICU
+  message. The tests compare the compiled messages against their sources.
+- Add a vocabulary term in the domain with its English labels and run `npm run i18n:extract`. Keep the stable
+  vocabulary identifiers in the domain. The generated English catalogue supplies the translation keys.
+- To add a product language, add its tag, endonym, direction, status, fallback and formatting locale to the locale
+  metadata. Add its glossary and source messages under `packages/i18n`, register the catalogues, and compile them.
+  Keep the language in beta until native review. Use the existing seed to install base topic translations.
+- The API resolves a supported `?locale=` override, the account preference, `Accept-Language`, then English.
+  Save canonical tags from `GET /v1/locales`. Send `{ "locale": null }` to `PATCH /v1/me` to clear a preference.
+  The language of contributed content has its own [plan](../agents/production/06-multilingual-content-and-search.md).
 
 ## Everyday commands
 

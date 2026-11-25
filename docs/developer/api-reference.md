@@ -7,7 +7,7 @@ validates against and the test suite checks every response with. The machine-rea
 [`api/openapi.json`](api/openapi.json) (also served live at `GET /v1/openapi.json`). Conventions —
 authentication, errors, pagination, idempotency — are explained in the [developer guide](developer-guide.md#api-conventions).
 
-**66 endpoints.** Access “signed in” means a session (Bearer token or `ip_session` cookie) is required; further restrictions are listed per endpoint.
+**68 endpoints.** Access “signed in” means a session (Bearer token or `ip_session` cookie) is required; further restrictions are listed per endpoint.
 
 ## Contents
 
@@ -15,10 +15,12 @@ authentication, errors, pagination, idempotency — are explained in the [develo
   - `GET /v1` — API index (`apiIndex`)
   - `GET /v1/health` — Readiness check (`health`)
   - `GET /v1/openapi.json` — This API as an OpenAPI 3.1 document (`openapi`)
+  - `GET /v1/locales` — List supported product languages (`locales`)
   - `GET /v1/vocabulary` — The product vocabulary (`vocabulary`)
   - `GET /v1/topics` — List topics (`listTopics`)
   - `POST /v1/topics` — Create a topic (`createTopic`)
   - `GET /v1/topics/:slug` — Get a topic with its child topics (`getTopic`)
+  - `PUT /v1/topics/:slug/translations/:locale` — Add or replace a topic translation (`putTopicTranslation`)
   - `GET /v1/search` — Search ideas, claims, sources and people (`search`)
   - `GET /v1/activity` — The global activity feed (`activity`)
 - [Identity](#identity) — Accounts, sessions, profiles, expertise and account moderation.
@@ -26,7 +28,7 @@ authentication, errors, pagination, idempotency — are explained in the [develo
   - `POST /v1/auth/login` — Sign in (`login`)
   - `POST /v1/auth/logout` — Sign out (revokes the current session) (`logout`)
   - `GET /v1/me` — The signed-in account (`me`)
-  - `PATCH /v1/me` — Update your profile (`updateMe`)
+  - `PATCH /v1/me` — Update your profile or saved language (`updateMe`)
   - `POST /v1/me/password` — Change your password (`changePassword`)
   - `POST /v1/me/expertise` — Declare expertise in a topic (`declareExpertise`)
   - `DELETE /v1/me/expertise/:topic` — Withdraw declared expertise (`revokeExpertise`)
@@ -121,6 +123,14 @@ Response `503`: [`Error`](#schema-error)
 
 Response `200`: object
 
+### `GET /v1/locales`
+
+**List supported product languages** · `locales`
+
+**Access:** public
+
+Response `200`: [`Locale`](#schema-locale)[]
+
 ### `GET /v1/vocabulary`
 
 **The product vocabulary** · `vocabulary`
@@ -129,6 +139,12 @@ Response `200`: object
 
 Every vocabulary with labels, descriptions, rating scales and lens explanations. Render labels from here instead of hard-coding them.
 
+Query parameters:
+
+| Name | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `locale` | string | no | Preferred language tag. Unsupported tags fall through to request negotiation. |
+
 Response `200`: [`Vocabulary`](#schema-vocabulary)
 
 ### `GET /v1/topics`
@@ -136,6 +152,12 @@ Response `200`: [`Vocabulary`](#schema-vocabulary)
 **List topics** · `listTopics`
 
 **Access:** public
+
+Query parameters:
+
+| Name | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `locale` | string | no | Preferred language tag. Unsupported tags fall through to request negotiation. |
 
 Response `200`: [`Topic`](#schema-topic)[]
 
@@ -165,7 +187,30 @@ Path parameters:
 | --- | --- |
 | `slug` | Topic slug. |
 
+Query parameters:
+
+| Name | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `locale` | string | no | Preferred language tag. Unsupported tags fall through to request negotiation. |
+
 Response `200`: [`TopicDetail`](#schema-topicdetail)
+
+### `PUT /v1/topics/:slug/translations/:locale`
+
+**Add or replace a topic translation** · `putTopicTranslation`
+
+**Access:** signed in — Admins.
+
+Path parameters:
+
+| Name | Description |
+| --- | --- |
+| `slug` | Topic slug. |
+| `locale` | Supported locale tag from GET /v1/locales. |
+
+Request body: [`TopicTranslationRequest`](#schema-topictranslationrequest)
+
+Response `200`: [`TopicTranslation`](#schema-topictranslation)
 
 ### `GET /v1/search`
 
@@ -261,7 +306,7 @@ Response `200`: [`Me`](#schema-me)
 
 ### `PATCH /v1/me`
 
-**Update your profile** · `updateMe`
+**Update your profile or saved language** · `updateMe`
 
 **Access:** signed in
 
@@ -1204,6 +1249,7 @@ Provide exactly one of `claimId` (link an existing claim) or `statement` (state 
 | `links.openapi` | string | yes |  |
 | `links.health` | string | yes |  |
 | `links.vocabulary` | string | yes |  |
+| `links.locales` | string | yes |  |
 | `links.ideas` | string | yes |  |
 | `links.topics` | string | yes |  |
 | `links.search` | string | yes |  |
@@ -1284,6 +1330,8 @@ Provide exactly one basis: `sourceId`, `source` (registered or matched by DOI/UR
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
 | `person` | [`Person`](#schema-person) | yes |  |
+| `preferences` | object | yes |  |
+| `preferences.locale` | string \| null | yes (nullable) | length 0–35 |
 | `token` | string | yes | Session token. Also set as the HttpOnly `ip_session` cookie. |
 | `expiresAt` | string (date-time) | yes |  |
 
@@ -1428,7 +1476,9 @@ Provide exactly one basis: `sourceId`, `source` (registered or matched by DOI/UR
 | `error` | object | yes |  |
 | `error.code` | string | yes |  |
 | `error.message` | string | yes |  |
-| `error.details` | any | no |  |
+| `error.details` | object | yes |  |
+| `error.details.reason` | string | yes |  |
+| `error.details.issues` | [`ValidationIssue`](#schema-validationissue)[] | no |  |
 | `error.requestId` | string | no |  |
 
 ### <a id="schema-evaluation"></a>Evaluation
@@ -1690,6 +1740,15 @@ Provide exactly one basis: `sourceId`, `source` (registered or matched by DOI/UR
 | `note` | string | yes |  |
 | `since` | string (date-time) | yes |  |
 
+### <a id="schema-locale"></a>Locale
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `tag` | string | yes | length 0–35 |
+| `name` | string | yes |  |
+| `direction` | `ltr` \| `rtl` | yes |  |
+| `status` | `released` \| `beta` | yes |  |
+
 ### <a id="schema-loginrequest"></a>LoginRequest
 
 | Field | Type | Required | Notes |
@@ -1703,6 +1762,8 @@ Provide exactly one basis: `sourceId`, `source` (registered or matched by DOI/UR
 | --- | --- | --- | --- |
 | `person` | [`Person`](#schema-person) | yes |  |
 | `email` | string | yes |  |
+| `preferences` | object | yes |  |
+| `preferences.locale` | string \| null | yes (nullable) | length 0–35 |
 
 ### <a id="schema-moderationrequest"></a>ModerationRequest
 
@@ -1846,6 +1907,7 @@ Provide exactly one basis: `sourceId`, `source` (registered or matched by DOI/UR
 | `displayName` | string | yes | length 2–80 |
 | `email` | string (email) | yes |  |
 | `password` | string | yes | length 10–200 |
+| `locale` | string | no | A supported locale tag from GET /v1/locales. — length 0–35 |
 
 ### <a id="schema-relation"></a>Relation
 
@@ -2070,6 +2132,21 @@ Provide exactly one basis: `sourceId`, `source` (registered or matched by DOI/UR
 | `slug` | string | yes |  |
 | `name` | string | yes |  |
 
+### <a id="schema-topictranslation"></a>TopicTranslation
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `locale` | string | yes | length 0–35 |
+| `name` | string | yes |  |
+| `description` | string | yes |  |
+
+### <a id="schema-topictranslationrequest"></a>TopicTranslationRequest
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `name` | string | yes | length 1–80 |
+| `description` | string | yes | length 0–500 |
+
 ### <a id="schema-updateinitiativestatusrequest"></a>UpdateInitiativeStatusRequest
 
 | Field | Type | Required | Notes |
@@ -2086,6 +2163,16 @@ Provide exactly one basis: `sourceId`, `source` (registered or matched by DOI/UR
 | `bio` | string | no | length 0–2000 |
 | `affiliation` | string | no | length 0–200 |
 | `capacities` | `research` \| `engineering` \| `funding` \| `entrepreneurship` \| `policy` \| `organizing` \| `communication`[] | no | 0–7 items |
+| `locale` | string \| null | no | A supported locale tag, or null to resume negotiation. — length 0–35 |
+
+### <a id="schema-validationissue"></a>ValidationIssue
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `path` | string | yes |  |
+| `code` | string | yes |  |
+| `message` | string | yes |  |
+| `params` | map (string → any) | yes |  |
 
 ### <a id="schema-viewerrating"></a>ViewerRating
 
@@ -2110,6 +2197,7 @@ Provide exactly one basis: `sourceId`, `source` (registered or matched by DOI/UR
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
+| `locale` | string | yes | length 0–35 |
 | `stages` | object[] | yes |  |
 | `stages[].key` | string \| number | yes |  |
 | `stages[].label` | string | yes |  |

@@ -19,7 +19,7 @@ it("reports an unexpected request error and excludes expected domain failures", 
     const reporter = createErrorReporter(logger, { send, flush: async () => {} });
     const app = createApp({ db: db.db, config, logger, errorReporter: reporter });
     app.get("/expected", () => {
-      throw new DomainError("not_found", "Expected fixture");
+      throw new DomainError("not_found", "resource_not_found");
     });
     app.get("/unexpected", () => {
       throw Object.assign(new Error("private parameters"), { code: "XX000" });

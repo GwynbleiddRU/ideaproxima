@@ -80,7 +80,7 @@ async function initiativeDtos(ctx: Ctx, rows: InitiativeRow[]): Promise<Initiati
 
 async function findInitiative(ctx: Ctx, id: string): Promise<InitiativeRow> {
   const [row] = await ctx.db.select().from(initiatives).where(eq(initiatives.id, id));
-  if (!row || (row.hiddenAt && !isModerator(ctx))) throw notFound("Initiative");
+  if (!row || (row.hiddenAt && !isModerator(ctx))) throw notFound("initiative_not_found");
   return row;
 }
 
@@ -95,7 +95,7 @@ export async function createInitiative(
 ): Promise<InitiativeDto> {
   authorize(ctx.actor, "knowledge.contribute");
   if (input.startedOn && input.endedOn && input.endedOn < input.startedOn) {
-    throw new DomainError("validation_failed", "endedOn cannot be before startedOn.");
+    throw new DomainError("validation_failed", "invalid_initiative_dates");
   }
   const row = await inTransaction(ctx, async (tx) => {
     const idea = await findIdea(tx, ideaRef);
@@ -172,14 +172,11 @@ export async function recordOutcome(
       isSteward: (await currentStewardIds(tx.db, initiative.ideaId)).includes(ctx.actor?.id ?? ""),
     });
     if (initiative.status === "planned") {
-      throw new DomainError(
-        "invariant_violated",
-        "A planned initiative has no outcome yet. Mark it active first.",
-      );
+      throw new DomainError("invariant_violated", "initiative_still_planned");
     }
     if (input.sourceId) {
       const [s] = await tx.db.select({ id: sources.id }).from(sources).where(eq(sources.id, input.sourceId));
-      if (!s) throw new DomainError("validation_failed", "Unknown sourceId.");
+      if (!s) throw new DomainError("validation_failed", "unknown_source");
     }
     const [outcome] = await tx.db
       .insert(outcomes)
@@ -215,6 +212,6 @@ export async function listIdeaInitiatives(ctx: Ctx, ideaRef: string): Promise<In
 
 export async function getInitiative(ctx: Ctx, initiativeId: string): Promise<InitiativeDto> {
   const dto = (await initiativeDtos(ctx, [await findInitiative(ctx, initiativeId)]))[0];
-  if (!dto) throw notFound("Initiative");
+  if (!dto) throw notFound("initiative_not_found");
   return dto;
 }

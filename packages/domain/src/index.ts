@@ -2,14 +2,11 @@
 // the API, scripts and the frontend alike.
 
 export * from "./vocabulary/term";
-export * from "./vocabulary/lifecycle";
-export * from "./vocabulary/knowledge";
-export * from "./vocabulary/signals";
-export * from "./vocabulary/graph";
-export * from "./vocabulary/people";
-export * from "./vocabulary/discovery";
+export * from "./vocabulary/index";
 
 export * from "./errors";
+export * from "./errors.en";
+export * from "./product-vocabulary";
 
 export * from "./rules/content";
 export * from "./rules/lifecycle";

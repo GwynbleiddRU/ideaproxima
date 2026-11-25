@@ -16,6 +16,7 @@ inline by default or delegates them to a dedicated worker process.
 ```text
 packages/domain      pure TypeScript: vocabulary, invariants, permission policy. No I/O
 packages/contracts   zod request and response schemas, the endpoint catalogue, the OpenAPI builder
+packages/i18n        product locales, language negotiation and catalogues. No I/O
 apps/api             Hono → module services → Drizzle → PostgreSQL (PGlite in development and tests)
 apps/web             React 19 single-page app (Vite, TanStack Router and Query, SCSS modules), served by the API
 ```
@@ -70,7 +71,7 @@ PGlite runs on one connection, so races only show under `npm run test:pg`.
 - **Derived data has one writer and is rebuildable.** Only `modules/metrics` writes `idea_metrics`.
 - **Popularity is not quality.** Stances never enter a quality metric. Missing data is `null`, never `0`.
 - **One vocabulary, one permission policy, one error mapping**, all in `packages/domain` and
-  `apps/api/src/http/errors.ts`. Services throw `DomainError`; routes never build error responses.
+  `apps/api/src/http/errors.ts`. Services throw `DomainError` with a stable reason. The HTTP layer renders errors in the request language.
 
 ## How work is organised: one step per session
 
@@ -124,7 +125,7 @@ it depends on already in place. Never run two steps at once.
   and the migrations Drizzle generated. Applied migrations are never edited at all.
 - In raw SQL, qualify every column with its table. Drizzle renders a single-table select's column bare, and
   inside a correlated subquery it silently binds to the inner table.
-- Dependencies are pinned for reasons (TypeScript `~5.9`, PGlite `^0.3.16`, Playwright `1.63.0`, Node ≥ 22.18).
+- Dependencies are pinned for reasons (TypeScript `~5.9`, PGlite `^0.3.16`, Playwright `1.63.0`, Node ≥ 22.19).
   Read the [dependency policy](docs/developer/developer-guide.md#dependency-policy) before adding or upgrading
   a package.
 - The development server listens on `127.0.0.1`. `npm run dev` and `docker compose up` both want port 3000.

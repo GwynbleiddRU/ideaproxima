@@ -94,6 +94,6 @@ export async function resolveTarget(ctx: Ctx, kind: TargetKind, id: string): Pro
       break;
     }
   }
-  if (!found || (found.hidden && !isModerator(ctx))) throw notFound(kind[0]!.toUpperCase() + kind.slice(1));
+  if (!found || (found.hidden && !isModerator(ctx))) throw notFound(`${kind}_not_found`);
   return { kind, id, ...found };
 }

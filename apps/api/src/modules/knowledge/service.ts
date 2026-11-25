@@ -50,7 +50,7 @@ type ArgumentRow = typeof argumentsTable.$inferSelect;
 
 async function findClaim(ctx: Ctx, claimId: string): Promise<ClaimRow> {
   const [claim] = await ctx.db.select().from(claims).where(eq(claims.id, claimId));
-  if (!claim || (claim.hiddenAt && !isModerator(ctx))) throw notFound("Claim");
+  if (!claim || (claim.hiddenAt && !isModerator(ctx))) throw notFound("claim_not_found");
   return claim;
 }
 
@@ -166,7 +166,7 @@ export async function addClaimToIdea(
 ): Promise<IdeaClaimDto> {
   authorize(ctx.actor, "knowledge.contribute");
   if (input.depth !== undefined && input.role !== "consequence" && input.role !== "risk") {
-    throw new DomainError("validation_failed", "depth only applies to consequences and risks.");
+    throw new DomainError("validation_failed", "depth_not_applicable");
   }
   const { ideaId, linkId } = await inTransaction(ctx, async (tx) => {
     const idea = await findIdea(tx, ideaRef);
@@ -196,7 +196,7 @@ export async function addClaimToIdea(
           isNull(ideaClaims.removedAt),
         ),
       );
-    if (existing) throw new DomainError("conflict", "This claim is already linked to the idea in that role.");
+    if (existing) throw new DomainError("conflict", "claim_link_exists");
     const [{ p } = { p: 0 }] = await tx.db
       .select({ p: max(ideaClaims.position) })
       .from(ideaClaims)
@@ -240,7 +240,7 @@ export async function unlinkClaim(ctx: Ctx, ideaRef: string, linkId: string): Pr
       .select()
       .from(ideaClaims)
       .where(and(eq(ideaClaims.id, linkId), eq(ideaClaims.ideaId, idea.id), isNull(ideaClaims.removedAt)));
-    if (!link) throw notFound("Claim link");
+    if (!link) throw notFound("claim_link_not_found");
     authorize(ctx.actor, "structure.curate", {
       isCreator: link.addedBy === ctx.actor?.id,
       isSteward: await isSteward(tx, idea.id),
@@ -344,8 +344,7 @@ export async function registerSource(
     let doi: string | null = null;
     if (input.doi) {
       doi = normalizeDoi(input.doi);
-      if (!doi)
-        throw new DomainError("validation_failed", "That does not look like a DOI (expected 10.xxxx/…).");
+      if (!doi) throw new DomainError("validation_failed", "invalid_doi");
     }
     // "Find or create" must stay idempotent when two people cite the same publication at the same moment.
     if (doi) await lockKey(tx, "source:doi", doi);
@@ -384,7 +383,7 @@ export async function registerSource(
 
 export async function getSource(ctx: Ctx, sourceId: string): Promise<SourceDto & { citedBy: number }> {
   const [row] = await ctx.db.select().from(sources).where(eq(sources.id, sourceId));
-  if (!row) throw notFound("Source");
+  if (!row) throw notFound("source_not_found");
   const [{ n } = { n: 0 }] = await ctx.db
     .select({ n: sql<number>`count(*)::int` })
     .from(evidence)
@@ -475,7 +474,7 @@ export async function attachEvidence(
     if (input.source) sourceId = (await registerSource(tx, input.source)).source.id;
     else if (input.sourceId) {
       const [s] = await tx.db.select({ id: sources.id }).from(sources).where(eq(sources.id, input.sourceId));
-      if (!s) throw new DomainError("validation_failed", "Unknown sourceId.");
+      if (!s) throw new DomainError("validation_failed", "unknown_source");
       sourceId = s.id;
     } else if (input.outcomeId) {
       const [o] = await tx.db
@@ -483,7 +482,7 @@ export async function attachEvidence(
         .from(outcomes)
         .innerJoin(initiatives, eq(initiatives.id, outcomes.initiativeId))
         .where(and(eq(outcomes.id, input.outcomeId), isNull(initiatives.hiddenAt)));
-      if (!o) throw new DomainError("validation_failed", "Unknown outcomeId.");
+      if (!o) throw new DomainError("validation_failed", "unknown_outcome");
       outcomeId = o.id;
     }
     const [dup] = await tx.db
@@ -496,11 +495,7 @@ export async function attachEvidence(
           sourceId ? eq(evidence.sourceId, sourceId) : eq(evidence.outcomeId, outcomeId!),
         ),
       );
-    if (dup)
-      throw new DomainError(
-        "conflict",
-        "This source is already attached to the claim. Assess or discuss it instead.",
-      );
+    if (dup) throw new DomainError("conflict", "evidence_source_exists");
     const [created] = await tx.db
       .insert(evidence)
       .values({
@@ -530,9 +525,9 @@ export async function attachEvidence(
 export async function withdrawEvidence(ctx: Ctx, evidenceId: string, reason: string): Promise<EvidenceDto> {
   const row = await inTransaction(ctx, async (tx) => {
     const [ev] = await tx.db.select().from(evidence).where(eq(evidence.id, evidenceId));
-    if (!ev) throw notFound("Evidence");
+    if (!ev) throw notFound("evidence_not_found");
     authorize(ctx.actor, "contribution.withdraw", { isCreator: ev.contributedBy === ctx.actor?.id });
-    if (ev.withdrawnAt) throw new DomainError("invariant_violated", "Already withdrawn.");
+    if (ev.withdrawnAt) throw new DomainError("invariant_violated", "already_withdrawn");
     const [updated] = await tx.db
       .update(evidence)
       .set({ withdrawnAt: sql`now()`, withdrawnReason: reason })
@@ -605,7 +600,7 @@ export async function createArgument(ctx: Ctx, input: CreateArgumentRequest): Pr
     else if (t.kind === "claim") await findClaim(tx, t.id);
     else {
       const [parent] = await tx.db.select().from(argumentsTable).where(eq(argumentsTable.id, t.id));
-      if (!parent || (parent.hiddenAt && !isModerator(tx))) throw notFound("Argument");
+      if (!parent || (parent.hiddenAt && !isModerator(tx))) throw notFound("argument_not_found");
     }
     const [created] = await tx.db
       .insert(argumentsTable)
@@ -635,9 +630,9 @@ export async function createArgument(ctx: Ctx, input: CreateArgumentRequest): Pr
 export async function withdrawArgument(ctx: Ctx, argumentId: string): Promise<ArgumentDto> {
   const row = await inTransaction(ctx, async (tx) => {
     const [arg] = await tx.db.select().from(argumentsTable).where(eq(argumentsTable.id, argumentId));
-    if (!arg) throw notFound("Argument");
+    if (!arg) throw notFound("argument_not_found");
     authorize(ctx.actor, "contribution.withdraw", { isCreator: arg.authorId === ctx.actor?.id });
-    if (arg.withdrawnAt) throw new DomainError("invariant_violated", "Already withdrawn.");
+    if (arg.withdrawnAt) throw new DomainError("invariant_violated", "already_withdrawn");
     const [updated] = await tx.db
       .update(argumentsTable)
       .set({ withdrawnAt: sql`now()` })
@@ -672,7 +667,7 @@ export async function getArgument(
   argumentId: string,
 ): Promise<ArgumentDto & { replies: ArgumentDto[] }> {
   const [row] = await ctx.db.select().from(argumentsTable).where(eq(argumentsTable.id, argumentId));
-  if (!row || (row.hiddenAt && !isModerator(ctx))) throw notFound("Argument");
+  if (!row || (row.hiddenAt && !isModerator(ctx))) throw notFound("argument_not_found");
   const replies = await ctx.db
     .select()
     .from(argumentsTable)

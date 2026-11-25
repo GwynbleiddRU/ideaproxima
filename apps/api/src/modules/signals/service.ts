@@ -62,9 +62,9 @@ export async function submitRatings(
   // Serialise this person's submissions on this target so a double submission supersedes cleanly.
   await lockKey(ctx, "evaluation", actorId, target.id);
   if (target.kind === "relation" && target.hidden)
-    throw new DomainError("invariant_violated", "This relation was retracted.");
+    throw new DomainError("invariant_violated", "relation_retracted");
   if (valid.some((r) => r.dimension === "useful") && target.creatorId === actorId) {
-    throw new DomainError("invariant_violated", "You cannot mark your own contribution as useful.");
+    throw new DomainError("invariant_violated", "self_usefulness_vote");
   }
 
   const targetColumn = TARGET_COLUMN[targetRef.kind];

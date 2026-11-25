@@ -1,4 +1,5 @@
 import { DomainError } from "../errors";
+import { ERROR_MESSAGES, type ErrorReason } from "../errors.en";
 import type { IdeaStage, InitiativeStatus } from "../vocabulary/lifecycle";
 
 /**
@@ -18,6 +19,19 @@ export interface StageEvidenceFacts {
 
 export const MIN_TRANSITION_RATIONALE = 10;
 
+const STAGE_PROOF_REASONS = {
+  examined: "stage_proof_examined",
+  tested: "stage_proof_tested",
+  implemented: "stage_proof_implemented",
+  learned_from: "stage_proof_learned_from",
+} as const satisfies Partial<Record<IdeaStage, ErrorReason>>;
+
+export function stageProofReason(stage: string): ErrorReason | undefined {
+  return Object.hasOwn(STAGE_PROOF_REASONS, stage)
+    ? STAGE_PROOF_REASONS[stage as keyof typeof STAGE_PROOF_REASONS]
+    : undefined;
+}
+
 export type StageRequirement = { stage: IdeaStage; met: boolean; requirement: string };
 
 /** What each stage demands. Earlier stages are a matter of judgement (with a rationale); later ones need proof. */
@@ -28,22 +42,22 @@ export function stageRequirements(facts: StageEvidenceFacts): StageRequirement[]
     {
       stage: "examined",
       met: facts.independentReviewers >= 1,
-      requirement: "At least one evaluation or argument from someone who is not a steward of the idea.",
+      requirement: ERROR_MESSAGES[STAGE_PROOF_REASONS.examined],
     },
     {
       stage: "tested",
       met: facts.testsWithOutcomes >= 1,
-      requirement: "At least one experiment, prototype or pilot with a recorded outcome.",
+      requirement: ERROR_MESSAGES[STAGE_PROOF_REASONS.tested],
     },
     {
       stage: "implemented",
       met: facts.implementations >= 1,
-      requirement: "At least one active or completed deployment or policy initiative.",
+      requirement: ERROR_MESSAGES[STAGE_PROOF_REASONS.implemented],
     },
     {
       stage: "learned_from",
       met: facts.outcomesWithLessons >= 1,
-      requirement: "At least one recorded outcome with explicit lessons.",
+      requirement: ERROR_MESSAGES[STAGE_PROOF_REASONS.learned_from],
     },
   ];
 }
@@ -63,21 +77,21 @@ export function assertStageTransition(input: {
 }): void {
   const { from, to, rationale, facts } = input;
   if (from === to) {
-    throw new DomainError("invariant_violated", `The idea is already at stage "${to}".`);
+    throw new DomainError("invariant_violated", "stage_unchanged", { stage: to });
   }
   if (rationale.trim().length < MIN_TRANSITION_RATIONALE) {
-    throw new DomainError(
-      "invariant_violated",
-      `A stage transition needs a rationale of at least ${MIN_TRANSITION_RATIONALE} characters — history must explain itself.`,
-    );
+    throw new DomainError("invariant_violated", "stage_rationale_too_short", {
+      minimum: MIN_TRANSITION_RATIONALE,
+    });
   }
   const req = stageRequirements(facts).find((r) => r.stage === to);
   if (req && !req.met) {
-    throw new DomainError("invariant_violated", `Cannot move to "${to}": ${req.requirement}`, {
-      stage: to,
-      requirement: req.requirement,
-      facts,
-    });
+    throw new DomainError(
+      "invariant_violated",
+      "stage_requirement_unmet",
+      { stage: to, requirement: req.requirement },
+      { facts },
+    );
   }
 }
 
@@ -91,6 +105,6 @@ const INITIATIVE_TRANSITIONS: Record<InitiativeStatus, readonly InitiativeStatus
 /** Initiatives move forward only; completed and discontinued are terminal (start a new initiative instead). */
 export function assertInitiativeTransition(from: InitiativeStatus, to: InitiativeStatus): void {
   if (!INITIATIVE_TRANSITIONS[from].includes(to)) {
-    throw new DomainError("invariant_violated", `An initiative cannot move from "${from}" to "${to}".`);
+    throw new DomainError("invariant_violated", "invalid_initiative_transition", { from, to });
   }
 }

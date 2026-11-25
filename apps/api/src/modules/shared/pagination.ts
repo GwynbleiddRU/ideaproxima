@@ -21,21 +21,21 @@ export function decodeCursor(raw: string | undefined): Cursor | null {
   } catch {
     // fall through
   }
-  throw new DomainError("validation_failed", "Invalid cursor.");
+  throw new DomainError("validation_failed", "invalid_cursor");
 }
 
 export function offsetFrom(raw: string | undefined): number {
   const c = decodeCursor(raw);
   if (!c) return 0;
-  if (!("o" in c)) throw new DomainError("validation_failed", "Invalid cursor for this list.");
-  if (c.o > 10_000) throw new DomainError("validation_failed", "Narrow the list with a filter.");
+  if (!("o" in c)) throw new DomainError("validation_failed", "wrong_cursor_type");
+  if (c.o > 10_000) throw new DomainError("validation_failed", "offset_limit_exceeded");
   return c.o;
 }
 
 export function keysetFrom(raw: string | undefined): { t: Date; id: string } | null {
   const c = decodeCursor(raw);
   if (!c) return null;
-  if (!("t" in c)) throw new DomainError("validation_failed", "Invalid cursor for this list.");
+  if (!("t" in c)) throw new DomainError("validation_failed", "wrong_cursor_type");
   return { t: new Date(c.t), id: c.id };
 }
 

@@ -14,7 +14,7 @@ export interface RelationEndpoints {
  */
 export function normalizeRelation(input: RelationEndpoints): RelationEndpoints {
   if (input.fromIdeaId === input.toIdeaId) {
-    throw new DomainError("invariant_violated", "An idea cannot be related to itself.");
+    throw new DomainError("invariant_violated", "self_relation");
   }
   if (!RELATION_TYPE_INFO[input.type].symmetric) return { ...input };
   const [a, b] = [input.fromIdeaId, input.toIdeaId].sort();
