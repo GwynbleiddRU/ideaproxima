@@ -425,7 +425,7 @@ function CreateInitiativeDialog({
         <FormError error={create.error} />
         <div className={forms.actions}>
           <Button onClick={onClose}>{t("common.cancel")}</Button>
-          <Button type="submit" variant="primary" loading={create.isPending}>
+          <Button type="submit" variant="primary" retryError={create.error} loading={create.isPending}>
             {t("idea.practice.submitInitiative")}
           </Button>
         </div>
@@ -512,7 +512,7 @@ function StatusDialog({
         <FormError error={update.error} />
         <div className={forms.actions}>
           <Button onClick={onClose}>{t("common.cancel")}</Button>
-          <Button type="submit" variant="primary" loading={update.isPending}>
+          <Button type="submit" variant="primary" retryError={update.error} loading={update.isPending}>
             {t("common.save")}
           </Button>
         </div>
@@ -595,7 +595,7 @@ function OutcomeDialog({
         <FormError error={record.error} />
         <div className={forms.actions}>
           <Button onClick={onClose}>{t("common.cancel")}</Button>
-          <Button type="submit" variant="primary" loading={record.isPending}>
+          <Button type="submit" variant="primary" retryError={record.error} loading={record.isPending}>
             {t("idea.practice.recordOutcome")}
           </Button>
         </div>

@@ -89,15 +89,15 @@ policy, correct concurrency proven on real PostgreSQL, and a stateless process. 
 What is missing is everything around it. The [audit](api-audit.md) records 58 findings (53 from the API audit,
 5 from the 2026-11-18 review of the web delivery), 20 of which block a public launch:
 
-| Area             | State today                                                                                                                                          |
-| ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Abuse protection | Two in-memory fixed-window limits; reads unlimited; the client address can be forged; no bot friction                                                |
-| Accounts         | E-mail and password only: no verification, no recovery, no second factor                                                                             |
-| Moderation       | One endpoint that hides six kinds of content; no reports, queue, appeals or automation; hidden text leaks through the activity feed                  |
-| Languages        | Localised API catalogues and errors with beta defaults and English fallback. The interface, search stemming and URL slugs still use English defaults |
-| Scale            | Metrics refresh synchronously by default, with coalesced async refresh available. Lists and offset pagination await plan 09.                         |
-| Operations       | Logs, private metrics, probes, drain, DB deadlines and a worker running maintenance schedules. Releases and restore drills are pending.              |
-| Public web       | Every page is the same shell with status 200; no link previews; no policy pages; browser errors unseen; Chrome-only tests                            |
+| Area             | State today                                                                                                                                                  |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Abuse protection | Trusted network ceiling before session lookup, shared endpoint budgets by trust tier, and per-email login throttling. Registration proof of work is pending. |
+| Accounts         | E-mail and password only: no verification, no recovery, no second factor                                                                                     |
+| Moderation       | One endpoint that hides six kinds of content; no reports, queue, appeals or automation; hidden text leaks through the activity feed                          |
+| Languages        | Localised API catalogues and errors with beta defaults and English fallback. The interface, search stemming and URL slugs still use English defaults         |
+| Scale            | Metrics refresh synchronously by default, with coalesced async refresh available. Lists and offset pagination await plan 09.                                 |
+| Operations       | Logs, private metrics, probes, drain, DB deadlines and a worker running maintenance schedules. Releases and restore drills are pending.                      |
+| Public web       | Every page is the same shell with status 200; no link previews; no policy pages; browser errors unseen; Chrome-only tests                                    |
 
 ## Target state
 
@@ -180,7 +180,7 @@ Updated by whoever finishes a step: `Not started`, `In progress`, `Waiting for t
 | 8    | 05   | C1    | Interface extraction: home, explore, the idea page and its tabs                                            | —                     | Done 2026-11-25 |
 | 9    | 05   | C2    | Interface extraction: editor, topics, search, activity, people, account, dialogs, toasts and errors        | —                     | Done 2026-11-25 |
 | 10   | 03   | A     | GCRA, memory and PostgreSQL stores, trust tiers, the policy catalogue                                      | —                     | Done 2026-11-25 |
-| 11   | 03   | B     | Limits declared per endpoint and enforced; rate-limit headers; web handling of 429                         | —                     | Not started     |
+| 11   | 03   | B     | Limits declared per endpoint and enforced; rate-limit headers; web handling of 429                         | —                     | Done 2026-11-26 |
 | 12   | 03   | C     | Proof of work on registration                                                                              | —                     | Not started     |
 | 13   | 04   | A     | Mail, verification, password reset, e-mail change, registration modes                                      | Decision 7; mock-ups  | Not started     |
 | 14   | 04   | B     | Session list and revocation, security log, trust inputs, terms and minimum-age mechanism                   | Decision 15           | Not started     |

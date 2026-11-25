@@ -1,6 +1,6 @@
 import { LocalizedText, useMessage } from "@/locales/react";
 import { Link, Outlet, useNavigate, useParams } from "@tanstack/react-router";
-import { useEffect, useRef } from "react";
+import { lazy, Suspense, useEffect, useRef } from "react";
 import { ChevronRight, Flag, Gauge, HandHelping, PenLine, Star } from "lucide-react";
 import type { IdeaDetail, RatingSummaryDto } from "@ideaproxima/contracts";
 import { IDEA_STAGES, STANCE_KIND_INFO, stageOrdinal, type DimensionKey } from "@ideaproxima/domain";
@@ -8,7 +8,6 @@ import { useTopicNames } from "@/api/catalog";
 import { useStance } from "@/api/signals";
 import { useAuthGate } from "@/components/auth";
 import { PersonLink, TimeAgo } from "@/components/meta";
-import { ModerateButton } from "@/components/ModerateButton";
 import { isConfident, nearestAnchor } from "@/components/Ratings";
 import { StageBadge } from "@/components/Stage";
 import { cx } from "@/lib/cx";
@@ -23,6 +22,10 @@ import { Dots } from "@/ui/Meter";
 import { IdeaActionsProvider, useIdeaActions } from "./actions";
 import { useIdea, usePermissions } from "./use-idea";
 import styles from "./IdeaLayout.module.scss";
+
+const ModerateButton = lazy(async () => ({
+  default: (await import("@/components/ModerateButton")).ModerateButton,
+}));
 
 export function IdeaLayout() {
   const t = useMessage();
@@ -177,6 +180,7 @@ function ImportantToggle({ idea }: { idea: IdeaDetail }) {
     <Button
       size="sm"
       className={cx(styles.important, on && styles.importantOn)}
+      retryError={stance.error}
       aria-pressed={on}
       title={t("idea.action.importantHint")}
       onClick={() => gate(() => stance.mutate({ kind: "important", on: !on }))}
@@ -219,7 +223,11 @@ function ActionBar({ idea }: { idea: IdeaDetail }) {
           {t("idea.stage")}
         </Button>
       )}
-      <ModerateButton kind="idea" id={idea.id} hidden={idea.hidden} />
+      {can.isModerator && (
+        <Suspense fallback={null}>
+          <ModerateButton kind="idea" id={idea.id} hidden={idea.hidden} />
+        </Suspense>
+      )}
       <span className={styles.grow} />
       <ImportantToggle idea={idea} />
     </div>

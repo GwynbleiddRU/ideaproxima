@@ -109,7 +109,9 @@ it("includes IDs on early exits and uses documented codes for Hono exceptions", 
   const { app } = loggedApp({
     CORS_ORIGINS: "https://frontend.example.test",
     MAX_BODY_BYTES: "32",
-    RATE_LIMIT_REQUESTS_PER_MINUTE: "1",
+    RATE_LIMIT_OVERRIDES: JSON.stringify({
+      "net.requests": { anonymous: [{ limit: 1, periodSeconds: 60 }] },
+    }),
   });
   app.get("/exception/:status", (c) => {
     throw new HTTPException(c.req.param("status") === "404" ? 404 : 405);
@@ -128,7 +130,9 @@ it("includes IDs on early exits and uses documented codes for Hono exceptions", 
     headers: { ...headers, origin: "https://frontend.example.test" },
   });
   expect(oversized.status).toBe(413);
-  expect(oversized.headers.get("Access-Control-Expose-Headers")).toBe("X-Request-Id");
+  expect(oversized.headers.get("Access-Control-Expose-Headers")).toBe(
+    "X-Request-Id,Retry-After,RateLimit-Policy,RateLimit",
+  );
   expect(await oversized.json()).toMatchObject({
     error: { code: "payload_too_large", requestId: "early-exit-id" },
   });
@@ -160,7 +164,11 @@ it("logs static assets at debug with byte counts and honours HEAD", async () => 
 });
 
 it("serves metrics only on the internal listener and bounds public labels", async () => {
-  const { app } = loggedApp({ RATE_LIMIT_REQUESTS_PER_MINUTE: "1" });
+  const { app } = loggedApp({
+    RATE_LIMIT_OVERRIDES: JSON.stringify({
+      "net.requests": { anonymous: [{ limit: 1, periodSeconds: 60 }] },
+    }),
+  });
   const publicServer = serve({ fetch: app.fetch, hostname: "127.0.0.1", port: 0 });
   const privateServer = startMetricsServer(0, h.db);
   try {
@@ -185,7 +193,7 @@ it("serves metrics only on the internal listener and bounds public labels", asyn
     expect(metrics).toContain('http_requests_total{method="GET",route="/v1/people/:handle",status="404"} 1');
     expect(metrics).toContain('method="GET",route="/v1/search",status_class="4xx"');
     expect(metrics).toContain('http_requests_total{method="GET",route="unmatched",status="404"}');
-    expect(metrics).toContain('rate_limit_decisions_total{policy="requests",outcome="denied"}');
+    expect(metrics).toContain('rate_limit_decisions_total{policy="net.requests",outcome="denied"}');
     expect(metrics).toContain("http_requests_in_flight 0");
     expect(metrics).toContain("password_hash_queue_depth 0");
     expect(metrics).toContain("nodejs_eventloop_lag_seconds");

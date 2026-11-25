@@ -49,6 +49,7 @@ export function UsefulButton({
       icon={<ThumbsUp />}
       aria-pressed={marked}
       className={cx(marked && styles.usefulOn)}
+      retryError={mark.error}
       loading={mark.isPending}
       onClick={() =>
         gate(() => mark.mutate({ kind, id, useful: !marked }, { onSuccess: () => setMarked(!marked) }))
@@ -272,7 +273,7 @@ export function ArgumentComposer({
       <FormError error={create.error} />
       <div className={forms.actions}>
         {onDone && <Button onClick={onDone}>{t("common.cancel")}</Button>}
-        <Button type="submit" variant="primary" loading={create.isPending}>
+        <Button type="submit" variant="primary" retryError={create.error} loading={create.isPending}>
           {t("idea.argument.post")}
         </Button>
       </div>

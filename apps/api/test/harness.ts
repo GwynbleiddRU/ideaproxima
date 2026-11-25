@@ -1,7 +1,13 @@
 import { appendFileSync } from "node:fs";
 import { isDeepStrictEqual } from "node:util";
 import { eq } from "drizzle-orm";
-import { ErrorResponse, matchEndpoint, type AuthResponse, type IdeaDetail } from "@ideaproxima/contracts";
+import {
+  ErrorResponse,
+  RateLimitedResponse,
+  matchEndpoint,
+  type AuthResponse,
+  type IdeaDetail,
+} from "@ideaproxima/contracts";
 import { uniformWeights, type PersonRole } from "@ideaproxima/domain";
 import { createApp } from "../src/app";
 import { loadConfig } from "../src/config";
@@ -50,7 +56,7 @@ export interface Harness {
 export function assertContract(method: string, fullPath: string, status: number, body: unknown) {
   const path = fullPath.split("?")[0]!;
   if (status >= 400) {
-    const parsed = ErrorResponse.safeParse(body);
+    const parsed = (status === 429 ? RateLimitedResponse : ErrorResponse).safeParse(body);
     if (!parsed.success)
       throw new Error(`${method} ${path} → ${status} without the error envelope: ${JSON.stringify(body)}`);
     return;
@@ -87,9 +93,7 @@ export async function createHarness(overrides: NodeJS.ProcessEnv = {}): Promise<
     METRICS_REFRESH_MODE: process.env.TEST_METRICS_REFRESH_MODE ?? "sync",
     SESSION_TTL_DAYS: "1",
     // The suite makes many requests from one "address"; rate limits get their own test.
-    RATE_LIMIT_REQUESTS_PER_MINUTE: "0",
-    RATE_LIMIT_AUTH_PER_MINUTE: "0",
-    RATE_LIMIT_WRITES_PER_MINUTE: "0",
+    RATE_LIMITS: "off",
     ...overrides,
   });
   const app = createApp({ db: database.db, config });
@@ -149,6 +153,9 @@ export async function createHarness(overrides: NodeJS.ProcessEnv = {}): Promise<
       if (res.status !== 201) throw new Error(`idea failed: ${JSON.stringify(res.body)}`);
       return res.body;
     },
-    close: () => testDb.dispose(),
+    close: async () => {
+      await app.closeRateLimits();
+      await testDb.dispose();
+    },
   };
 }

@@ -194,6 +194,7 @@ function EvaluateForm({
             <Button
               variant="quiet"
               size="sm"
+              retryError={withdraw.error}
               loading={withdraw.isPending}
               onClick={() =>
                 withdraw.mutate([...new Set(mine.map((e) => e.dimension))], { onSuccess: onDone })
@@ -206,6 +207,7 @@ function EvaluateForm({
             type="submit"
             variant="primary"
             size="sm"
+            retryError={submit.error}
             loading={submit.isPending}
             disabled={ratings.length === 0}
           >

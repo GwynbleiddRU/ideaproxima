@@ -47,4 +47,4 @@ when changing the API, and why.
 ## Known gaps
 
 Email verification and password reset; OAuth/ORCID; follows, bookmarks and notifications; bulk data export (open
-data dumps); webhooks; a distributed rate limiter. See [roadmap.md](roadmap.md).
+data dumps); webhooks. See [roadmap.md](roadmap.md).

@@ -127,6 +127,7 @@ function StageForm({ idea, onDone }: { idea: IdeaDetail; onDone: () => void }) {
         <Button
           type="submit"
           variant="primary"
+          retryError={transition.error}
           loading={transition.isPending}
           disabled={!to || !rationale.trim()}
         >

@@ -52,6 +52,10 @@
           "Catalog"
         ],
         "summary": "API index",
+        "x-rate-limits": [
+          "net.requests"
+        ],
+        "x-mutates": false,
         "description": "Name, version and the main entry points. `GET /` redirects here; the full description is `GET /v1/openapi.json`.",
         "security": [],
         "parameters": [],
@@ -65,6 +69,9 @@
                 }
               }
             }
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
           },
           "default": {
             "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
@@ -86,6 +93,10 @@
           "Catalog"
         ],
         "summary": "Readiness check",
+        "x-rate-limits": [
+          "net.requests"
+        ],
+        "x-mutates": false,
         "description": "200 when the API can reach its database, 503 otherwise.",
         "security": [],
         "parameters": [],
@@ -99,6 +110,9 @@
                 }
               }
             }
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
           },
           "503": {
             "description": "Error",
@@ -130,6 +144,10 @@
           "Catalog"
         ],
         "summary": "This API as an OpenAPI 3.1 document",
+        "x-rate-limits": [
+          "net.requests"
+        ],
+        "x-mutates": false,
         "security": [],
         "parameters": [],
         "responses": {
@@ -152,6 +170,9 @@
               }
             }
           },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
           "default": {
             "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
@@ -172,6 +193,10 @@
           "Catalog"
         ],
         "summary": "List supported product languages",
+        "x-rate-limits": [
+          "net.requests"
+        ],
+        "x-mutates": false,
         "security": [],
         "parameters": [],
         "responses": {
@@ -187,6 +212,9 @@
                 }
               }
             }
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
           },
           "default": {
             "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
@@ -208,6 +236,10 @@
           "Catalog"
         ],
         "summary": "The product vocabulary",
+        "x-rate-limits": [
+          "net.requests"
+        ],
+        "x-mutates": false,
         "description": "Every vocabulary with labels, descriptions, rating scales and lens explanations. Render labels from here instead of hard-coding them.",
         "security": [],
         "parameters": [
@@ -232,6 +264,9 @@
               }
             }
           },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
           "default": {
             "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
@@ -252,6 +287,10 @@
           "Catalog"
         ],
         "summary": "List topics",
+        "x-rate-limits": [
+          "net.requests"
+        ],
+        "x-mutates": false,
         "security": [],
         "parameters": [
           {
@@ -278,6 +317,9 @@
               }
             }
           },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
           "default": {
             "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
@@ -296,6 +338,12 @@
           "Catalog"
         ],
         "summary": "Create a topic",
+        "x-rate-limits": [
+          "net.requests",
+          "write.any",
+          "write.knowledge"
+        ],
+        "x-mutates": true,
         "description": "**Who:** Admins.\n\n**Notable errors:**\n- `conflict`: a topic with that slug exists",
         "security": [
           {
@@ -327,6 +375,9 @@
               }
             }
           },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
           "default": {
             "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
@@ -347,6 +398,10 @@
           "Catalog"
         ],
         "summary": "Get a topic with its child topics",
+        "x-rate-limits": [
+          "net.requests"
+        ],
+        "x-mutates": false,
         "security": [],
         "parameters": [
           {
@@ -379,6 +434,9 @@
               }
             }
           },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
           "default": {
             "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
@@ -399,6 +457,12 @@
           "Catalog"
         ],
         "summary": "Add or replace a topic translation",
+        "x-rate-limits": [
+          "net.requests",
+          "write.any",
+          "write.knowledge"
+        ],
+        "x-mutates": true,
         "description": "**Who:** Admins.",
         "security": [
           {
@@ -449,6 +513,9 @@
               }
             }
           },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
           "default": {
             "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
@@ -469,6 +536,11 @@
           "Catalog"
         ],
         "summary": "Search ideas, claims, sources and people",
+        "x-rate-limits": [
+          "net.requests",
+          "read.search"
+        ],
+        "x-mutates": false,
         "description": "Full-text search (English stemming). At most 25 results per kind.",
         "security": [],
         "parameters": [
@@ -514,6 +586,9 @@
               }
             }
           },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
           "default": {
             "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
@@ -534,6 +609,11 @@
           "Catalog"
         ],
         "summary": "The global activity feed",
+        "x-rate-limits": [
+          "net.requests",
+          "read.heavy"
+        ],
+        "x-mutates": false,
         "description": "Newest first. `action=moderation.` returns the public moderation log. For public readers, activity about hidden ideas is omitted and other hidden subjects have an empty payload and subject.hidden=true. Moderation entries stay public.",
         "security": [],
         "parameters": [
@@ -578,6 +658,9 @@
               }
             }
           },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
           "default": {
             "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
@@ -598,6 +681,11 @@
           "Identity"
         ],
         "summary": "Create an account",
+        "x-rate-limits": [
+          "net.requests",
+          "auth.register"
+        ],
+        "x-mutates": true,
         "description": "Returns a session token and sets the `ip_session` cookie. Rate-limited per client address.\n\n**Notable errors:**\n- `conflict`: email or handle already taken\n- `rate_limited`: too many attempts\n- `unavailable`: password service busy",
         "security": [],
         "parameters": [],
@@ -622,6 +710,9 @@
               }
             }
           },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
           "default": {
             "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
@@ -642,7 +733,13 @@
           "Identity"
         ],
         "summary": "Sign in",
-        "description": "Returns a session token and sets the `ip_session` cookie. Rate-limited per client address.\n\n**Notable errors:**\n- `unauthenticated`: wrong email or password\n- `rate_limited`: too many attempts\n- `unavailable`: password service busy",
+        "x-rate-limits": [
+          "net.requests",
+          "auth.login",
+          "auth.login.failures"
+        ],
+        "x-mutates": true,
+        "description": "Returns a session token and sets the `ip_session` cookie. Rate-limited per client address. Failed attempts also consume a continuously refilling per-email budget.\n\n**Notable errors:**\n- `unauthenticated`: wrong email or password\n- `rate_limited`: too many attempts\n- `unavailable`: password service busy",
         "security": [],
         "parameters": [],
         "requestBody": {
@@ -666,6 +763,9 @@
               }
             }
           },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
           "default": {
             "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
@@ -686,6 +786,10 @@
           "Identity"
         ],
         "summary": "Sign out (revokes the current session)",
+        "x-rate-limits": [
+          "net.requests"
+        ],
+        "x-mutates": true,
         "security": [],
         "parameters": [],
         "responses": {
@@ -698,6 +802,9 @@
                 }
               }
             }
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
           },
           "default": {
             "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
@@ -719,6 +826,10 @@
           "Identity"
         ],
         "summary": "The signed-in account",
+        "x-rate-limits": [
+          "net.requests"
+        ],
+        "x-mutates": false,
         "security": [
           {
             "bearerAuth": []
@@ -739,6 +850,9 @@
               }
             }
           },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
           "default": {
             "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
@@ -757,6 +871,12 @@
           "Identity"
         ],
         "summary": "Update your profile or saved language",
+        "x-rate-limits": [
+          "net.requests",
+          "write.any",
+          "write.knowledge"
+        ],
+        "x-mutates": true,
         "security": [
           {
             "bearerAuth": []
@@ -787,6 +907,9 @@
               }
             }
           },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
           "default": {
             "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
@@ -807,6 +930,12 @@
           "Identity"
         ],
         "summary": "Change your password",
+        "x-rate-limits": [
+          "net.requests",
+          "write.any",
+          "write.knowledge"
+        ],
+        "x-mutates": true,
         "description": "Signs out every other session.\n\n**Notable errors:**\n- `forbidden`: the current password is not correct\n- `unavailable`: password service busy",
         "security": [
           {
@@ -838,6 +967,9 @@
               }
             }
           },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
           "default": {
             "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
@@ -858,6 +990,12 @@
           "Identity"
         ],
         "summary": "Declare expertise in a topic",
+        "x-rate-limits": [
+          "net.requests",
+          "write.any",
+          "write.knowledge"
+        ],
+        "x-mutates": true,
         "description": "Recorded as a dated, self-declared fact. Returns your current expertise.",
         "security": [
           {
@@ -892,6 +1030,9 @@
               }
             }
           },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
           "default": {
             "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
@@ -912,6 +1053,12 @@
           "Identity"
         ],
         "summary": "Withdraw declared expertise",
+        "x-rate-limits": [
+          "net.requests",
+          "write.any",
+          "write.knowledge"
+        ],
+        "x-mutates": true,
         "security": [
           {
             "bearerAuth": []
@@ -945,6 +1092,9 @@
               }
             }
           },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
           "default": {
             "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
@@ -965,6 +1115,10 @@
           "Identity"
         ],
         "summary": "A person's contribution profile",
+        "x-rate-limits": [
+          "net.requests"
+        ],
+        "x-mutates": false,
         "security": [],
         "parameters": [
           {
@@ -988,6 +1142,9 @@
               }
             }
           },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
           "default": {
             "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
@@ -1008,6 +1165,11 @@
           "Identity"
         ],
         "summary": "A person's activity",
+        "x-rate-limits": [
+          "net.requests",
+          "read.heavy"
+        ],
+        "x-mutates": false,
         "security": [],
         "parameters": [
           {
@@ -1051,6 +1213,9 @@
               }
             }
           },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
           "default": {
             "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
@@ -1071,6 +1236,12 @@
           "Identity"
         ],
         "summary": "Deactivate an account",
+        "x-rate-limits": [
+          "net.requests",
+          "write.any",
+          "write.knowledge"
+        ],
+        "x-mutates": true,
         "description": "The person can no longer sign in or act; their sessions end; their contributions stay attributed. Logged publicly with the reason.\n\n**Who:** Moderators (for members) and admins (for anyone).\n\n**Notable errors:**\n- `conflict`: already deactivated\n- `invariant_violated`: you cannot moderate yourself",
         "security": [
           {
@@ -1112,6 +1283,9 @@
               }
             }
           },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
           "default": {
             "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
@@ -1132,6 +1306,12 @@
           "Identity"
         ],
         "summary": "Reactivate an account",
+        "x-rate-limits": [
+          "net.requests",
+          "write.any",
+          "write.knowledge"
+        ],
+        "x-mutates": true,
         "description": "**Who:** Moderators (for members) and admins (for anyone).\n\n**Notable errors:**\n- `conflict`: already active",
         "security": [
           {
@@ -1173,6 +1353,9 @@
               }
             }
           },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
           "default": {
             "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
@@ -1193,6 +1376,12 @@
           "Identity"
         ],
         "summary": "Set a person's platform role",
+        "x-rate-limits": [
+          "net.requests",
+          "write.any",
+          "write.knowledge"
+        ],
+        "x-mutates": true,
         "description": "**Who:** Admins (not on themselves).",
         "security": [
           {
@@ -1234,6 +1423,9 @@
               }
             }
           },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
           "default": {
             "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
@@ -1254,7 +1446,12 @@
           "Ideas"
         ],
         "summary": "Discover ideas through a lens",
-        "description": "Each lens measures something different and says so (see `GET /v1/vocabulary` → lenses). Filters combine with any lens.",
+        "x-rate-limits": [
+          "net.requests",
+          "read.search"
+        ],
+        "x-mutates": false,
+        "description": "Each lens measures something different and says so (see `GET /v1/vocabulary` → lenses). Filters combine with any lens. The read.search policy applies when q contains search text.",
         "security": [],
         "parameters": [
           {
@@ -1354,6 +1551,9 @@
               }
             }
           },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
           "default": {
             "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
@@ -1372,6 +1572,12 @@
           "Ideas"
         ],
         "summary": "Propose an idea",
+        "x-rate-limits": [
+          "net.requests",
+          "write.any",
+          "write.idea"
+        ],
+        "x-mutates": true,
         "description": "Records the idea, its first revision, the proposer as originator steward and the `imagined` stage. Only title, summary and one topic are required.",
         "security": [
           {
@@ -1403,6 +1609,9 @@
               }
             }
           },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
           "default": {
             "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
@@ -1423,6 +1632,10 @@
           "Ideas"
         ],
         "summary": "An idea in full",
+        "x-rate-limits": [
+          "net.requests"
+        ],
+        "x-mutates": false,
         "description": "Current narrative, stewards, derived signals, stage requirements and — when signed in — your own stances, ratings and involvements.",
         "security": [],
         "parameters": [
@@ -1447,6 +1660,9 @@
               }
             }
           },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
           "default": {
             "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
@@ -1467,6 +1683,10 @@
           "Ideas"
         ],
         "summary": "The idea's revision history (newest first, without content)",
+        "x-rate-limits": [
+          "net.requests"
+        ],
+        "x-mutates": false,
         "security": [],
         "parameters": [
           {
@@ -1507,6 +1727,9 @@
               }
             }
           },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
           "default": {
             "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
@@ -1525,6 +1748,12 @@
           "Ideas"
         ],
         "summary": "Publish or propose a new version of the narrative",
+        "x-rate-limits": [
+          "net.requests",
+          "write.any",
+          "write.idea"
+        ],
+        "x-mutates": true,
         "description": "Stewards publish directly (`intent: auto|publish`); everyone else proposes. Publishing requires `baseRevisionId` to be the current revision.\n\n**Notable errors:**\n- `conflict`: the idea changed since you started editing (details.currentRevisionId)\n- `validation_failed`: the revision changes nothing",
         "security": [
           {
@@ -1566,6 +1795,9 @@
               }
             }
           },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
           "default": {
             "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
@@ -1586,6 +1818,10 @@
           "Ideas"
         ],
         "summary": "One revision with its full content",
+        "x-rate-limits": [
+          "net.requests"
+        ],
+        "x-mutates": false,
         "security": [],
         "parameters": [
           {
@@ -1618,6 +1854,9 @@
               }
             }
           },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
           "default": {
             "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
@@ -1638,6 +1877,12 @@
           "Ideas"
         ],
         "summary": "Accept or reject a proposed revision",
+        "x-rate-limits": [
+          "net.requests",
+          "write.any",
+          "write.idea"
+        ],
+        "x-mutates": true,
         "description": "**Who:** Stewards of the idea, or moderators.\n\n**Notable errors:**\n- `conflict`: the proposal is based on an outdated revision\n- `invariant_violated`: already decided",
         "security": [
           {
@@ -1688,6 +1933,9 @@
               }
             }
           },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
           "default": {
             "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
@@ -1708,6 +1956,12 @@
           "Ideas"
         ],
         "summary": "Withdraw your pending proposal",
+        "x-rate-limits": [
+          "net.requests",
+          "write.any",
+          "write.idea"
+        ],
+        "x-mutates": true,
         "description": "**Who:** The proposal's author, or moderators.",
         "security": [
           {
@@ -1748,6 +2002,9 @@
               }
             }
           },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
           "default": {
             "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
@@ -1768,6 +2025,12 @@
           "Ideas"
         ],
         "summary": "Appoint a co-steward",
+        "x-rate-limits": [
+          "net.requests",
+          "write.any",
+          "write.idea"
+        ],
+        "x-mutates": true,
         "description": "**Who:** Stewards of the idea, or moderators.",
         "security": [
           {
@@ -1812,6 +2075,9 @@
               }
             }
           },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
           "default": {
             "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
@@ -1832,6 +2098,10 @@
           "Ideas"
         ],
         "summary": "Lifecycle history (oldest first)",
+        "x-rate-limits": [
+          "net.requests"
+        ],
+        "x-mutates": false,
         "security": [],
         "parameters": [
           {
@@ -1858,6 +2128,9 @@
               }
             }
           },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
           "default": {
             "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
@@ -1876,6 +2149,12 @@
           "Ideas"
         ],
         "summary": "Record a lifecycle transition",
+        "x-rate-limits": [
+          "net.requests",
+          "write.any",
+          "write.idea"
+        ],
+        "x-mutates": true,
         "description": "Needs a rationale (≥ 10 characters). `examined`, `tested`, `implemented` and `learned_from` need proof on record — see the idea's `stageRequirements`.\n\n**Who:** Stewards of the idea, or moderators.\n\n**Notable errors:**\n- `invariant_violated`: the requirement for the stage is not met (details.requirement)",
         "security": [
           {
@@ -1917,6 +2196,9 @@
               }
             }
           },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
           "default": {
             "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
@@ -1937,6 +2219,11 @@
           "Ideas"
         ],
         "summary": "Everything that happened to the idea (newest first)",
+        "x-rate-limits": [
+          "net.requests",
+          "read.heavy"
+        ],
+        "x-mutates": false,
         "security": [],
         "parameters": [
           {
@@ -1980,6 +2267,9 @@
               }
             }
           },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
           "default": {
             "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
@@ -2000,6 +2290,10 @@
           "Knowledge"
         ],
         "summary": "The idea's claims, with derived status and evidence counts",
+        "x-rate-limits": [
+          "net.requests"
+        ],
+        "x-mutates": false,
         "security": [],
         "parameters": [
           {
@@ -2026,6 +2320,9 @@
               }
             }
           },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
           "default": {
             "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
@@ -2044,6 +2341,12 @@
           "Knowledge"
         ],
         "summary": "State a new claim, or link an existing one, in a role",
+        "x-rate-limits": [
+          "net.requests",
+          "write.any",
+          "write.knowledge"
+        ],
+        "x-mutates": true,
         "description": "**Notable errors:**\n- `conflict`: already linked in that role",
         "security": [
           {
@@ -2085,6 +2388,9 @@
               }
             }
           },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
           "default": {
             "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
@@ -2105,6 +2411,12 @@
           "Knowledge"
         ],
         "summary": "Remove a claim from an idea (recorded, not deleted)",
+        "x-rate-limits": [
+          "net.requests",
+          "write.any",
+          "write.knowledge"
+        ],
+        "x-mutates": true,
         "description": "**Who:** The person who linked it, stewards, or moderators.",
         "security": [
           {
@@ -2145,6 +2457,9 @@
               }
             }
           },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
           "default": {
             "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
@@ -2165,6 +2480,10 @@
           "Knowledge"
         ],
         "summary": "Arguments that target the idea",
+        "x-rate-limits": [
+          "net.requests"
+        ],
+        "x-mutates": false,
         "security": [],
         "parameters": [
           {
@@ -2191,6 +2510,9 @@
               }
             }
           },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
           "default": {
             "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
@@ -2211,6 +2533,10 @@
           "Knowledge"
         ],
         "summary": "A claim with every idea using it, its evidence and arguments",
+        "x-rate-limits": [
+          "net.requests"
+        ],
+        "x-mutates": false,
         "security": [],
         "parameters": [
           {
@@ -2234,6 +2560,9 @@
               }
             }
           },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
           "default": {
             "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
@@ -2254,6 +2583,12 @@
           "Knowledge"
         ],
         "summary": "Attach evidence to a claim",
+        "x-rate-limits": [
+          "net.requests",
+          "write.any",
+          "write.knowledge"
+        ],
+        "x-mutates": true,
         "description": "**Notable errors:**\n- `conflict`: this source is already attached to the claim",
         "security": [
           {
@@ -2295,6 +2630,9 @@
               }
             }
           },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
           "default": {
             "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
@@ -2315,6 +2653,12 @@
           "Knowledge"
         ],
         "summary": "Withdraw evidence (stays on record with the reason)",
+        "x-rate-limits": [
+          "net.requests",
+          "write.any",
+          "write.knowledge"
+        ],
+        "x-mutates": true,
         "description": "**Who:** The contributor, or moderators.",
         "security": [
           {
@@ -2356,6 +2700,9 @@
               }
             }
           },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
           "default": {
             "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
@@ -2376,6 +2723,12 @@
           "Knowledge"
         ],
         "summary": "Register a source, or get the existing one with the same DOI/URL",
+        "x-rate-limits": [
+          "net.requests",
+          "write.any",
+          "write.knowledge"
+        ],
+        "x-mutates": true,
         "description": "201 when created, 200 when an existing source matched.",
         "security": [
           {
@@ -2417,6 +2770,9 @@
               }
             }
           },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
           "default": {
             "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
@@ -2437,6 +2793,10 @@
           "Knowledge"
         ],
         "summary": "A source and how often it is cited",
+        "x-rate-limits": [
+          "net.requests"
+        ],
+        "x-mutates": false,
         "security": [],
         "parameters": [
           {
@@ -2460,6 +2820,9 @@
               }
             }
           },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
           "default": {
             "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
@@ -2480,6 +2843,12 @@
           "Knowledge"
         ],
         "summary": "Argue for, against, or with caveats about an idea, a claim or another argument",
+        "x-rate-limits": [
+          "net.requests",
+          "write.any",
+          "write.discussion"
+        ],
+        "x-mutates": true,
         "security": [
           {
             "bearerAuth": []
@@ -2510,6 +2879,9 @@
               }
             }
           },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
           "default": {
             "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
@@ -2530,6 +2902,10 @@
           "Knowledge"
         ],
         "summary": "An argument with its replies",
+        "x-rate-limits": [
+          "net.requests"
+        ],
+        "x-mutates": false,
         "security": [],
         "parameters": [
           {
@@ -2553,6 +2929,9 @@
               }
             }
           },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
           "default": {
             "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
@@ -2573,6 +2952,12 @@
           "Knowledge"
         ],
         "summary": "Withdraw an argument",
+        "x-rate-limits": [
+          "net.requests",
+          "write.any",
+          "write.discussion"
+        ],
+        "x-mutates": true,
         "description": "**Who:** The author, or moderators.",
         "security": [
           {
@@ -2604,6 +2989,9 @@
               }
             }
           },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
           "default": {
             "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
@@ -2624,6 +3012,11 @@
           "Signals"
         ],
         "summary": "Raw evaluations of one target",
+        "x-rate-limits": [
+          "net.requests",
+          "read.heavy"
+        ],
+        "x-mutates": false,
         "description": "`history=all` includes superseded ratings, so changes of opinion can be studied.",
         "security": [],
         "parameters": [
@@ -2697,6 +3090,9 @@
               }
             }
           },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
           "default": {
             "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
@@ -2715,6 +3111,12 @@
           "Signals"
         ],
         "summary": "Rate a target on one or more dimensions",
+        "x-rate-limits": [
+          "net.requests",
+          "write.any",
+          "write.signal"
+        ],
+        "x-mutates": true,
         "description": "Omit a dimension to say 'I don't know'. Re-rating supersedes your previous rating; repeating it is a no-op.\n\n**Notable errors:**\n- `invariant_violated`: you cannot mark your own contribution as useful",
         "security": [
           {
@@ -2746,6 +3148,9 @@
               }
             }
           },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
           "default": {
             "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
@@ -2766,6 +3171,12 @@
           "Signals"
         ],
         "summary": "Withdraw your ratings on some dimensions",
+        "x-rate-limits": [
+          "net.requests",
+          "write.any",
+          "write.signal"
+        ],
+        "x-mutates": true,
         "security": [
           {
             "bearerAuth": []
@@ -2796,6 +3207,9 @@
               }
             }
           },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
           "default": {
             "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
@@ -2816,6 +3230,12 @@
           "Signals"
         ],
         "summary": "Take a stance on an idea (idempotent)",
+        "x-rate-limits": [
+          "net.requests",
+          "write.any",
+          "write.signal"
+        ],
+        "x-mutates": true,
         "description": "`plausible` and `doubtful` exclude each other. Returns your current stances.",
         "security": [
           {
@@ -2856,6 +3276,9 @@
               }
             }
           },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
           "default": {
             "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
@@ -2874,6 +3297,12 @@
           "Signals"
         ],
         "summary": "Retract a stance (idempotent)",
+        "x-rate-limits": [
+          "net.requests",
+          "write.any",
+          "write.signal"
+        ],
+        "x-mutates": true,
         "security": [
           {
             "bearerAuth": []
@@ -2913,6 +3342,9 @@
               }
             }
           },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
           "default": {
             "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
@@ -2933,6 +3365,10 @@
           "Signals"
         ],
         "summary": "Who offers or is working on the idea, in which capacity",
+        "x-rate-limits": [
+          "net.requests"
+        ],
+        "x-mutates": false,
         "security": [],
         "parameters": [
           {
@@ -2959,6 +3395,9 @@
               }
             }
           },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
           "default": {
             "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
@@ -2979,6 +3418,12 @@
           "Signals"
         ],
         "summary": "Declare your involvement in one capacity (idempotent)",
+        "x-rate-limits": [
+          "net.requests",
+          "write.any",
+          "write.signal"
+        ],
+        "x-mutates": true,
         "security": [
           {
             "bearerAuth": []
@@ -3031,6 +3476,9 @@
               }
             }
           },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
           "default": {
             "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
@@ -3049,6 +3497,12 @@
           "Signals"
         ],
         "summary": "Withdraw your involvement in one capacity",
+        "x-rate-limits": [
+          "net.requests",
+          "write.any",
+          "write.signal"
+        ],
+        "x-mutates": true,
         "security": [
           {
             "bearerAuth": []
@@ -3091,6 +3545,9 @@
               }
             }
           },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
           "default": {
             "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
@@ -3111,6 +3568,10 @@
           "Graph"
         ],
         "summary": "The idea's typed relations, phrased from its point of view",
+        "x-rate-limits": [
+          "net.requests"
+        ],
+        "x-mutates": false,
         "security": [],
         "parameters": [
           {
@@ -3137,6 +3598,9 @@
               }
             }
           },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
           "default": {
             "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
@@ -3157,6 +3621,11 @@
           "Graph"
         ],
         "summary": "Traverse the idea graph",
+        "x-rate-limits": [
+          "net.requests",
+          "read.heavy"
+        ],
+        "x-mutates": false,
         "description": "`downstream`: what realising this idea would unlock. `upstream`: what must exist first. `both`: the whole neighbourhood.",
         "security": [],
         "parameters": [
@@ -3206,6 +3675,9 @@
               }
             }
           },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
           "default": {
             "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
@@ -3226,6 +3698,12 @@
           "Graph"
         ],
         "summary": "Relate two ideas",
+        "x-rate-limits": [
+          "net.requests",
+          "write.any",
+          "write.knowledge"
+        ],
+        "x-mutates": true,
         "description": "**Notable errors:**\n- `conflict`: the relation already exists\n- `invariant_violated`: an idea cannot relate to itself",
         "security": [
           {
@@ -3257,6 +3735,9 @@
               }
             }
           },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
           "default": {
             "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
@@ -3277,6 +3758,12 @@
           "Graph"
         ],
         "summary": "Retract a relation",
+        "x-rate-limits": [
+          "net.requests",
+          "write.any",
+          "write.knowledge"
+        ],
+        "x-mutates": true,
         "description": "**Who:** The proposer, stewards of either idea, or moderators.",
         "security": [
           {
@@ -3308,6 +3795,9 @@
               }
             }
           },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
           "default": {
             "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
@@ -3328,6 +3818,10 @@
           "Practice"
         ],
         "summary": "Real-world action taken on the idea, with outcomes",
+        "x-rate-limits": [
+          "net.requests"
+        ],
+        "x-mutates": false,
         "security": [],
         "parameters": [
           {
@@ -3354,6 +3848,9 @@
               }
             }
           },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
           "default": {
             "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
@@ -3372,6 +3869,12 @@
           "Practice"
         ],
         "summary": "Record an initiative (it may be historical and already completed)",
+        "x-rate-limits": [
+          "net.requests",
+          "write.any",
+          "write.knowledge"
+        ],
+        "x-mutates": true,
         "security": [
           {
             "bearerAuth": []
@@ -3412,6 +3915,9 @@
               }
             }
           },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
           "default": {
             "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
@@ -3432,6 +3938,10 @@
           "Practice"
         ],
         "summary": "An initiative with its outcomes",
+        "x-rate-limits": [
+          "net.requests"
+        ],
+        "x-mutates": false,
         "security": [],
         "parameters": [
           {
@@ -3455,6 +3965,9 @@
               }
             }
           },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
           "default": {
             "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
@@ -3475,6 +3988,12 @@
           "Practice"
         ],
         "summary": "Move an initiative forward (planned → active → completed | discontinued)",
+        "x-rate-limits": [
+          "net.requests",
+          "write.any",
+          "write.knowledge"
+        ],
+        "x-mutates": true,
         "description": "**Who:** The initiative's creator, stewards of the idea, or moderators.\n\n**Notable errors:**\n- `invariant_violated`: that status change is not allowed",
         "security": [
           {
@@ -3516,6 +4035,9 @@
               }
             }
           },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
           "default": {
             "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
@@ -3536,6 +4058,12 @@
           "Practice"
         ],
         "summary": "Record what an initiative produced — including failures",
+        "x-rate-limits": [
+          "net.requests",
+          "write.any",
+          "write.knowledge"
+        ],
+        "x-mutates": true,
         "description": "**Who:** The initiative's creator, stewards of the idea, or moderators.\n\n**Notable errors:**\n- `invariant_violated`: a planned initiative has no outcome yet",
         "security": [
           {
@@ -3577,6 +4105,9 @@
               }
             }
           },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
           "default": {
             "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
@@ -3597,6 +4128,10 @@
           "Discussion"
         ],
         "summary": "The idea's discussion (oldest first)",
+        "x-rate-limits": [
+          "net.requests"
+        ],
+        "x-mutates": false,
         "security": [],
         "parameters": [
           {
@@ -3640,6 +4175,9 @@
               }
             }
           },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
           "default": {
             "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
@@ -3658,6 +4196,12 @@
           "Discussion"
         ],
         "summary": "Comment, ask or suggest — optionally replying or anchored to a claim, evidence or argument",
+        "x-rate-limits": [
+          "net.requests",
+          "write.any",
+          "write.discussion"
+        ],
+        "x-mutates": true,
         "security": [
           {
             "bearerAuth": []
@@ -3698,6 +4242,9 @@
               }
             }
           },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
           "default": {
             "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
@@ -3718,6 +4265,12 @@
           "Discussion"
         ],
         "summary": "Hide or restore content",
+        "x-rate-limits": [
+          "net.requests",
+          "write.any",
+          "write.discussion"
+        ],
+        "x-mutates": true,
         "description": "Content is never deleted. The action and reason are published in the moderation log.\n\n**Who:** Moderators.\n\n**Notable errors:**\n- `conflict`: already in that state",
         "security": [
           {
@@ -3749,6 +4302,9 @@
               }
             }
           },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
           "default": {
             "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
             "content": {
@@ -3775,6 +4331,37 @@
         "in": "cookie",
         "name": "ip_session",
         "description": "HttpOnly session cookie."
+      }
+    },
+    "responses": {
+      "RateLimited": {
+        "description": "Request budget exhausted. Wait for Retry-After before retrying.",
+        "headers": {
+          "Retry-After": {
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          "RateLimit-Policy": {
+            "schema": {
+              "type": "string"
+            }
+          },
+          "RateLimit": {
+            "schema": {
+              "type": "string"
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/RateLimited"
+            }
+          }
+        }
       }
     },
     "schemas": {
@@ -6902,6 +7489,92 @@
           "toIdeaId",
           "type"
         ]
+      },
+      "RateLimited": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string",
+                "const": "rate_limited"
+              },
+              "message": {
+                "type": "string"
+              },
+              "details": {
+                "type": "object",
+                "properties": {
+                  "reason": {
+                    "type": "string",
+                    "const": "too_many_requests"
+                  },
+                  "policy": {
+                    "type": "string",
+                    "enum": [
+                      "net.requests",
+                      "auth.login",
+                      "auth.login.failures",
+                      "auth.register",
+                      "auth.recovery",
+                      "write.any",
+                      "write.signal",
+                      "write.discussion",
+                      "write.knowledge",
+                      "write.idea",
+                      "moderation.report",
+                      "read.search",
+                      "read.heavy"
+                    ]
+                  },
+                  "scope": {
+                    "type": "string",
+                    "enum": [
+                      "account",
+                      "email",
+                      "network"
+                    ]
+                  },
+                  "limit": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0
+                  },
+                  "periodSeconds": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0
+                  },
+                  "retryAfterSeconds": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0
+                  }
+                },
+                "required": [
+                  "reason",
+                  "policy",
+                  "scope",
+                  "limit",
+                  "periodSeconds",
+                  "retryAfterSeconds"
+                ],
+                "additionalProperties": false
+              },
+              "requestId": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "code",
+              "message",
+              "details"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "error"
+        ],
+        "additionalProperties": false
       },
       "RatingSummary": {
         "type": "object",

@@ -40,6 +40,7 @@ export const identityRoutes = new Hono<AppEnv>()
       c.get("ctx"),
       await jsonBody(c, LoginRequest),
       c.get("config").http.sessionTtlDays,
+      c.get("loginFailureBudget"),
     );
     setSessionCookie(c, auth);
     return c.json(auth);

@@ -326,7 +326,14 @@ export function IdeaEditor({
           {aside}
           {footer}
           <FormError error={error && !Object.keys(errors).length ? error : null} />
-          <Button type="submit" variant="primary" block loading={pending} disabled={!!missing}>
+          <Button
+            type="submit"
+            variant="primary"
+            block
+            retryError={error}
+            loading={pending}
+            disabled={!!missing}
+          >
             {submitLabel}
           </Button>
           {missing && <p className={styles.missing}>{t(missing)}</p>}

@@ -3,7 +3,7 @@
 Part of the [production-readiness program](README.md). Prompt for the implementing agent:
 `prompts/api/03-rate-limiting-prompt.md`.
 
-| Status     | Phase A complete 2026-11-25 (step 10). Step 11, phase B, is next.                                                                                                                 |
+| Status     | Phases A and B complete (steps 10–11). Step 12, phase C, is next.                                                                                                                 |
 | ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Depends on | [00](00-immediate-hardening.md) (network keys), [01](01-operational-foundations.md) (metrics, configuration), [02](02-background-jobs.md) (the PostgreSQL store's purge schedule) |
 | Unblocks   | Open registration; [07](07-moderation-core.md) (report limits); [12](12-public-api.md) (key quotas)                                                                               |
@@ -237,11 +237,11 @@ Two policies are enforced inside the identity service because they need the requ
 
 - `Retry-After` (seconds) on every 429.
 - On every response governed by an L2 policy, the IETF fields of
-  `draft-ietf-httpapi-ratelimit-headers-11` (May 2026; still a draft, so the formatter is one small function):
+  [draft-ietf-httpapi-ratelimit-headers-12](https://datatracker.ietf.org/doc/html/draft-ietf-httpapi-ratelimit-headers-12) (November 2026):
 
   ```http
-  RateLimit-Policy: "write.discussion";q=20;w=60, "write.discussion";q=300;w=86400
-  RateLimit: "write.discussion";r=17;t=42
+  RateLimit-Policy: "write.discussion.1";q=20;w=60, "write.discussion.2";q=300;w=86400
+  RateLimit: "write.discussion.1";a=17;w=9
   ```
 
   `RateLimit` reports the rule closest to exhaustion. Add both names to the CORS `exposeHeaders`.
@@ -360,3 +360,55 @@ does not establish the post-launch Redis trigger. No owner decision is pending f
 
 **Next eligible row:** step 11 (plan 03, phase B), `prompts/api/03-rate-limiting-prompt.md`.
 Wire the policies through the endpoint catalogue, request middleware, failure throttle and web retry handling.
+
+### Step 11 · Phase B · 2026-11-26
+
+Steps 1–10 were Done on clean `main` at `421df7c`. The checkout had the trusted network key, bounded hashing,
+configuration registry, metrics, maintenance schedule, localised error path, and phase A engine and stores.
+The baseline `npm run check` passed with 229 PGlite tests and all 68 endpoints exercised.
+
+- The [generated API reference](../../developer/api-reference.md) records the policies for all 68 endpoints.
+  Of 38 mutations, 35 require a session and declare two write policies. Registration and login charge the
+  network, login also checks email failure debt, and logout has only the network ceiling. Seven reads
+  declare L2 policies. Browsing ideas charges search only when the trimmed `q` is nonempty.
+- The [policy table](#policies) supplies the shipped defaults. Within the existing vocabulary, account and
+  topic administration use `write.knowledge`, idea governance uses `write.idea`, and moderator hide/restore
+  uses `write.discussion`. The report and recovery policies await their endpoints. Keep the initial quotas
+  pending real traffic.
+- The API looks up Hono's matched route template in the contract and runs each rule on its own store before
+  the business operation. A denied or invalid request can have spent an earlier rule's budget. Login checks
+  the email budget before password verification, charges a wrong password and clears the debt on success.
+  Existing sessions continue working during a throttle.
+- Draft 12 requires unique policy identifiers within each field. The formatter numbers a policy's windows
+  in catalogue order, uses `a` for available units and `w` for the window, and reports a deep graph's
+  three-unit cost. Error details and metric labels retain the catalogue name. The local Compose stack has a
+  development key alongside its local database credentials. Production operators supply a private key.
+- The form uses the server's retry delay and preserves the entered values. The browser audit runs a second
+  isolated API with a short registration budget to test an actual 429 and subsequent successful registration.
+
+The phase A PostgreSQL 17.12 benchmark was repeated with the same sequential workload, 100 warm-up and
+2,000 measured decisions per outcome. It measures the store call, including the read after denial.
+
+| Outcome | SQL statements per decision | Statements/s | Mean ms | p50 ms | p95 ms |
+| ------- | --------------------------: | -----------: | ------: | -----: | -----: |
+| Allowed |                           1 |          911 |   1.098 |  1.067 |  1.276 |
+| Denied  |                           2 |          946 |   2.115 |  2.070 |  2.442 |
+
+The browser observed the following headers on `POST /v1/auth/register` with its three-second test window.
+The body reported `auth.register`, network scope, limit 1, period 3 and retry delay 3.
+
+```http
+Retry-After: 3
+RateLimit-Policy: "auth.register.1";q=1;w=3, "auth.register.2";q=10;w=86400
+RateLimit: "auth.register.1";a=0;w=3
+```
+
+| Verification                                  | Result                                                                                                                                                                                                                                                                                         |
+| --------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `npm run i18n:compile` and `npm run docs:api` | Regenerated the API message catalogue, the endpoint reference and OpenAPI, including the typed 429 response.                                                                                                                                                                                   |
+| `npm run check`                               | Typecheck, lint, formatting, documentation links and production builds passed. On PGlite 237 tests passed and three PostgreSQL-only cases skipped. All 68 endpoints were exercised.                                                                                                            |
+| `npm run test:pg`                             | 240 tests passed on PostgreSQL 17.12, including shared budgets across two API instances, store outage handling, and exactly 10 admissions from 50 concurrent consumes.                                                                                                                         |
+| `npm run test:e2e`                            | 63 browser checks passed. Registration preserved the form, disabled submit, then returned 201 after the wait. Loading moderator controls only for moderators reduced the Russian idea page's initial compressed JavaScript from 160.1 to 156.8 KB on the same audit, within the 160 KB budget. |
+
+**Next eligible row:** step 12 (plan 03, phase C), `prompts/api/03-rate-limiting-prompt.md`.
+No owner decision is pending for the handoff.

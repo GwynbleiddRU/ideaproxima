@@ -65,6 +65,8 @@ export const englishMessages = {
   "auth.haveAccount": "Already have an account? <0>Sign in</0>",
   "auth.title": "{title} · ideaproxima", // The current auth page title.
   "auth.network": "Could not reach the server. Check your connection and try again.",
+  "error.retryAfter":
+    "Too many requests. Please wait {seconds, plural, one {# second} other {# seconds}} before trying again.",
   "auth.rateLimit": "Too many requests. Please wait a moment and try again.",
   // Standalone counts. Other screen copy enters the catalogue in phases C1 and C2.
   "count.claim": "{count, plural, one {# claim} other {# claims}}",
@@ -1073,6 +1075,7 @@ export const translatedMessages = {
     "auth.email": "البريد الإلكتروني",
     "auth.password": "كلمة المرور",
     "auth.network": "تعذر الاتصال بالخادم. تحقق من اتصالك وحاول مرة أخرى.",
+    "error.retryAfter": "طلبات كثيرة جدًا. يُرجى الانتظار لمدة {seconds} ثانية قبل المحاولة مجددًا.",
     "auth.rateLimit": "طلبات كثيرة جدًا. انتظر قليلًا وحاول مرة أخرى.",
     "count.claim":
       "{count, plural, zero {لا ادعاءات} one {ادعاء واحد} two {ادعاءان} few {# ادعاءات} many {# ادعاءً} other {# ادعاء}}",

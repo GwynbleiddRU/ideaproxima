@@ -26,14 +26,37 @@ export default defineConfig({
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
   },
-  webServer: {
-    command: "npx tsx server.ts",
-    url: `http://localhost:${PORT}/v1/health`,
-    reuseExistingServer: !process.env.CI,
-    timeout: 120_000,
-    stdout: "ignore",
-    stderr: "pipe",
-  },
+  webServer: [
+    {
+      command: "npx tsx server.ts",
+      url: `http://localhost:${PORT}/v1/health`,
+      reuseExistingServer: !process.env.CI,
+      timeout: 120_000,
+      stdout: "ignore",
+      stderr: "pipe",
+    },
+    {
+      // A separate in-memory API lets the registration test observe a real, short-lived 429.
+      command: "node ../apps/api/dist/main.js",
+      url: `http://127.0.0.1:${PORT + 1}/readyz`,
+      env: {
+        NODE_ENV: "test",
+        DATABASE_URL: "pglite:memory",
+        PORT: String(PORT + 1),
+        JOBS_MODE: "off",
+        RATE_LIMITS: "on",
+        RATE_LIMIT_STORE: "memory",
+        RATE_LIMIT_OVERRIDES: JSON.stringify({
+          "auth.register": {
+            anonymous: [
+              { limit: 1, periodSeconds: 3 },
+              { limit: 10, periodSeconds: 86400 },
+            ],
+          },
+        }),
+      },
+    },
+  ],
   projects: [
     {
       name: "e2e",

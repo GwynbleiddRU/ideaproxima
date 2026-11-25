@@ -8,6 +8,9 @@ import { message } from "@/locales/runtime";
  */
 
 export class ApiError extends Error {
+  readonly retryAfterSeconds: number | undefined;
+  readonly retryAt: number | undefined;
+
   constructor(
     readonly status: number,
     readonly code: string,
@@ -17,6 +20,11 @@ export class ApiError extends Error {
   ) {
     super(message);
     this.name = "ApiError";
+    const seconds = (details as { retryAfterSeconds?: unknown } | null)?.retryAfterSeconds;
+    if (status === 429 && typeof seconds === "number" && Number.isSafeInteger(seconds) && seconds > 0) {
+      this.retryAfterSeconds = seconds;
+      this.retryAt = Date.now() + seconds * 1000;
+    }
   }
 
   /** Field path → message, from a `validation_failed` response (`details.issues`). */
@@ -35,7 +43,10 @@ export const isApiError = (e: unknown, status?: number): e is ApiError =>
 export function errorMessage(error: unknown): string {
   if (error instanceof ApiError) {
     if (error.status === 401) return message("error.signIn");
-    if (error.status === 429) return message("auth.rateLimit");
+    if (error.status === 429)
+      return error.retryAfterSeconds
+        ? message("error.retryAfter", { seconds: error.retryAfterSeconds })
+        : message("auth.rateLimit");
     const issues = Object.entries(error.fieldErrors);
     if (error.code === "validation_failed" && issues.length) {
       const fields = issues.map(([path, detail]) =>

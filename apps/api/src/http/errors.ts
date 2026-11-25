@@ -23,11 +23,12 @@ const STATUS: Record<DomainErrorCode, ContentfulStatusCode> = {
   forbidden: 403,
   not_found: 404,
   unavailable: 503,
+  rate_limited: 429,
   conflict: 409,
   invariant_violated: 422,
 };
 
-type ApiErrorCode = DomainErrorCode | "internal_error" | "payload_too_large" | "rate_limited";
+type ApiErrorCode = DomainErrorCode | "internal_error" | "payload_too_large";
 
 export function errorResponse(
   c: Context<AppEnv>,
@@ -49,7 +50,8 @@ export function errorResponse(
     message: t(`validation.${key}`, issue.params),
   }));
   localizedResponseHeaders(c);
-  if (!c.get("sessionId")) c.header("Cache-Control", "no-store");
+  if (code === "rate_limited" || !c.get("sessionId")) c.header("Cache-Control", "no-store");
+  if (code === "rate_limited") c.header("Retry-After", String(params.retryAfterSeconds));
   if (code === "unavailable") c.header("Retry-After", "1");
   return c.json<ErrorResponse>(
     {

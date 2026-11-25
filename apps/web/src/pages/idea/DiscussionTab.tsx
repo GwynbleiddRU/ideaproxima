@@ -281,7 +281,14 @@ function CommentComposer({
             {t("common.cancel")}
           </Button>
         )}
-        <Button type="submit" size="sm" variant="primary" loading={post.isPending} disabled={!body.trim()}>
+        <Button
+          type="submit"
+          size="sm"
+          variant="primary"
+          retryError={post.error}
+          loading={post.isPending}
+          disabled={!body.trim()}
+        >
           {t(parentId ? "idea.discussion.reply" : "idea.discussion.post")}
         </Button>
       </div>

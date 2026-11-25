@@ -119,6 +119,7 @@ function InvolveForm({ idea, onDone }: { idea: IdeaDetail; onDone: () => void })
         {current ? (
           <Button
             variant="quiet"
+            retryError={withdraw.error}
             loading={withdraw.isPending}
             onClick={() => withdraw.mutate(capacity, { onSuccess: onDone })}
           >
@@ -134,7 +135,7 @@ function InvolveForm({ idea, onDone }: { idea: IdeaDetail; onDone: () => void })
         ) : (
           <span />
         )}
-        <Button type="submit" variant="primary" loading={declare.isPending}>
+        <Button type="submit" variant="primary" retryError={declare.error} loading={declare.isPending}>
           {current ? t("involve.update") : t("involve.recordMyInvolvement")}
         </Button>
       </div>

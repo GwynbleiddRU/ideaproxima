@@ -91,6 +91,7 @@ function operation(name: string, spec: EndpointSpec): Json {
             content: { "application/json": { schema: schemaFor(spec.response, "output") } },
           };
   }
+  responses["429"] = { $ref: "#/components/responses/RateLimited" };
   responses.default = {
     description:
       "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
@@ -109,6 +110,8 @@ function operation(name: string, spec: EndpointSpec): Json {
     operationId: name,
     tags: [spec.tag],
     summary: spec.summary,
+    "x-rate-limits": ["net.requests", ...spec.limits],
+    "x-mutates": spec.mutates,
     ...(description ? { description } : {}),
     ...(spec.auth === "member" ? { security: [{ bearerAuth: [] }, { cookieAuth: [] }] } : { security: [] }),
     parameters: [...pathParams, ...(spec.query ? queryParameters(spec.query) : [])],
@@ -150,6 +153,17 @@ export function buildOpenApiDocument(options: { version?: string; serverUrl?: st
           in: "cookie",
           name: "ip_session",
           description: "HttpOnly session cookie.",
+        },
+      },
+      responses: {
+        RateLimited: {
+          description: "Request budget exhausted. Wait for Retry-After before retrying.",
+          headers: {
+            "Retry-After": { required: true, schema: { type: "integer", minimum: 1 } },
+            "RateLimit-Policy": { schema: { type: "string" } },
+            RateLimit: { schema: { type: "string" } },
+          },
+          content: { "application/json": { schema: ref("RateLimited") } },
         },
       },
       schemas: componentSchemas(),

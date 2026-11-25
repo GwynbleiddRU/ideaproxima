@@ -2,7 +2,8 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { ENDPOINTS, buildOpenApiDocument, type EndpointSpec } from "@ideaproxima/contracts";
+import { RATE_LIMIT_POLICIES } from "@ideaproxima/domain";
+import { ENDPOINTS, defineEndpoint, buildOpenApiDocument, type EndpointSpec } from "@ideaproxima/contracts";
 import { API_DOCS_PATHS, renderApiDocs } from "../../../scripts/docs/api-reference";
 import { createApp } from "../src/app";
 import { loadConfig } from "../src/config";
@@ -30,6 +31,32 @@ describe("the endpoint catalogue is the API", () => {
     );
     expect([...served].filter((r) => !catalogued.has(r))).toEqual([]);
     expect([...catalogued].filter((r) => !served.has(r))).toEqual([]);
+  });
+
+  it("declares the limits of every read, member mutation and public credential operation", () => {
+    const credentials: Record<string, string[]> = {
+      register: ["auth.register"],
+      login: ["auth.login", "auth.login.failures"],
+      logout: [],
+    };
+    for (const [name, spec] of Object.entries(ENDPOINTS)) {
+      for (const policy of spec.limits) expect(Object.hasOwn(RATE_LIMIT_POLICIES, policy), name).toBe(true);
+      expect(spec.limits, name).not.toContain("net.requests");
+      if (!spec.mutates) {
+        expect(
+          spec.limits.every((policy) => policy.startsWith("read.")),
+          name,
+        ).toBe(true);
+      } else if (spec.auth === "public") {
+        expect(spec.limits, name).toEqual(credentials[name]);
+      } else {
+        expect(spec.limits, name).toEqual([
+          "write.any",
+          expect.stringMatching(/^(write\.(signal|discussion|knowledge|idea)|moderation\.report)$/),
+        ]);
+      }
+    }
+    expect(defineEndpoint({ ...ENDPOINTS.search, method: "POST", mutates: false }).mutates).toBe(false);
   });
 
   it("produces an OpenAPI document whose every reference resolves", async () => {

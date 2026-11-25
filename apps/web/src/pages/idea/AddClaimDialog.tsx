@@ -230,6 +230,7 @@ function ClaimForm({ idea, onDone }: { idea: IdeaDetail; onDone: () => void }) {
         <Button
           type="submit"
           variant="primary"
+          retryError={add.error}
           loading={add.isPending}
           disabled={mode === "existing" && !claimId}
         >

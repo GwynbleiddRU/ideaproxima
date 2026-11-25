@@ -9,6 +9,7 @@ export type DomainErrorCode =
   | "unauthenticated" // no valid session
   | "forbidden" // authenticated, but not allowed
   | "not_found"
+  | "rate_limited"
   | "unavailable"
   | "conflict" // concurrent modification / duplicate
   | "invariant_violated"; // well-formed input that breaks a domain rule (e.g. stage transition without proof)

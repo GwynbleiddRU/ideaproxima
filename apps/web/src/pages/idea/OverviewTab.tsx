@@ -358,7 +358,7 @@ function PeopleCard({ idea }: { idea: IdeaDetail }) {
             aria-label={t("idea.overview.stewardHandle")}
             required
           />
-          <Button type="submit" size="sm" loading={appoint.isPending}>
+          <Button type="submit" size="sm" retryError={appoint.error} loading={appoint.isPending}>
             {t("idea.overview.appoint")}
           </Button>
           <FormError error={appoint.error} />

@@ -34,7 +34,7 @@ describe("runtime configuration", () => {
       CORS_ORIGINS: "https://example.test, http://localhost:3000",
       COOKIE_SECURE: "1",
       CLIENT_IP_HEADER: "X-Real-IP",
-      RATE_LIMIT_AUTH_PER_MINUTE: "0",
+      RATE_LIMITS: "off",
       PASSWORD_HASH_CONCURRENCY: "1",
       PASSWORD_HASH_QUEUE: "0",
       LOG_LEVEL: "debug",
@@ -48,7 +48,7 @@ describe("runtime configuration", () => {
       corsOrigins: ["https://example.test", "http://localhost:3000"],
     });
     expect(config.passwordHash).toEqual({ concurrency: 1, queue: 0 });
-    expect(config.rateLimits.authPerMinute).toBe(0);
+    expect(config.rateLimits.enabled).toBe(false);
     expect(config.log).toEqual({ requests: false, level: "debug", format: "json" });
   });
 
@@ -62,7 +62,7 @@ describe("runtime configuration", () => {
         INTERNAL_PORT: "9100",
         CLIENT_IP_HEADER: "bad header",
         CORS_ORIGINS: "https://example.test/a-path",
-        RATE_LIMIT_AUTH_PER_MINUTE: "1O",
+        RATE_LIMITS: "1O",
         PASSWORD_HASH_QUEUE: "2.5",
         LOG_LEVEL: "inf0",
       });
@@ -77,12 +77,12 @@ describe("runtime configuration", () => {
       "INTERNAL_PORT",
       "CLIENT_IP_HEADER",
       "CORS_ORIGINS",
-      "RATE_LIMIT_AUTH_PER_MINUTE",
+      "RATE_LIMITS",
       "PASSWORD_HASH_QUEUE",
       "LOG_LEVEL",
     ])
       expect(message).toContain(`- ${variable}:`);
-    expect(message).toContain('received "1O"');
+    expect(message).toContain("RATE_LIMIT_KEY_SECRET");
     expect(() => loadConfig({ LOG_REQUESTS: "flase" })).toThrow(/LOG_REQUESTS/);
     expect(() => loadConfig({ DATABASE_URL: "mysql://user:example-secret@localhost/db" })).toThrow(
       /^Invalid configuration:\n- DATABASE_URL: expected a PostgreSQL URL or a nonempty pglite: location$/,
@@ -98,6 +98,7 @@ describe("runtime configuration", () => {
     const local = loadConfig(
       {
         NODE_ENV: "production",
+        RATE_LIMIT_KEY_SECRET: "test",
         DATABASE_URL: "pglite:memory",
         ALLOW_PGLITE_IN_PRODUCTION: "true",
         COOKIE_SECURE: "false",
@@ -113,6 +114,7 @@ describe("runtime configuration", () => {
     const config = loadConfig(
       {
         NODE_ENV: "production",
+        RATE_LIMIT_KEY_SECRET: "test",
         DATABASE_URL: "postgresql://localhost/db",
         TRUST_PROXY_HOPS: "1",
       },
@@ -121,10 +123,28 @@ describe("runtime configuration", () => {
     expect(config.http.cookieSecure).toBe(true);
     expect(warn).not.toHaveBeenCalled();
     loadConfig(
-      { NODE_ENV: "production", DATABASE_URL: "postgres://localhost/db", CLIENT_IP_HEADER: "x-real-ip" },
+      {
+        NODE_ENV: "production",
+        DATABASE_URL: "postgres://localhost/db",
+        CLIENT_IP_HEADER: "x-real-ip",
+        RATE_LIMIT_KEY_SECRET: "test",
+      },
       warn,
     );
     expect(warn).not.toHaveBeenCalled();
+  });
+
+  it("validates policy overrides and the maximum graph cost before serving requests", () => {
+    for (const raw of [
+      "broken",
+      '{"bad":{}}',
+      '{"read.heavy":{"anonymous":[{"limit":2,"periodSeconds":60}]}}',
+      '{"auth.login":{"member":[]}}',
+    ]) {
+      expect(() => loadConfig({ RATE_LIMIT_OVERRIDES: raw })).toThrow(/RATE_LIMIT_OVERRIDES/);
+    }
+    expect(() => loadConfig({ RATE_LIMIT_SCALE: "0.01" })).toThrow(/RATE_LIMIT_SCALE/);
+    expect(() => loadConfig({ RATE_LIMIT_STORE: "postgres" })).toThrow(/RATE_LIMIT_KEY_SECRET/);
   });
 
   it("documents every schema variable in the example and the operations configuration table", () => {

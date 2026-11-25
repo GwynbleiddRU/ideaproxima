@@ -9,8 +9,7 @@ import type { AppConfig } from "./config";
 import type { Database } from "./db/client";
 import { SESSION_COOKIE, type AppEnv } from "./http/env";
 import { errorResponse, handleError } from "./http/errors";
-import { clientAddress } from "./http/client-address";
-import { rateLimit } from "./http/rate-limit";
+import { rateLimitMiddleware } from "./http/rate-limit";
 import { setRequestLocale } from "./http/locale";
 import { addProbes } from "./http/probes";
 import { catalogRoutes } from "./http/routes/catalog";
@@ -36,8 +35,6 @@ export interface AppDeps {
   webRoot?: string | null;
 }
 
-const WRITE_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
-
 /**
  * Builds the HTTP application. Returns a standard fetch handler (`app.fetch`), so the same API can run as a
  * standalone Node server (src/main.ts), inside a frontend framework's route handler, or in tests via
@@ -55,6 +52,9 @@ export function createApp(deps: AppDeps) {
   const logger = deps.logger ?? createLogger(config.log);
   const errorReporter = deps.errorReporter ?? createErrorReporter(logger);
   const app = new Hono<AppEnv>();
+  const limiter = config.rateLimits.enabled
+    ? rateLimitMiddleware(config.rateLimits, deps.db, logger)
+    : undefined;
 
   app.use("*", ...identifyRequest);
   app.use("*", observeRequest(logger, config.log.requests, errorReporter));
@@ -70,7 +70,7 @@ export function createApp(deps: AppDeps) {
         origin: http.corsOrigins,
         credentials: true,
         allowHeaders: ["Content-Type", "Authorization", "X-Request-Id"],
-        exposeHeaders: ["X-Request-Id"],
+        exposeHeaders: ["X-Request-Id", "Retry-After", "RateLimit-Policy", "RateLimit"],
       }),
     );
   }
@@ -87,14 +87,7 @@ export function createApp(deps: AppDeps) {
     c.set("config", config);
     await next();
   });
-  app.use(
-    "/v1/*",
-    rateLimit({
-      name: "requests",
-      perMinute: config.rateLimits.requestsPerMinute,
-      key: clientAddress,
-    }),
-  );
+  if (limiter) app.use("/v1/*", limiter.networkLimit);
 
   // Resolve the actor once per API request: Bearer token (API clients) or HttpOnly cookie (browsers).
   app.use("/v1/*", async (c, next) => {
@@ -117,26 +110,7 @@ export function createApp(deps: AppDeps) {
     await next();
   });
 
-  // Credential endpoints are limited per client address; every other write per account (or address).
-  const authLimit = rateLimit({
-    name: "authentication",
-    perMinute: config.rateLimits.authPerMinute,
-    key: (c) => `auth:${clientAddress(c)}`,
-  });
-  app.use("/v1/auth/login", authLimit);
-  app.use("/v1/auth/register", authLimit);
-  app.use(
-    "/v1/*",
-    rateLimit({
-      name: "writes",
-      perMinute: config.rateLimits.writesPerMinute,
-      key: (c) => {
-        if (!WRITE_METHODS.has(c.req.method)) return null;
-        const actor = c.get("ctx").actor;
-        return actor ? `write:person:${actor.id}` : `write:addr:${clientAddress(c)}`;
-      },
-    }),
-  );
+  if (limiter) app.use("/v1/*", limiter.endpointLimits);
 
   app.onError(handleError);
   app.notFound((c) => errorResponse(c, 404, "not_found", "unknown_endpoint"));
@@ -148,7 +122,7 @@ export function createApp(deps: AppDeps) {
   app.route("/v1", identityRoutes);
   app.route("/v1", ideaRoutes);
   app.route("/v1", resourceRoutes);
-  return app;
+  return Object.assign(app, { closeRateLimits: async () => limiter?.close() });
 }
 
 export type App = ReturnType<typeof createApp>;

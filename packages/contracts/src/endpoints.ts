@@ -6,6 +6,7 @@
  * catalogue and the server's routes are identical and (2) validate every successful response body against
  * the `response` schema declared here. Adding a route without cataloguing it fails the test suite.
  */
+import type { RateLimitPolicyName } from "@ideaproxima/domain";
 import { z } from "zod";
 import * as Req from "./requests";
 import * as Res from "./responses";
@@ -16,6 +17,8 @@ export interface EndpointSpec {
   method: HttpMethod;
   /** Path with `:param` placeholders, including the /v1 prefix. */
   path: string;
+  limits: readonly RateLimitPolicyName[];
+  mutates: boolean;
   tag: Tag;
   summary: string;
   description?: string;
@@ -66,13 +69,20 @@ export const PATH_PARAMS: Record<string, string> = {
 const STEWARD_OR_MOD = "Stewards of the idea, or moderators.";
 const OpenApiDocument = z.looseObject({ openapi: z.string() });
 
-export const ENDPOINTS = {
+type Declaration = Omit<EndpointSpec, "mutates"> & { mutates?: boolean };
+
+export function defineEndpoint<const S extends Declaration>(spec: S) {
+  return { ...spec, mutates: spec.mutates ?? spec.method !== "GET" };
+}
+
+const declarations = {
   // ---------------------------------------------------------------- catalog
   apiIndex: {
     method: "GET",
     path: "/v1",
     tag: "Catalog",
     auth: "public",
+    limits: [],
     summary: "API index",
     description:
       "Name, version and the main entry points. `GET /` redirects here; the full description is `GET /v1/openapi.json`.",
@@ -83,6 +93,7 @@ export const ENDPOINTS = {
     path: "/v1/health",
     tag: "Catalog",
     auth: "public",
+    limits: [],
     summary: "Readiness check",
     description: "200 when the API can reach its database, 503 otherwise.",
     response: Res.HealthResponse,
@@ -93,6 +104,7 @@ export const ENDPOINTS = {
     path: "/v1/openapi.json",
     tag: "Catalog",
     auth: "public",
+    limits: [],
     summary: "This API as an OpenAPI 3.1 document",
     response: OpenApiDocument,
   },
@@ -101,6 +113,7 @@ export const ENDPOINTS = {
     path: "/v1/locales",
     tag: "Catalog",
     auth: "public",
+    limits: [],
     summary: "List supported product languages",
     response: z.array(Res.LocaleDto),
   },
@@ -109,6 +122,7 @@ export const ENDPOINTS = {
     path: "/v1/vocabulary",
     tag: "Catalog",
     auth: "public",
+    limits: [],
     summary: "The product vocabulary",
     description:
       "Every vocabulary with labels, descriptions, rating scales and lens explanations. Render labels from here instead of hard-coding them.",
@@ -120,6 +134,7 @@ export const ENDPOINTS = {
     path: "/v1/topics",
     tag: "Catalog",
     auth: "public",
+    limits: [],
     summary: "List topics",
     query: Req.LocaleQuery,
     response: z.array(Res.TopicDto),
@@ -129,6 +144,7 @@ export const ENDPOINTS = {
     path: "/v1/topics",
     tag: "Catalog",
     auth: "member",
+    limits: ["write.any", "write.knowledge"],
     who: "Admins.",
     summary: "Create a topic",
     body: Req.CreateTopicRequest,
@@ -141,6 +157,7 @@ export const ENDPOINTS = {
     path: "/v1/topics/:slug",
     tag: "Catalog",
     auth: "public",
+    limits: [],
     summary: "Get a topic with its child topics",
     query: Req.LocaleQuery,
     response: Res.TopicDetailDto,
@@ -150,6 +167,7 @@ export const ENDPOINTS = {
     path: "/v1/topics/:slug/translations/:locale",
     tag: "Catalog",
     auth: "member",
+    limits: ["write.any", "write.knowledge"],
     who: "Admins.",
     summary: "Add or replace a topic translation",
     body: Req.TopicTranslationRequest,
@@ -160,6 +178,7 @@ export const ENDPOINTS = {
     path: "/v1/search",
     tag: "Catalog",
     auth: "public",
+    limits: ["read.search"],
     summary: "Search ideas, claims, sources and people",
     description: "Full-text search (English stemming). At most 25 results per kind.",
     query: Req.SearchQuery,
@@ -170,6 +189,7 @@ export const ENDPOINTS = {
     path: "/v1/activity",
     tag: "Catalog",
     auth: "public",
+    limits: ["read.heavy"],
     summary: "The global activity feed",
     description:
       "Newest first. `action=moderation.` returns the public moderation log. For public readers, activity about hidden ideas is omitted and other hidden subjects have an empty payload and subject.hidden=true. Moderation entries stay public.",
@@ -183,6 +203,7 @@ export const ENDPOINTS = {
     path: "/v1/auth/register",
     tag: "Identity",
     auth: "public",
+    limits: ["auth.register"],
     summary: "Create an account",
     description: "Returns a session token and sets the `ip_session` cookie. Rate-limited per client address.",
     body: Req.RegisterRequest,
@@ -199,8 +220,10 @@ export const ENDPOINTS = {
     path: "/v1/auth/login",
     tag: "Identity",
     auth: "public",
+    limits: ["auth.login", "auth.login.failures"],
     summary: "Sign in",
-    description: "Returns a session token and sets the `ip_session` cookie. Rate-limited per client address.",
+    description:
+      "Returns a session token and sets the `ip_session` cookie. Rate-limited per client address. Failed attempts also consume a continuously refilling per-email budget.",
     body: Req.LoginRequest,
     response: Res.AuthResponse,
     errors: [
@@ -214,6 +237,7 @@ export const ENDPOINTS = {
     path: "/v1/auth/logout",
     tag: "Identity",
     auth: "public",
+    limits: [],
     summary: "Sign out (revokes the current session)",
     response: Res.OkResponse,
   },
@@ -222,6 +246,7 @@ export const ENDPOINTS = {
     path: "/v1/me",
     tag: "Identity",
     auth: "member",
+    limits: [],
     summary: "The signed-in account",
     response: Res.MeResponse,
   },
@@ -230,6 +255,7 @@ export const ENDPOINTS = {
     path: "/v1/me",
     tag: "Identity",
     auth: "member",
+    limits: ["write.any", "write.knowledge"],
     summary: "Update your profile or saved language",
     body: Req.UpdateProfileRequest,
     response: Res.PersonDto,
@@ -239,6 +265,7 @@ export const ENDPOINTS = {
     path: "/v1/me/password",
     tag: "Identity",
     auth: "member",
+    limits: ["write.any", "write.knowledge"],
     summary: "Change your password",
     description: "Signs out every other session.",
     body: Req.ChangePasswordRequest,
@@ -250,6 +277,7 @@ export const ENDPOINTS = {
     path: "/v1/me/expertise",
     tag: "Identity",
     auth: "member",
+    limits: ["write.any", "write.knowledge"],
     summary: "Declare expertise in a topic",
     description: "Recorded as a dated, self-declared fact. Returns your current expertise.",
     body: Req.DeclareExpertiseRequest,
@@ -261,6 +289,7 @@ export const ENDPOINTS = {
     path: "/v1/me/expertise/:topic",
     tag: "Identity",
     auth: "member",
+    limits: ["write.any", "write.knowledge"],
     summary: "Withdraw declared expertise",
     response: z.array(Res.ExpertiseDto),
   },
@@ -269,6 +298,7 @@ export const ENDPOINTS = {
     path: "/v1/people/:handle",
     tag: "Identity",
     auth: "public",
+    limits: [],
     summary: "A person's contribution profile",
     response: Res.ProfileDto,
   },
@@ -277,6 +307,7 @@ export const ENDPOINTS = {
     path: "/v1/people/:handle/activity",
     tag: "Identity",
     auth: "public",
+    limits: ["read.heavy"],
     summary: "A person's activity",
     query: Req.PageQuery,
     response: Res.ActivityPage,
@@ -286,6 +317,7 @@ export const ENDPOINTS = {
     path: "/v1/people/:handle/deactivate",
     tag: "Identity",
     auth: "member",
+    limits: ["write.any", "write.knowledge"],
     who: "Moderators (for members) and admins (for anyone).",
     summary: "Deactivate an account",
     description:
@@ -299,6 +331,7 @@ export const ENDPOINTS = {
     path: "/v1/people/:handle/reactivate",
     tag: "Identity",
     auth: "member",
+    limits: ["write.any", "write.knowledge"],
     who: "Moderators (for members) and admins (for anyone).",
     summary: "Reactivate an account",
     body: Req.PersonModerationRequest,
@@ -310,6 +343,7 @@ export const ENDPOINTS = {
     path: "/v1/people/:handle/role",
     tag: "Identity",
     auth: "member",
+    limits: ["write.any", "write.knowledge"],
     who: "Admins (not on themselves).",
     summary: "Set a person's platform role",
     body: Req.SetRoleRequest,
@@ -322,9 +356,10 @@ export const ENDPOINTS = {
     path: "/v1/ideas",
     tag: "Ideas",
     auth: "public",
+    limits: ["read.search"],
     summary: "Discover ideas through a lens",
     description:
-      "Each lens measures something different and says so (see `GET /v1/vocabulary` → lenses). Filters combine with any lens.",
+      "Each lens measures something different and says so (see `GET /v1/vocabulary` → lenses). Filters combine with any lens. The read.search policy applies when q contains search text.",
     query: Req.ListIdeasQuery,
     response: Res.IdeaPage,
   },
@@ -333,6 +368,7 @@ export const ENDPOINTS = {
     path: "/v1/ideas",
     tag: "Ideas",
     auth: "member",
+    limits: ["write.any", "write.idea"],
     summary: "Propose an idea",
     description:
       "Records the idea, its first revision, the proposer as originator steward and the `imagined` stage. Only title, summary and one topic are required.",
@@ -345,6 +381,7 @@ export const ENDPOINTS = {
     path: "/v1/ideas/:idea",
     tag: "Ideas",
     auth: "public",
+    limits: [],
     summary: "An idea in full",
     description:
       "Current narrative, stewards, derived signals, stage requirements and — when signed in — your own stances, ratings and involvements.",
@@ -355,6 +392,7 @@ export const ENDPOINTS = {
     path: "/v1/ideas/:idea/revisions",
     tag: "Ideas",
     auth: "public",
+    limits: [],
     summary: "The idea's revision history (newest first, without content)",
     query: Req.RevisionsQuery,
     response: z.array(Res.RevisionSummaryDto),
@@ -364,6 +402,7 @@ export const ENDPOINTS = {
     path: "/v1/ideas/:idea/revisions",
     tag: "Ideas",
     auth: "member",
+    limits: ["write.any", "write.idea"],
     summary: "Publish or propose a new version of the narrative",
     description:
       "Stewards publish directly (`intent: auto|publish`); everyone else proposes. Publishing requires `baseRevisionId` to be the current revision.",
@@ -380,6 +419,7 @@ export const ENDPOINTS = {
     path: "/v1/ideas/:idea/revisions/:revision",
     tag: "Ideas",
     auth: "public",
+    limits: [],
     summary: "One revision with its full content",
     response: Res.RevisionDto,
   },
@@ -388,6 +428,7 @@ export const ENDPOINTS = {
     path: "/v1/ideas/:idea/revisions/:revision/decision",
     tag: "Ideas",
     auth: "member",
+    limits: ["write.any", "write.idea"],
     who: STEWARD_OR_MOD,
     summary: "Accept or reject a proposed revision",
     body: Req.DecideRevisionRequest,
@@ -402,6 +443,7 @@ export const ENDPOINTS = {
     path: "/v1/ideas/:idea/revisions/:revision/withdraw",
     tag: "Ideas",
     auth: "member",
+    limits: ["write.any", "write.idea"],
     who: "The proposal's author, or moderators.",
     summary: "Withdraw your pending proposal",
     response: Res.RevisionDto,
@@ -411,6 +453,7 @@ export const ENDPOINTS = {
     path: "/v1/ideas/:idea/stewards",
     tag: "Ideas",
     auth: "member",
+    limits: ["write.any", "write.idea"],
     who: STEWARD_OR_MOD,
     summary: "Appoint a co-steward",
     body: Req.AppointStewardRequest,
@@ -422,6 +465,7 @@ export const ENDPOINTS = {
     path: "/v1/ideas/:idea/stages",
     tag: "Ideas",
     auth: "public",
+    limits: [],
     summary: "Lifecycle history (oldest first)",
     response: z.array(Res.StageTransitionDto),
   },
@@ -430,6 +474,7 @@ export const ENDPOINTS = {
     path: "/v1/ideas/:idea/stages",
     tag: "Ideas",
     auth: "member",
+    limits: ["write.any", "write.idea"],
     who: STEWARD_OR_MOD,
     summary: "Record a lifecycle transition",
     description:
@@ -444,6 +489,7 @@ export const ENDPOINTS = {
     path: "/v1/ideas/:idea/timeline",
     tag: "Ideas",
     auth: "public",
+    limits: ["read.heavy"],
     summary: "Everything that happened to the idea (newest first)",
     query: Req.PageQuery,
     response: Res.ActivityPage,
@@ -455,6 +501,7 @@ export const ENDPOINTS = {
     path: "/v1/ideas/:idea/claims",
     tag: "Knowledge",
     auth: "public",
+    limits: [],
     summary: "The idea's claims, with derived status and evidence counts",
     response: z.array(Res.IdeaClaimDto),
   },
@@ -463,6 +510,7 @@ export const ENDPOINTS = {
     path: "/v1/ideas/:idea/claims",
     tag: "Knowledge",
     auth: "member",
+    limits: ["write.any", "write.knowledge"],
     summary: "State a new claim, or link an existing one, in a role",
     body: Req.AddClaimRequest,
     response: Res.IdeaClaimDto,
@@ -474,6 +522,7 @@ export const ENDPOINTS = {
     path: "/v1/ideas/:idea/claims/:link/unlink",
     tag: "Knowledge",
     auth: "member",
+    limits: ["write.any", "write.knowledge"],
     who: "The person who linked it, stewards, or moderators.",
     summary: "Remove a claim from an idea (recorded, not deleted)",
     response: Res.OkResponse,
@@ -483,6 +532,7 @@ export const ENDPOINTS = {
     path: "/v1/ideas/:idea/arguments",
     tag: "Knowledge",
     auth: "public",
+    limits: [],
     summary: "Arguments that target the idea",
     response: z.array(Res.ArgumentDto),
   },
@@ -491,6 +541,7 @@ export const ENDPOINTS = {
     path: "/v1/claims/:claim",
     tag: "Knowledge",
     auth: "public",
+    limits: [],
     summary: "A claim with every idea using it, its evidence and arguments",
     response: Res.ClaimDetailDto,
   },
@@ -499,6 +550,7 @@ export const ENDPOINTS = {
     path: "/v1/claims/:claim/evidence",
     tag: "Knowledge",
     auth: "member",
+    limits: ["write.any", "write.knowledge"],
     summary: "Attach evidence to a claim",
     body: Req.AttachEvidenceRequest,
     response: Res.EvidenceDto,
@@ -510,6 +562,7 @@ export const ENDPOINTS = {
     path: "/v1/evidence/:evidence/withdraw",
     tag: "Knowledge",
     auth: "member",
+    limits: ["write.any", "write.knowledge"],
     who: "The contributor, or moderators.",
     summary: "Withdraw evidence (stays on record with the reason)",
     body: Req.WithdrawRequest,
@@ -520,6 +573,7 @@ export const ENDPOINTS = {
     path: "/v1/sources",
     tag: "Knowledge",
     auth: "member",
+    limits: ["write.any", "write.knowledge"],
     summary: "Register a source, or get the existing one with the same DOI/URL",
     description: "201 when created, 200 when an existing source matched.",
     body: Req.SourceInput,
@@ -531,6 +585,7 @@ export const ENDPOINTS = {
     path: "/v1/sources/:source",
     tag: "Knowledge",
     auth: "public",
+    limits: [],
     summary: "A source and how often it is cited",
     response: Res.SourceDetailDto,
   },
@@ -539,6 +594,7 @@ export const ENDPOINTS = {
     path: "/v1/arguments",
     tag: "Knowledge",
     auth: "member",
+    limits: ["write.any", "write.discussion"],
     summary: "Argue for, against, or with caveats about an idea, a claim or another argument",
     body: Req.CreateArgumentRequest,
     response: Res.ArgumentDto,
@@ -549,6 +605,7 @@ export const ENDPOINTS = {
     path: "/v1/arguments/:argument",
     tag: "Knowledge",
     auth: "public",
+    limits: [],
     summary: "An argument with its replies",
     response: Res.ArgumentDetailDto,
   },
@@ -557,6 +614,7 @@ export const ENDPOINTS = {
     path: "/v1/arguments/:argument/withdraw",
     tag: "Knowledge",
     auth: "member",
+    limits: ["write.any", "write.discussion"],
     who: "The author, or moderators.",
     summary: "Withdraw an argument",
     response: Res.ArgumentDto,
@@ -568,6 +626,7 @@ export const ENDPOINTS = {
     path: "/v1/evaluations",
     tag: "Signals",
     auth: "public",
+    limits: ["read.heavy"],
     summary: "Raw evaluations of one target",
     description: "`history=all` includes superseded ratings, so changes of opinion can be studied.",
     query: Req.EvaluationsQuery,
@@ -578,6 +637,7 @@ export const ENDPOINTS = {
     path: "/v1/evaluations",
     tag: "Signals",
     auth: "member",
+    limits: ["write.any", "write.signal"],
     summary: "Rate a target on one or more dimensions",
     description:
       "Omit a dimension to say 'I don't know'. Re-rating supersedes your previous rating; repeating it is a no-op.",
@@ -590,6 +650,7 @@ export const ENDPOINTS = {
     path: "/v1/evaluations/withdraw",
     tag: "Signals",
     auth: "member",
+    limits: ["write.any", "write.signal"],
     summary: "Withdraw your ratings on some dimensions",
     body: Req.WithdrawEvaluationRequest,
     response: Res.WithdrawEvaluationResponse,
@@ -599,6 +660,7 @@ export const ENDPOINTS = {
     path: "/v1/ideas/:idea/stances/:kind",
     tag: "Signals",
     auth: "member",
+    limits: ["write.any", "write.signal"],
     summary: "Take a stance on an idea (idempotent)",
     description: "`plausible` and `doubtful` exclude each other. Returns your current stances.",
     response: Res.StancesResponse,
@@ -608,6 +670,7 @@ export const ENDPOINTS = {
     path: "/v1/ideas/:idea/stances/:kind",
     tag: "Signals",
     auth: "member",
+    limits: ["write.any", "write.signal"],
     summary: "Retract a stance (idempotent)",
     response: Res.StancesResponse,
   },
@@ -616,6 +679,7 @@ export const ENDPOINTS = {
     path: "/v1/ideas/:idea/involvements",
     tag: "Signals",
     auth: "public",
+    limits: [],
     summary: "Who offers or is working on the idea, in which capacity",
     response: z.array(Res.InvolvementDto),
   },
@@ -624,6 +688,7 @@ export const ENDPOINTS = {
     path: "/v1/ideas/:idea/involvements/:capacity",
     tag: "Signals",
     auth: "member",
+    limits: ["write.any", "write.signal"],
     summary: "Declare your involvement in one capacity (idempotent)",
     body: Req.DeclareInvolvementRequest,
     response: z.array(Res.InvolvementDto),
@@ -633,6 +698,7 @@ export const ENDPOINTS = {
     path: "/v1/ideas/:idea/involvements/:capacity",
     tag: "Signals",
     auth: "member",
+    limits: ["write.any", "write.signal"],
     summary: "Withdraw your involvement in one capacity",
     response: z.array(Res.InvolvementDto),
   },
@@ -643,6 +709,7 @@ export const ENDPOINTS = {
     path: "/v1/ideas/:idea/relations",
     tag: "Graph",
     auth: "public",
+    limits: [],
     summary: "The idea's typed relations, phrased from its point of view",
     response: z.array(Res.IdeaRelationView),
   },
@@ -651,6 +718,7 @@ export const ENDPOINTS = {
     path: "/v1/ideas/:idea/graph",
     tag: "Graph",
     auth: "public",
+    limits: ["read.heavy"],
     summary: "Traverse the idea graph",
     description:
       "`downstream`: what realising this idea would unlock. `upstream`: what must exist first. `both`: the whole neighbourhood.",
@@ -662,6 +730,7 @@ export const ENDPOINTS = {
     path: "/v1/relations",
     tag: "Graph",
     auth: "member",
+    limits: ["write.any", "write.knowledge"],
     summary: "Relate two ideas",
     body: Req.ProposeRelationRequest,
     response: Res.RelationDto,
@@ -673,6 +742,7 @@ export const ENDPOINTS = {
     path: "/v1/relations/:relation/retract",
     tag: "Graph",
     auth: "member",
+    limits: ["write.any", "write.knowledge"],
     who: "The proposer, stewards of either idea, or moderators.",
     summary: "Retract a relation",
     response: Res.OkResponse,
@@ -684,6 +754,7 @@ export const ENDPOINTS = {
     path: "/v1/ideas/:idea/initiatives",
     tag: "Practice",
     auth: "public",
+    limits: [],
     summary: "Real-world action taken on the idea, with outcomes",
     response: z.array(Res.InitiativeDto),
   },
@@ -692,6 +763,7 @@ export const ENDPOINTS = {
     path: "/v1/ideas/:idea/initiatives",
     tag: "Practice",
     auth: "member",
+    limits: ["write.any", "write.knowledge"],
     summary: "Record an initiative (it may be historical and already completed)",
     body: Req.CreateInitiativeRequest,
     response: Res.InitiativeDto,
@@ -702,6 +774,7 @@ export const ENDPOINTS = {
     path: "/v1/initiatives/:initiative",
     tag: "Practice",
     auth: "public",
+    limits: [],
     summary: "An initiative with its outcomes",
     response: Res.InitiativeDto,
   },
@@ -710,6 +783,7 @@ export const ENDPOINTS = {
     path: "/v1/initiatives/:initiative/status",
     tag: "Practice",
     auth: "member",
+    limits: ["write.any", "write.knowledge"],
     who: "The initiative's creator, stewards of the idea, or moderators.",
     summary: "Move an initiative forward (planned → active → completed | discontinued)",
     body: Req.UpdateInitiativeStatusRequest,
@@ -721,6 +795,7 @@ export const ENDPOINTS = {
     path: "/v1/initiatives/:initiative/outcomes",
     tag: "Practice",
     auth: "member",
+    limits: ["write.any", "write.knowledge"],
     who: "The initiative's creator, stewards of the idea, or moderators.",
     summary: "Record what an initiative produced — including failures",
     body: Req.RecordOutcomeRequest,
@@ -735,6 +810,7 @@ export const ENDPOINTS = {
     path: "/v1/ideas/:idea/comments",
     tag: "Discussion",
     auth: "public",
+    limits: [],
     summary: "The idea's discussion (oldest first)",
     query: Req.PageQuery,
     response: Res.CommentPage,
@@ -744,6 +820,7 @@ export const ENDPOINTS = {
     path: "/v1/ideas/:idea/comments",
     tag: "Discussion",
     auth: "member",
+    limits: ["write.any", "write.discussion"],
     summary: "Comment, ask or suggest — optionally replying or anchored to a claim, evidence or argument",
     body: Req.PostCommentRequest,
     response: Res.CommentDto,
@@ -754,6 +831,7 @@ export const ENDPOINTS = {
     path: "/v1/moderation",
     tag: "Discussion",
     auth: "member",
+    limits: ["write.any", "write.discussion"],
     who: "Moderators.",
     summary: "Hide or restore content",
     description: "Content is never deleted. The action and reason are published in the moderation log.",
@@ -761,9 +839,12 @@ export const ENDPOINTS = {
     response: Res.ModerationResponse,
     errors: ["conflict: already in that state"],
   },
-} as const satisfies Record<string, EndpointSpec>;
+} as const satisfies Record<string, Declaration>;
 
-export type EndpointName = keyof typeof ENDPOINTS;
+export type EndpointName = keyof typeof declarations;
+export const ENDPOINTS = Object.fromEntries(
+  Object.entries(declarations).map(([name, spec]) => [name, defineEndpoint(spec)]),
+) as { [Name in EndpointName]: (typeof declarations)[Name] & { mutates: boolean } };
 
 /** Finds the catalogued endpoint for a concrete request (path without query string, including /v1). */
 export function matchEndpoint(method: string, path: string): [EndpointName, EndpointSpec] | null {

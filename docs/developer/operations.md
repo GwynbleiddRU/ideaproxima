@@ -11,9 +11,10 @@ How to configure, deploy, run and maintain the Ideaproxima API.
 5. [First admin and roles](#first-admin-and-roles)
 6. [Database: migrations, backups, restore](#database-migrations-backups-restore)
 7. [Security checklist](#security-checklist)
-8. [Monitoring](#monitoring)
-9. [Maintenance tasks](#maintenance-tasks)
-10. [Scaling](#scaling)
+8. [Tuning rate limits](#tuning-rate-limits)
+9. [Monitoring](#monitoring)
+10. [Maintenance tasks](#maintenance-tasks)
+11. [Scaling](#scaling)
 
 ## What runs in production
 
@@ -36,46 +37,48 @@ contains that file.
 Invalid settings stop startup with one error listing the affected variables. Boolean settings accept
 `true`, `false`, `1` or `0`. Omit settings to use their defaults.
 
-| Variable                         | Default                                         | Meaning                                                                                                                                                                          |
-| -------------------------------- | ----------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `DATABASE_URL`                   | `pglite:./.data/pglite`                         | `postgres://user:pass@host:5432/db` in production. `pglite:memory` or `pglite:<dir>` for development.                                                                            |
-| `ALLOW_PGLITE_IN_PRODUCTION`     | `false`                                         | Explicit exception for isolated local runs with PGlite and production defaults.                                                                                                  |
-| `PORT`                           | `3000`                                          | HTTP port.                                                                                                                                                                       |
-| `INTERNAL_PORT`                  | unset                                           | Enables the private Prometheus listener on a port distinct from `PORT`.                                                                                                          |
-| `NODE_ENV`                       | —                                               | Set `production` in production (makes cookies Secure by default).                                                                                                                |
-| `APP_COMMIT`                     | `unknown`                                       | Short or full Git commit hash recorded at startup. Also a Docker build argument.                                                                                                 |
-| `DB_POOL_MAX`                    | `10`                                            | Maximum connections per API instance on PostgreSQL.                                                                                                                              |
-| `DB_STATEMENT_TIMEOUT_MS`        | `5000`                                          | Maximum execution time per API statement. Zero disables it.                                                                                                                      |
-| `DB_LOCK_TIMEOUT_MS`             | `3000`                                          | Maximum wait per API database lock, including advisory locks. Zero disables it.                                                                                                  |
-| `DB_IDLE_IN_TX_TIMEOUT_MS`       | `10000`                                         | Maximum idle time inside an API transaction. Zero disables it.                                                                                                                   |
-| `DB_CONNECT_TIMEOUT_MS`          | `5000`                                          | PostgreSQL connection establishment deadline in milliseconds.                                                                                                                    |
-| `SHUTDOWN_DELAY_MS`              | `5000`                                          | Wait after readiness fails so the load balancer can stop routing. Zero closes the listeners immediately.                                                                         |
-| `SHUTDOWN_TIMEOUT_MS`            | `25000`                                         | Maximum time to wait for active HTTP connections after closing the listeners.                                                                                                    |
-| `SESSION_TTL_DAYS`               | `30`                                            | Session lifetime.                                                                                                                                                                |
-| `COOKIE_SECURE`                  | `true` when `NODE_ENV=production`, else `false` | Mark the session cookie Secure (HTTPS only).                                                                                                                                     |
-| `ALLOW_INSECURE_COOKIES`         | `false`                                         | Explicit exception for local HTTP runs with production defaults and `COOKIE_SECURE=false`.                                                                                       |
-| `CORS_ORIGINS`                   | empty (same-origin only)                        | Comma-separated browser origins allowed to call the API with credentials.                                                                                                        |
-| `TRUST_PROXY_HOPS`               | `0`                                             | Trusted reverse proxies on every ingress path. Count from the right of `X-Forwarded-For`. Zero or a short chain uses the socket peer.                                            |
-| `CLIENT_IP_HEADER`               | unset                                           | Single-value header overwritten by the edge, e.g. `cf-connecting-ip`, `fly-client-ip` or `x-real-ip`. Takes precedence over hop counting. A missing header uses the socket peer. |
-| `TRUST_PROXY`                    | `false`                                         | Deprecated for one release. `true` warns at startup and defaults `TRUST_PROXY_HOPS` to one (the last entry).                                                                     |
-| `RATE_LIMIT_IPV6_PREFIX`         | `64`                                            | IPv6 network prefix length (0–128). IPv4-mapped addresses share their IPv4 bucket. Invalid addresses share one unknown bucket.                                                   |
-| `TRUST_REQUIRE_VERIFIED_EMAIL`   | `false`                                         | Require verified email for promotion from new to member. Keep false until verification ships in plan 04.                                                                         |
-| `RATE_LIMIT_REQUESTS_PER_MINUTE` | `600`                                           | Requests per network per minute, including reads, before session lookup. Zero disables this limit.                                                                               |
-| `PASSWORD_HASH_CONCURRENCY`      | `3`                                             | Maximum simultaneous scrypt operations per process. Minimum one.                                                                                                                 |
-| `PASSWORD_HASH_QUEUE`            | `32`                                            | Maximum waiting scrypt operations. Zero allows only active slots. Overflow returns 503 `unavailable` with `Retry-After: 1`.                                                      |
-| `MAX_BODY_BYTES`                 | `1048576`                                       | Maximum request body size.                                                                                                                                                       |
-| `RATE_LIMIT_AUTH_PER_MINUTE`     | `10`                                            | Login + registration attempts per client address per minute. `0` disables.                                                                                                       |
-| `RATE_LIMIT_WRITES_PER_MINUTE`   | `120`                                           | Writes per account (or per address when anonymous) per minute. `0` disables.                                                                                                     |
-| `LOG_REQUESTS`                   | `true` (unless `NODE_ENV=test`)                 | One log line per request.                                                                                                                                                        |
-| `LOG_LEVEL`                      | `info`                                          | Minimum log level. Values are `fatal`, `error`, `warn`, `info`, `debug`, `trace` and `silent`.                                                                                   |
-| `LOG_FORMAT`                     | `json` in production, else `pretty`             | Log format on stdout. Pretty formatting requires the development dependency; production-only installations emit JSON.                                                            |
-| `SENTRY_DSN`                     | unset                                           | Optional HTTP(S) DSN for forwarding redacted unexpected errors and fatal process events.                                                                                         |
-| `WEB_ROOT`                       | `apps/web/dist`, when it has been built         | Directory of the built web app to serve at `/`. `off` serves the API only (`GET /` then redirects to the `/v1` index).                                                           |
-| `JOBS_MODE`                      | `inline`                                        | Execute jobs in the API (`inline`), a dedicated process (`worker`), or only through explicit drains (`off`).                                                                     |
-| `METRICS_REFRESH_MODE`           | `sync`                                          | Compute signals during the write, or set `async` to enqueue one pending refresh per affected idea.                                                                               |
-| `JOBS_CONCURRENCY`               | `4`                                             | Maximum active handlers per worker process.                                                                                                                                      |
-| `JOBS_QUEUES`                    | `default`                                       | Comma-separated queue names with optional per-process caps, e.g. `default,moderation=2`.                                                                                         |
-| `JOBS_STATEMENT_TIMEOUT_MS`      | `60000`                                         | Dedicated worker and queue operator statement deadline. Inline handlers share the API database settings.                                                                         |
+| Variable                       | Default                                         | Meaning                                                                                                                                                                          |
+| ------------------------------ | ----------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `DATABASE_URL`                 | `pglite:./.data/pglite`                         | `postgres://user:pass@host:5432/db` in production. `pglite:memory` or `pglite:<dir>` for development.                                                                            |
+| `ALLOW_PGLITE_IN_PRODUCTION`   | `false`                                         | Explicit exception for isolated local runs with PGlite and production defaults.                                                                                                  |
+| `PORT`                         | `3000`                                          | HTTP port.                                                                                                                                                                       |
+| `INTERNAL_PORT`                | unset                                           | Enables the private Prometheus listener on a port distinct from `PORT`.                                                                                                          |
+| `NODE_ENV`                     | —                                               | Set `production` in production (makes cookies Secure by default).                                                                                                                |
+| `APP_COMMIT`                   | `unknown`                                       | Short or full Git commit hash recorded at startup. Also a Docker build argument.                                                                                                 |
+| `DB_POOL_MAX`                  | `10`                                            | Maximum connections per API instance on PostgreSQL.                                                                                                                              |
+| `DB_STATEMENT_TIMEOUT_MS`      | `5000`                                          | Maximum execution time per API statement. Zero disables it.                                                                                                                      |
+| `DB_LOCK_TIMEOUT_MS`           | `3000`                                          | Maximum wait per API database lock, including advisory locks. Zero disables it.                                                                                                  |
+| `DB_IDLE_IN_TX_TIMEOUT_MS`     | `10000`                                         | Maximum idle time inside an API transaction. Zero disables it.                                                                                                                   |
+| `DB_CONNECT_TIMEOUT_MS`        | `5000`                                          | PostgreSQL connection establishment deadline in milliseconds.                                                                                                                    |
+| `SHUTDOWN_DELAY_MS`            | `5000`                                          | Wait after readiness fails so the load balancer can stop routing. Zero closes the listeners immediately.                                                                         |
+| `SHUTDOWN_TIMEOUT_MS`          | `25000`                                         | Maximum time to wait for active HTTP connections after closing the listeners.                                                                                                    |
+| `SESSION_TTL_DAYS`             | `30`                                            | Session lifetime.                                                                                                                                                                |
+| `COOKIE_SECURE`                | `true` when `NODE_ENV=production`, else `false` | Mark the session cookie Secure (HTTPS only).                                                                                                                                     |
+| `ALLOW_INSECURE_COOKIES`       | `false`                                         | Explicit exception for local HTTP runs with production defaults and `COOKIE_SECURE=false`.                                                                                       |
+| `CORS_ORIGINS`                 | empty (same-origin only)                        | Comma-separated browser origins allowed to call the API with credentials.                                                                                                        |
+| `TRUST_PROXY_HOPS`             | `0`                                             | Trusted reverse proxies on every ingress path. Count from the right of `X-Forwarded-For`. Zero or a short chain uses the socket peer.                                            |
+| `CLIENT_IP_HEADER`             | unset                                           | Single-value header overwritten by the edge, e.g. `cf-connecting-ip`, `fly-client-ip` or `x-real-ip`. Takes precedence over hop counting. A missing header uses the socket peer. |
+| `TRUST_PROXY`                  | `false`                                         | Deprecated for one release. `true` warns at startup and defaults `TRUST_PROXY_HOPS` to one (the last entry).                                                                     |
+| `RATE_LIMIT_IPV6_PREFIX`       | `64`                                            | IPv6 network prefix length (0–128). IPv4-mapped addresses share their IPv4 bucket. Invalid addresses share one unknown bucket.                                                   |
+| `TRUST_REQUIRE_VERIFIED_EMAIL` | `false`                                         | Require verified email for promotion from new to member. Keep false until verification ships in plan 04.                                                                         |
+| `RATE_LIMITS`                  | `on`                                            | Set `off` to disable both layers for tests or local load experiments.                                                                                                            |
+| `RATE_LIMIT_STORE`             | `memory`                                        | L2 store, `memory` or `postgres`. L1 always uses memory.                                                                                                                         |
+| `RATE_LIMIT_KEY_SECRET`        | generated per process in local memory mode      | Required in production and with the PostgreSQL store. Use the same private random secret on every instance. Rotation gives networks and emails fresh budgets.                    |
+| `RATE_LIMIT_SCALE`             | `1`                                             | Positive multiplier applied to read and write quotas after overrides.                                                                                                            |
+| `RATE_LIMIT_OVERRIDES`         | `{}`                                            | JSON rule replacements by policy and base tier.                                                                                                                                  |
+| `PASSWORD_HASH_CONCURRENCY`    | `3`                                             | Maximum simultaneous scrypt operations per process. Minimum one.                                                                                                                 |
+| `PASSWORD_HASH_QUEUE`          | `32`                                            | Maximum waiting scrypt operations. Zero allows only active slots. Overflow returns 503 `unavailable` with `Retry-After: 1`.                                                      |
+| `MAX_BODY_BYTES`               | `1048576`                                       | Maximum request body size.                                                                                                                                                       |
+| `LOG_REQUESTS`                 | `true` (unless `NODE_ENV=test`)                 | One log line per request.                                                                                                                                                        |
+| `LOG_LEVEL`                    | `info`                                          | Minimum log level. Values are `fatal`, `error`, `warn`, `info`, `debug`, `trace` and `silent`.                                                                                   |
+| `LOG_FORMAT`                   | `json` in production, else `pretty`             | Log format on stdout. Pretty formatting requires the development dependency; production-only installations emit JSON.                                                            |
+| `SENTRY_DSN`                   | unset                                           | Optional HTTP(S) DSN for forwarding redacted unexpected errors and fatal process events.                                                                                         |
+| `WEB_ROOT`                     | `apps/web/dist`, when it has been built         | Directory of the built web app to serve at `/`. `off` serves the API only (`GET /` then redirects to the `/v1` index).                                                           |
+| `JOBS_MODE`                    | `inline`                                        | Execute jobs in the API (`inline`), a dedicated process (`worker`), or only through explicit drains (`off`).                                                                     |
+| `METRICS_REFRESH_MODE`         | `sync`                                          | Compute signals during the write, or set `async` to enqueue one pending refresh per affected idea.                                                                               |
+| `JOBS_CONCURRENCY`             | `4`                                             | Maximum active handlers per worker process.                                                                                                                                      |
+| `JOBS_QUEUES`                  | `default`                                       | Comma-separated queue names with optional per-process caps, e.g. `default,moderation=2`.                                                                                         |
+| `JOBS_STATEMENT_TIMEOUT_MS`    | `60000`                                         | Dedicated worker and queue operator statement deadline. Inline handlers share the API database settings.                                                                         |
 
 ## Background jobs
 
@@ -210,10 +213,21 @@ with no actor.
 - [ ] `CORS_ORIGINS` lists exactly your frontend origins, or is empty when the frontend is served from the same
       origin.
 - [ ] The database user has only the privileges the API needs. Keep `DATABASE_URL` in a secret store.
-- [ ] Rate limits are **per process and in memory**. With several instances, use sticky sessions or put a shared
-      rate limiter (proxy/WAF) in front.
+- [ ] For multiple instances, select `RATE_LIMIT_STORE=postgres` and provision `RATE_LIMIT_KEY_SECRET` from
+      the deployment secret store. Keep the edge request ceiling enabled.
 - [ ] Not yet built (see `docs/agents/roadmap.md`): email verification, password reset, OAuth/ORCID. Plan around them
       before a public launch.
+
+## Tuning rate limits
+
+Start with the [policy table](../agents/production/03-rate-limiting.md#policies). Investigate sustained denials
+by policy before changing quotas. Review member write traffic if more than 1% of it is denied. The counter
+aggregates trust tiers and counts each checked rule. On a store failure, reads and ordinary writes proceed
+and credential checks return 503. Investigate `fail_open` and `fail_closed` outcomes and the matching warning.
+
+For example, `{"write.discussion":{"new":[{"limit":8,"periodSeconds":60},{"limit":40,"periodSeconds":86400}]}}`
+changes both windows for new accounts. Keep the catalogue's rule order and count. Apply the configuration on
+every instance and restart together. The per-network ceiling is independent of the read/write scale.
 
 ## Monitoring
 
@@ -241,7 +255,7 @@ with no actor.
 | `http_request_duration_seconds` | Histogram | `method`, `route`, `status_class`                                                                           |
 | `http_requests_in_flight`       | Gauge     | None                                                                                                        |
 | `db_errors_total`               | Counter   | `code` (two-character SQLSTATE class observed at the HTTP boundary)                                         |
-| `rate_limit_decisions_total`    | Counter   | `policy` (`requests`, `authentication`, `writes`), `outcome` (`allowed`, `denied`)                          |
+| `rate_limit_decisions_total`    | Counter   | `policy` (catalogue name), `outcome` (`allowed`, `denied`, `fail_open`, `fail_closed`)                      |
 | `password_hash_queue_depth`     | Gauge     | None                                                                                                        |
 | Node process defaults           | Various   | Runtime metrics from `prom-client`, including event-loop lag, heap, GC and file descriptors where supported |
 
@@ -281,8 +295,7 @@ attributed to an anonymous former contributor.
 
 ## Scaling
 
-The API is stateless; run more instances behind a load balancer once the points above are addressed (shared rate
-limiting). Known future steps, in the order they are likely to be needed:
+Multiple API instances can share endpoint budgets with `RATE_LIMIT_STORE=postgres` behind a load balancer. Known future steps, in the order they are likely to be needed:
 
 1. Move derived-metric recomputation from the request path to a job queue (a table with `SKIP LOCKED` workers is
    enough). Callers don't change.

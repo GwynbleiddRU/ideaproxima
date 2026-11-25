@@ -135,7 +135,15 @@ describe("roles", () => {
 describe("abuse protection", () => {
   it("rate-limits authentication attempts per client address", async () => {
     const limited = await createHarness({
-      RATE_LIMIT_AUTH_PER_MINUTE: "3",
+      RATE_LIMITS: "on",
+      RATE_LIMIT_OVERRIDES: JSON.stringify({
+        "auth.login": {
+          anonymous: [
+            { limit: 3, periodSeconds: 60 },
+            { limit: 60, periodSeconds: 3600 },
+          ],
+        },
+      }),
     });
     try {
       const attempts = [];
@@ -148,7 +156,13 @@ describe("abuse protection", () => {
       expect(attempts.map((a) => a.status)).toEqual([401, 401, 401, 429]);
       expect(attempts[3]!.body.error).toMatchObject({
         code: "rate_limited",
-        details: { retryAfterSeconds: expect.any(Number) },
+        details: {
+          policy: "auth.login",
+          scope: "network",
+          limit: 3,
+          periodSeconds: 60,
+          retryAfterSeconds: expect.any(Number),
+        },
       });
     } finally {
       await limited.close();
@@ -157,17 +171,19 @@ describe("abuse protection", () => {
 
   it("rate-limits writes per account and rejects oversized bodies", async () => {
     const limited = await createHarness({
-      RATE_LIMIT_WRITES_PER_MINUTE: "2",
+      RATE_LIMITS: "on",
+      RATE_LIMIT_OVERRIDES: JSON.stringify({ "write.any": { new: [{ limit: 2, periodSeconds: 60 }] } }),
       MAX_BODY_BYTES: "2000",
     });
     try {
-      const u = await limited.user("tessa"); // registration is the first write from this address
+      const u = await limited.user("tessa");
       const idea = await limited.idea(u.token); // first write for the account
       expect(
         (await limited.call("PUT", `/ideas/${idea.id}/stances/important`, { token: u.token })).status,
       ).toBe(200);
       const third = await limited.call("PUT", `/ideas/${idea.id}/stances/plausible`, { token: u.token });
       expect(third.status).toBe(429);
+      expect(third.body.error.details.policy).toBe("write.any");
       expect((await limited.call("GET", `/ideas/${idea.id}`, { token: u.token })).status).toBe(200); // reads are not limited
 
       const big = await limited.call("POST", "/auth/login", {

@@ -55,7 +55,7 @@ try {
               webRoot: webRoot ? "[redacted]" : "off",
             },
             db: { ...config.db, url: "[redacted]" },
-            rateLimits: config.rateLimits,
+            rateLimits: { enabled: config.rateLimits.enabled, store: config.rateLimits.store },
             jobs: config.jobs,
             passwordHash: config.passwordHash,
             log: { ...config.log, sentryDsn: sentry ? "[redacted]" : undefined },

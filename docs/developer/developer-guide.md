@@ -360,7 +360,9 @@ so replaying a callback only repeats work that PostgreSQL rolled back.
    `requestRegistry` at the bottom). Reuse or add a response schema in `responses.ts` (wrap it in `named(...)` if
    it should be a named component).
 2. **Catalogue**: an entry in `ENDPOINTS` (`endpoints.ts`) with method, path, tag, summary, `auth`, `who`, query,
-   body, response, status and notable errors.
+   body, response, status and notable errors. Declare its L2 `limits`. Member mutations take `write.any`
+   and one specific policy. Public credential operations take their auth policy, and logout is exempt.
+   Reads take an empty list unless they perform search or heavy work. Set `mutates: false` on read-only POSTs.
 3. **Service** in the owning module: `authorize` → `inTransaction` → domain rules (and `lockKey` if you check
    before writing) → write the fact → projections → `recordActivity` → `refreshIdeaMetrics` if an idea's signals
    change → return the DTO.
@@ -371,6 +373,10 @@ so replaying a callback only repeats work that PostgreSQL rolled back.
 
 The suite fails if a route is missing from the catalogue (or vice versa), if a response does not match its schema
 exactly, if the generated docs are stale, or if a catalogued endpoint is never exercised.
+
+A 429 carries the policy, scope, quota, period and `retryAfterSeconds` in `error.details`. Wait at least
+that many seconds (also sent as `Retry-After`) before resubmitting. Web forms pass the mutation error to
+the button's `retryError` prop. The HTTP client reads the delay once when the response arrives.
 
 ### Change the database schema
 
@@ -435,7 +441,7 @@ it("does the thing", async () => {
 });
 ```
 
-`h.user(handle, "moderator" | "admin")` creates privileged users. `createHarness({ rateLimits: … })` overrides
+`h.user(handle, "moderator" | "admin")` creates privileged users. `createHarness({ RATE_LIMITS: "on", RATE_LIMIT_OVERRIDES: … })` overrides
 configuration. `h.db` gives direct database access for asserting on facts and triggers.
 
 **The browser audit** (`npm run test:e2e`) is separate from `npm test` because it needs a build and a browser.

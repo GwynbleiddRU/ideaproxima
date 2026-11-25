@@ -1,3 +1,10 @@
+import { randomBytes } from "node:crypto";
+import {
+  RATE_LIMIT_POLICIES,
+  resolveRateLimitPolicy,
+  type RateLimitPolicyName,
+  type TrustTier,
+} from "@ideaproxima/domain";
 import { validateHeaderName } from "node:http";
 import { z } from "zod";
 
@@ -50,6 +57,26 @@ const origins = z
     "expected comma-separated HTTP(S) origins",
   );
 
+const policyNames = Object.keys(RATE_LIMIT_POLICIES) as RateLimitPolicyName[];
+const tiers: TrustTier[] = ["anonymous", "restricted", "new", "member", "established", "staff"];
+const positiveInteger = z.number().int().positive();
+const rules = z.array(
+  z.strictObject({
+    limit: positiveInteger,
+    periodSeconds: positiveInteger,
+    burst: positiveInteger.optional(),
+  }),
+);
+const overrides = z.partialRecord(
+  z.enum(policyNames),
+  z.strictObject({
+    anonymous: rules.optional(),
+    new: rules.optional(),
+    member: rules.optional(),
+    established: rules.optional(),
+  }),
+);
+
 const envSettings = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).optional(),
   APP_COMMIT: z
@@ -100,9 +127,24 @@ const envSettings = z.object({
   TRUST_REQUIRE_VERIFIED_EMAIL: boolean.default(false),
   CLIENT_IP_HEADER: headerName.optional(),
   RATE_LIMIT_IPV6_PREFIX: integer(0, 128).default(64),
-  RATE_LIMIT_REQUESTS_PER_MINUTE: integer(0).default(600),
-  RATE_LIMIT_AUTH_PER_MINUTE: integer(0).default(10),
-  RATE_LIMIT_WRITES_PER_MINUTE: integer(0).default(120),
+  RATE_LIMITS: z.enum(["on", "off"]).default("on"),
+  RATE_LIMIT_STORE: z.enum(["memory", "postgres"]).default("memory"),
+  RATE_LIMIT_KEY_SECRET: z.string().trim().min(1).optional(),
+  RATE_LIMIT_SCALE: z.coerce.number().positive().default(1),
+  RATE_LIMIT_OVERRIDES: z
+    .string()
+    .transform((raw, ctx) => {
+      try {
+        return overrides.parse(JSON.parse(raw));
+      } catch {
+        ctx.addIssue({
+          code: "custom",
+          message: "expected JSON with known policies, base tiers and positive integer rules",
+        });
+        return z.NEVER;
+      }
+    })
+    .default({}),
   MAX_BODY_BYTES: integer(1).default(1_048_576),
   PASSWORD_HASH_CONCURRENCY: integer(1).default(3),
   PASSWORD_HASH_QUEUE: integer(0).default(32),
@@ -134,6 +176,15 @@ function validSettings(...keys: (keyof typeof envSettings.shape)[]) {
 }
 
 const envSchema = envSettings
+  .refine(
+    (env) =>
+      (env.NODE_ENV !== "production" && env.RATE_LIMIT_STORE !== "postgres") || !!env.RATE_LIMIT_KEY_SECRET,
+    {
+      path: ["RATE_LIMIT_KEY_SECRET"],
+      error: "required in production or with the PostgreSQL rate-limit store",
+      when: validSettings("NODE_ENV", "RATE_LIMIT_STORE", "RATE_LIMIT_KEY_SECRET"),
+    },
+  )
   .refine(
     (env) =>
       env.NODE_ENV !== "production" ||
@@ -190,6 +241,30 @@ export function loadConfig(
   const result = envSchema.safeParse(env);
   if (!result.success) throw new ConfigError(result.error.issues);
   const values = result.data;
+  const policyRules = new Map<
+    TrustTier,
+    Map<RateLimitPolicyName, ReturnType<typeof resolveRateLimitPolicy>>
+  >();
+  for (const tier of tiers) {
+    const resolved = new Map<RateLimitPolicyName, ReturnType<typeof resolveRateLimitPolicy>>();
+    for (const name of policyNames) {
+      try {
+        resolved.set(
+          name,
+          resolveRateLimitPolicy(name, tier, values.RATE_LIMIT_OVERRIDES, values.RATE_LIMIT_SCALE),
+        );
+      } catch (error) {
+        throw new ConfigError([
+          {
+            code: "custom",
+            path: ["RATE_LIMIT_OVERRIDES"],
+            message: `check RATE_LIMIT_SCALE and ${name} for ${tier}: ${(error as Error).message}`,
+          },
+        ]);
+      }
+    }
+    policyRules.set(tier, resolved);
+  }
   const production = values.NODE_ENV === "production";
   const trustProxyHops = values.TRUST_PROXY_HOPS ?? Number(values.TRUST_PROXY);
   const clientIpHeader = values.CLIENT_IP_HEADER || undefined;
@@ -224,9 +299,10 @@ export function loadConfig(
     },
     rateLimits: {
       requireVerifiedEmail: values.TRUST_REQUIRE_VERIFIED_EMAIL,
-      requestsPerMinute: values.RATE_LIMIT_REQUESTS_PER_MINUTE,
-      authPerMinute: values.RATE_LIMIT_AUTH_PER_MINUTE,
-      writesPerMinute: values.RATE_LIMIT_WRITES_PER_MINUTE,
+      enabled: values.RATE_LIMITS === "on",
+      store: values.RATE_LIMIT_STORE,
+      keySecret: values.RATE_LIMIT_KEY_SECRET ?? randomBytes(32).toString("hex"),
+      rules: (name: RateLimitPolicyName, tier: TrustTier) => policyRules.get(tier)!.get(name)!,
       ipv6Prefix: values.RATE_LIMIT_IPV6_PREFIX,
     },
     passwordHash: passwordHashLimits(values),

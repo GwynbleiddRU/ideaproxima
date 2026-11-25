@@ -184,7 +184,7 @@ function CreateTopicDialog({
         <FormError error={create.error} />
         <div className={forms.actions}>
           <Button onClick={onClose}>{t("common.cancel")}</Button>
-          <Button type="submit" variant="primary" loading={create.isPending}>
+          <Button type="submit" variant="primary" retryError={create.error} loading={create.isPending}>
             {t("topics.createTopic")}
           </Button>
         </div>

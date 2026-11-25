@@ -99,7 +99,7 @@ export function SearchPage() {
             <X aria-hidden />
           </button>
         )}
-        <Button type="submit" variant="primary" size="sm">
+        <Button type="submit" variant="primary" size="sm" retryError={results.error}>
           {t("nav.search")}
         </Button>
       </form>

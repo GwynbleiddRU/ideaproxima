@@ -176,6 +176,7 @@ function RelationRow({ relation, idea }: { relation: IdeaRelationView; idea: Ide
             <Button
               variant="quiet"
               size="sm"
+              retryError={retract.error}
               loading={retract.isPending}
               onClick={() => retract.mutate(relation.id)}
             >
@@ -322,7 +323,13 @@ function ConnectForm({ idea, onDone }: { idea: IdeaDetail; onDone: () => void })
       <FormError error={propose.error} />
       <div className={forms.actions}>
         <Button onClick={onDone}>{t("common.cancel")}</Button>
-        <Button type="submit" variant="primary" loading={propose.isPending} disabled={!otherId}>
+        <Button
+          type="submit"
+          variant="primary"
+          retryError={propose.error}
+          loading={propose.isPending}
+          disabled={!otherId}
+        >
           {t("idea.connections.record")}
         </Button>
       </div>

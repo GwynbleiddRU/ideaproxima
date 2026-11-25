@@ -186,6 +186,7 @@ function RevisionRow({
           <Button
             variant="quiet"
             size="sm"
+            retryError={withdraw.error}
             loading={withdraw.isPending}
             onClick={() => withdraw.mutate(revision.id)}
           >
@@ -248,10 +249,15 @@ function DecisionDialog({
         </Field>
         <FormError error={decide.error} />
         <div className={forms.actions}>
-          <Button variant="danger" onClick={() => submit("reject")()} disabled={decide.isPending}>
+          <Button
+            variant="danger"
+            onClick={() => submit("reject")()}
+            retryError={decide.error}
+            disabled={decide.isPending}
+          >
             {t("idea.history.decline")}
           </Button>
-          <Button type="submit" variant="primary" loading={decide.isPending}>
+          <Button type="submit" variant="primary" retryError={decide.error} loading={decide.isPending}>
             {t("idea.history.accept")}
           </Button>
         </div>

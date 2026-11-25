@@ -3,6 +3,7 @@
  * serving the production build (apps/web/dist + apps/api/dist; `npm run build` first) on port 3100.
  * Rate limits are off so tests can sign in repeatedly. It never touches apps/api/.data.
  */
+import { randomBytes } from "node:crypto";
 import { spawn, spawnSync } from "node:child_process";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -20,9 +21,8 @@ const env = {
   ALLOW_INSECURE_COOKIES: "true",
   ALLOW_PGLITE_IN_PRODUCTION: "true",
   LOG_REQUESTS: "false",
-  RATE_LIMIT_AUTH_PER_MINUTE: "0",
-  RATE_LIMIT_REQUESTS_PER_MINUTE: "0",
-  RATE_LIMIT_WRITES_PER_MINUTE: "0",
+  RATE_LIMITS: "off",
+  RATE_LIMIT_KEY_SECRET: randomBytes(32).toString("hex"),
   WEB_ROOT: join(root, "apps/web/dist"),
 };
 

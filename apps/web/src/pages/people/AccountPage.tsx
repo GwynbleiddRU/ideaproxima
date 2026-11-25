@@ -146,7 +146,7 @@ function ProfileForm({ me }: { me: PersonDto }) {
         </div>
         <FormError error={update.error && !Object.keys(errors).length ? update.error : null} />
         <div className={forms.actions}>
-          <Button type="submit" variant="primary" loading={update.isPending}>
+          <Button type="submit" variant="primary" retryError={update.error} loading={update.isPending}>
             {t("account.saveProfile")}
           </Button>
         </div>
@@ -234,7 +234,7 @@ function ExpertiseForm({ handle }: { handle: string }) {
         </div>
         <FormError error={declare.error} />
         <div className={forms.actions}>
-          <Button type="submit" loading={declare.isPending}>
+          <Button type="submit" retryError={declare.error} loading={declare.isPending}>
             {t("account.declareExpertise")}
           </Button>
         </div>
@@ -301,7 +301,7 @@ function PasswordForm() {
         </div>
         <FormError error={change.error && !errors.newPassword ? change.error : null} />
         <div className={forms.actions}>
-          <Button type="submit" loading={change.isPending}>
+          <Button type="submit" retryError={change.error} loading={change.isPending}>
             {t("account.changePassword")}
           </Button>
         </div>

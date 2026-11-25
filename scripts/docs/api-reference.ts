@@ -141,6 +141,10 @@ function endpointSection(name: string, spec: EndpointSpec, doc: OpenApi): string
     `**Access:** ${spec.auth === "public" ? "public" : "signed in"}${spec.who ? ` — ${spec.who}` : ""}`,
     "",
   );
+  out.push(
+    `**Rate limits:** ${["net.requests", ...spec.limits].map((policy) => `\`${policy}\``).join(", ")}`,
+    "",
+  );
   if (spec.description) out.push(spec.description, "");
   const pathParams = op.parameters.filter((p) => p.in === "path");
   const queryParams = op.parameters.filter((p) => p.in === "query");
@@ -196,6 +200,8 @@ export function renderApiDocs(): { openapi: string; markdown: string } {
     "authentication, errors, pagination, idempotency — are explained in the [developer guide](developer-guide.md#api-conventions).",
     "",
     `**${endpoints.length} endpoints.** Access “signed in” means a session (Bearer token or \`ip_session\` cookie) is required; further restrictions are listed per endpoint.`,
+    "",
+    `Every endpoint can answer 429 with ${schemaLink("RateLimited")} and a \`Retry-After\` delay in seconds.`,
     "",
     "## Contents",
     "",

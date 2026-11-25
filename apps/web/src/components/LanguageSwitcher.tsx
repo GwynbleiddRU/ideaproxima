@@ -2,6 +2,7 @@ import { LOCALES, localeInfo, type Locale } from "@ideaproxima/i18n/locales";
 import { useRouter } from "@tanstack/react-router";
 import { Globe } from "lucide-react";
 import { useId, useState } from "react";
+import { errorMessage, isApiError } from "@/api/http";
 import { useSaveLocale, useSession } from "@/api/session";
 import { writeLocalePreference } from "@/locales/preferences";
 import { useMessage } from "@/locales/react";
@@ -20,11 +21,11 @@ export function LanguageSwitcher({ settings = false }: { settings?: boolean }) {
   const [selected, setSelected] = useState<Locale>(current.tag);
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false);
-  const [failed, setFailed] = useState(false);
+  const [error, setError] = useState<unknown>(null);
 
   const apply = async () => {
     setPending(true);
-    setFailed(false);
+    setError(null);
     try {
       const catalogue = await prepareLocale(selected);
       const applySelection = () => {
@@ -39,8 +40,8 @@ export function LanguageSwitcher({ settings = false }: { settings?: boolean }) {
       if (me) await saveLocale(selected, applySelection);
       else applySelection();
       setOpen(false);
-    } catch {
-      setFailed(true);
+    } catch (cause) {
+      setError(cause);
     } finally {
       setPending(false);
     }
@@ -61,7 +62,7 @@ export function LanguageSwitcher({ settings = false }: { settings?: boolean }) {
         aria-haspopup="dialog"
         onClick={() => {
           setSelected(current.tag);
-          setFailed(false);
+          setError(null);
           setOpen(true);
         }}
       >
@@ -75,7 +76,7 @@ export function LanguageSwitcher({ settings = false }: { settings?: boolean }) {
         open={open}
         onClose={() => setOpen(false)}
         footer={
-          <Button variant="primary" loading={pending} onClick={() => void apply()}>
+          <Button variant="primary" retryError={error} loading={pending} onClick={() => void apply()}>
             {t("locale.apply")}
           </Button>
         }
@@ -96,7 +97,7 @@ export function LanguageSwitcher({ settings = false }: { settings?: boolean }) {
             </label>
           ))}
         </fieldset>
-        {failed && <p role="alert">{t("locale.failed")}</p>}
+        {!!error && <p role="alert">{isApiError(error, 429) ? errorMessage(error) : t("locale.failed")}</p>}
       </Dialog>
     </div>
   );

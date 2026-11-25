@@ -1,3 +1,5 @@
+import { useEffect, useReducer } from "react";
+import { ApiError } from "@/api/http";
 import { createLink } from "@tanstack/react-router";
 import type { AnchorHTMLAttributes, ButtonHTMLAttributes, ReactNode, Ref } from "react";
 import { cx } from "@/lib/cx";
@@ -20,6 +22,7 @@ export const buttonClass = ({ variant = "secondary", size = "md", block, iconOnl
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement>, StyleProps {
   loading?: boolean;
+  retryError?: unknown;
   icon?: ReactNode;
   ref?: Ref<HTMLButtonElement>;
 }
@@ -30,6 +33,7 @@ export function Button({
   block,
   iconOnly,
   loading,
+  retryError,
   icon,
   children,
   className,
@@ -37,11 +41,24 @@ export function Button({
   type = "button",
   ...rest
 }: ButtonProps) {
+  const deadline = retryError instanceof ApiError ? retryError.retryAt : undefined;
+  const [, refresh] = useReducer((value: number) => value + 1, 0);
+  useEffect(() => {
+    if (!deadline) return;
+    let timer: ReturnType<typeof setTimeout>;
+    const wake = () => {
+      const remaining = deadline - Date.now();
+      if (remaining > 0) timer = setTimeout(wake, Math.min(remaining, 2_147_483_647));
+      else refresh();
+    };
+    wake();
+    return () => clearTimeout(timer);
+  }, [deadline]);
   return (
     <button
       type={type}
       className={cx(buttonClass({ variant, size, block, iconOnly }), className)}
-      disabled={disabled || loading}
+      disabled={disabled || loading || (!!deadline && Date.now() < deadline)}
       aria-busy={loading || undefined}
       {...rest}
     >

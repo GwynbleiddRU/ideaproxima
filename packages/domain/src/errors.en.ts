@@ -71,6 +71,7 @@ export const ERROR_MESSAGES = {
   idea_section_too_long: 'Section "{section}" is too long.',
   unknown_endpoint: "No such endpoint. The API is served under /v1; GET /v1 lists its entry points.",
   request_body_too_large: "Request body exceeds {maximum} bytes.",
+  rate_limit_unavailable: "Request limits could not be checked. Try again shortly.",
   too_many_requests: "Too many requests ({policy}). Try again in {retryAfterSeconds}s.",
   http_request_failed: "The request could not be completed.",
   duplicate_record: "That already exists.",

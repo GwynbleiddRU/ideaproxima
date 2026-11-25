@@ -19,6 +19,10 @@ x-app-image: &app-image
       APP_COMMIT: "${APP_COMMIT:-unknown}"
   image: ideaproxima:local
 
+# This Compose stack has local-only credentials. Supply a private shared value in deployments.
+x-local-rate-limit: &local-rate-limit
+  RATE_LIMIT_KEY_SECRET: "${RATE_LIMIT_KEY_SECRET:-ideaproxima-local-compose-only}"
+
 services:
   postgres:
     image: postgres:17-alpine
@@ -42,6 +46,7 @@ services:
     <<: *app-image
     command: ["sh", "-c", "node apps/api/dist/migrate.js && node apps/api/dist/seed.js"]
     environment:
+      <<: *local-rate-limit
       DATABASE_URL: postgres://ideaproxima:ideaproxima@postgres:5432/ideaproxima
     depends_on:
       postgres:
@@ -52,6 +57,7 @@ services:
   app:
     <<: *app-image
     environment:
+      <<: *local-rate-limit
       DATABASE_URL: postgres://ideaproxima:ideaproxima@postgres:5432/ideaproxima
       NODE_ENV: production
       JOBS_MODE: worker
@@ -71,6 +77,7 @@ services:
     <<: *app-image
     command: ["node", "apps/api/dist/worker.js"]
     environment:
+      <<: *local-rate-limit
       DATABASE_URL: postgres://ideaproxima:ideaproxima@postgres:5432/ideaproxima
       JOBS_MODE: worker
       INTERNAL_PORT: 9100
@@ -88,6 +95,7 @@ services:
     profiles: ["demo"]
     command: ["node", "apps/api/dist/seed.js", "--demo"]
     environment:
+      <<: *local-rate-limit
       DATABASE_URL: postgres://ideaproxima:ideaproxima@postgres:5432/ideaproxima
     depends_on:
       migrate:

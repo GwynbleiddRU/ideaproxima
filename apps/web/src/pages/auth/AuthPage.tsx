@@ -1,7 +1,7 @@
 import { Link, useRouter, useSearch } from "@tanstack/react-router";
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { LIMITS } from "@ideaproxima/domain";
-import { isApiError } from "@/api/http";
+import { errorMessage, isApiError } from "@/api/http";
 import { useLogin, useRegister, useSession } from "@/api/session";
 import forms from "@/components/forms.module.scss";
 import { LocalizedText, useMessage } from "@/locales/react";
@@ -70,7 +70,14 @@ export function SignInPage() {
           )}
         </Field>
         <AuthError error={login.error} />
-        <Button type="submit" variant="primary" size="lg" block loading={login.isPending}>
+        <Button
+          type="submit"
+          variant="primary"
+          size="lg"
+          block
+          retryError={login.error}
+          loading={login.isPending}
+        >
           {t("auth.signIn")}
         </Button>
       </form>
@@ -174,7 +181,14 @@ export function JoinPage() {
           )}
         </Field>
         <AuthError error={register.error && !Object.keys(errors).length ? register.error : null} />
-        <Button type="submit" variant="primary" size="lg" block loading={register.isPending}>
+        <Button
+          type="submit"
+          variant="primary"
+          size="lg"
+          block
+          retryError={register.error}
+          loading={register.isPending}
+        >
           {t("auth.create")}
         </Button>
       </form>
@@ -195,7 +209,7 @@ function AuthError({ error }: { error: unknown }) {
       error={error}
       describe={(cause) => {
         if (!isApiError(cause)) return t("auth.network");
-        return cause.status === 429 ? t("auth.rateLimit") : cause.message;
+        return cause.status === 429 ? errorMessage(cause) : cause.message;
       }}
     />
   );

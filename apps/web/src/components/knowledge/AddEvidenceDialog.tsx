@@ -302,7 +302,7 @@ function EvidenceForm({
       <FormError error={attach.error} />
       <div className={forms.actions}>
         <Button onClick={onDone}>{t("common.cancel")}</Button>
-        <Button type="submit" variant="primary" loading={attach.isPending}>
+        <Button type="submit" variant="primary" retryError={attach.error} loading={attach.isPending}>
           {t("idea.claim.attach")}
         </Button>
       </div>

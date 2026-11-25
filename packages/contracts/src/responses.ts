@@ -34,6 +34,8 @@ import {
   INVOLVEMENT_STATUSES,
   OUTCOME_RESULTS,
   PERSON_ROLES,
+  RATE_LIMIT_POLICIES,
+  type RateLimitPolicyName,
   RELATION_TYPES,
   REVISION_STATUSES,
   SOURCE_KINDS,
@@ -86,6 +88,23 @@ export const ErrorResponse = named(
   "Every error. `code` is stable and machine-readable; `message` is for humans; `details.reason` is stable and more specific than `code`. Other detail fields are reason-specific; `requestId` correlates the response with server logs.",
 );
 export type ErrorResponse = z.infer<typeof ErrorResponse>;
+
+export const RateLimitedResponse = named(
+  "RateLimited",
+  z.object({
+    error: ErrorResponse.shape.error.extend({
+      code: z.literal("rate_limited"),
+      details: z.object({
+        reason: z.literal("too_many_requests"),
+        policy: z.enum(Object.keys(RATE_LIMIT_POLICIES) as RateLimitPolicyName[]),
+        scope: z.enum(["account", "email", "network"]),
+        limit: int.positive(),
+        periodSeconds: int.positive(),
+        retryAfterSeconds: int.positive(),
+      }),
+    }),
+  }),
+);
 
 export const OkResponse = named("Ok", z.object({ ok: z.literal(true) }));
 export type OkResponse = z.infer<typeof OkResponse>;

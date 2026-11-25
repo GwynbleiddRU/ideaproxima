@@ -474,3 +474,9 @@ curl "http://localhost:3000/v1/evaluations?targetKind=idea&targetId=$IDEA_ID&his
 - **Stance**: a lightweight community perspective (important, worth researching, plausible, doubtful, ready today).
 - **Steward**: someone who maintains an idea's narrative.
 - **Supersede**: replace a current rating/stance/involvement with a newer one while keeping the old one in history.
+
+## When the site asks you to wait
+
+If you send several requests quickly, the site may ask you to wait before trying again. The message gives
+the wait in seconds, and the form becomes available again afterward. New accounts have smaller posting
+budgets. These limits do not change how your contributions are evaluated.

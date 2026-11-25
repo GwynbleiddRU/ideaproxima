@@ -199,27 +199,19 @@ _Revisit if:_ lock contention on very hot ideas becomes measurable. Move metric 
 
 ### ADR-17 Abuse protection in the API process
 
-Fixed-window, in-memory rate limits:
+The API charges `net.requests` in bounded process memory before session lookup. Network keys come from the
+socket peer or a configured trusted proxy, with IPv6 grouped by prefix. Only correctly shaped tokens reach
+the database. After session resolution the endpoint catalogue selects the applicable GCRA policies and the
+actor's trust tier supplies the quotas. Trust gates rate limits and pre-moderation only.
 
-- authentication attempts per client address (default 10/min);
-- writes per account, or per address when anonymous (default 120/min).
+L2 uses process memory or a shared PostgreSQL store on the application pool. A failed business transaction
+still spends its request budget. Networks and normalized emails are keyed with HMAC-SHA-256. Store failures
+allow ordinary reads and writes through and return 503 for credential checks. Login peeks before hashing,
+charges wrong credentials for both known and unknown accounts, and clears failure debt on success. The
+process-wide hashing queue, body limit, and JSON-only writes still apply.
 
-Also a request body limit (1 MiB) and JSON-only writes. Limits are per process. Multiple instances need a
-shared limiter (proxy/WAF/Redis).
-
-**2026-11-25 addendum.** After body validation and before session resolution, a network budget covers reads
-and writes (600/min). Only tokens with the issued 43-character base64url shape trigger a lookup. Auth and
-write budgets run next. Network keys use IPv4 addresses or IPv6 prefixes (default /64), with one fallback
-bucket for invalid addresses. The socket peer is the default. Isolated origins may use a fixed trusted hop
-count from the right or a single header their edge overwrites. Login verifies one hash even for missing or
-deactivated accounts. Registration, login and password changes share three active scrypt slots and 32 waiting
-slots by default. See the [configuration and proxy checklist](../developer/operations.md#configuration).
-
-Plan 03 phase A adds a GCRA engine with named policies and bounded memory and shared PostgreSQL stores.
-Session resolution computes trust in its existing query. Trust gates rate limits and pre-moderation only.
-The PostgreSQL store charges a key atomically on the application pool so a rolled-back domain write still
-spends its budget. Phase B connects the new engine to HTTP. The [policy table and measurements](production/03-rate-limiting.md#policies)
-record the defaults and the store contract.
+See the [policy table and measurements](production/03-rate-limiting.md#policies) and the
+[configuration and proxy checklist](../developer/operations.md#configuration).
 
 ### ADR-18 Operator commands and explicit migrations
 

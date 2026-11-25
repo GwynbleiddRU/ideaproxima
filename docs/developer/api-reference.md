@@ -9,6 +9,8 @@ authentication, errors, pagination, idempotency — are explained in the [develo
 
 **68 endpoints.** Access “signed in” means a session (Bearer token or `ip_session` cookie) is required; further restrictions are listed per endpoint.
 
+Every endpoint can answer 429 with [`RateLimited`](#schema-ratelimited) and a `Retry-After` delay in seconds.
+
 ## Contents
 
 - [Catalog](#catalog) — Vocabulary, topics, search, the activity feed and service metadata.
@@ -99,6 +101,8 @@ Vocabulary, topics, search, the activity feed and service metadata.
 
 **Access:** public
 
+**Rate limits:** `net.requests`
+
 Name, version and the main entry points. `GET /` redirects here; the full description is `GET /v1/openapi.json`.
 
 Response `200`: [`ApiIndex`](#schema-apiindex)
@@ -108,6 +112,8 @@ Response `200`: [`ApiIndex`](#schema-apiindex)
 **Readiness check** · `health`
 
 **Access:** public
+
+**Rate limits:** `net.requests`
 
 200 when the API can reach its database, 503 otherwise.
 
@@ -121,6 +127,8 @@ Response `503`: [`Error`](#schema-error)
 
 **Access:** public
 
+**Rate limits:** `net.requests`
+
 Response `200`: object
 
 ### `GET /v1/locales`
@@ -129,6 +137,8 @@ Response `200`: object
 
 **Access:** public
 
+**Rate limits:** `net.requests`
+
 Response `200`: [`Locale`](#schema-locale)[]
 
 ### `GET /v1/vocabulary`
@@ -136,6 +146,8 @@ Response `200`: [`Locale`](#schema-locale)[]
 **The product vocabulary** · `vocabulary`
 
 **Access:** public
+
+**Rate limits:** `net.requests`
 
 Every vocabulary with labels, descriptions, rating scales and lens explanations. Render labels from here instead of hard-coding them.
 
@@ -153,6 +165,8 @@ Response `200`: [`Vocabulary`](#schema-vocabulary)
 
 **Access:** public
 
+**Rate limits:** `net.requests`
+
 Query parameters:
 
 | Name | Type | Required | Notes |
@@ -167,6 +181,8 @@ Response `200`: [`Topic`](#schema-topic)[]
 
 **Access:** signed in — Admins.
 
+**Rate limits:** `net.requests`, `write.any`, `write.knowledge`
+
 Request body: [`CreateTopicRequest`](#schema-createtopicrequest)
 
 Response `201`: [`Topic`](#schema-topic)
@@ -180,6 +196,8 @@ Notable errors:
 **Get a topic with its child topics** · `getTopic`
 
 **Access:** public
+
+**Rate limits:** `net.requests`
 
 Path parameters:
 
@@ -201,6 +219,8 @@ Response `200`: [`TopicDetail`](#schema-topicdetail)
 
 **Access:** signed in — Admins.
 
+**Rate limits:** `net.requests`, `write.any`, `write.knowledge`
+
 Path parameters:
 
 | Name | Description |
@@ -217,6 +237,8 @@ Response `200`: [`TopicTranslation`](#schema-topictranslation)
 **Search ideas, claims, sources and people** · `search`
 
 **Access:** public
+
+**Rate limits:** `net.requests`, `read.search`
 
 Full-text search (English stemming). At most 25 results per kind.
 
@@ -235,6 +257,8 @@ Response `200`: [`SearchResults`](#schema-searchresults)
 **The global activity feed** · `activity`
 
 **Access:** public
+
+**Rate limits:** `net.requests`, `read.heavy`
 
 Newest first. `action=moderation.` returns the public moderation log. For public readers, activity about hidden ideas is omitted and other hidden subjects have an empty payload and subject.hidden=true. Moderation entries stay public.
 
@@ -258,6 +282,8 @@ Accounts, sessions, profiles, expertise and account moderation.
 
 **Access:** public
 
+**Rate limits:** `net.requests`, `auth.register`
+
 Returns a session token and sets the `ip_session` cookie. Rate-limited per client address.
 
 Request body: [`RegisterRequest`](#schema-registerrequest)
@@ -276,7 +302,9 @@ Notable errors:
 
 **Access:** public
 
-Returns a session token and sets the `ip_session` cookie. Rate-limited per client address.
+**Rate limits:** `net.requests`, `auth.login`, `auth.login.failures`
+
+Returns a session token and sets the `ip_session` cookie. Rate-limited per client address. Failed attempts also consume a continuously refilling per-email budget.
 
 Request body: [`LoginRequest`](#schema-loginrequest)
 
@@ -294,6 +322,8 @@ Notable errors:
 
 **Access:** public
 
+**Rate limits:** `net.requests`
+
 Response `200`: [`Ok`](#schema-ok)
 
 ### `GET /v1/me`
@@ -302,6 +332,8 @@ Response `200`: [`Ok`](#schema-ok)
 
 **Access:** signed in
 
+**Rate limits:** `net.requests`
+
 Response `200`: [`Me`](#schema-me)
 
 ### `PATCH /v1/me`
@@ -309,6 +341,8 @@ Response `200`: [`Me`](#schema-me)
 **Update your profile or saved language** · `updateMe`
 
 **Access:** signed in
+
+**Rate limits:** `net.requests`, `write.any`, `write.knowledge`
 
 Request body: [`UpdateProfileRequest`](#schema-updateprofilerequest)
 
@@ -319,6 +353,8 @@ Response `200`: [`Person`](#schema-person)
 **Change your password** · `changePassword`
 
 **Access:** signed in
+
+**Rate limits:** `net.requests`, `write.any`, `write.knowledge`
 
 Signs out every other session.
 
@@ -337,6 +373,8 @@ Notable errors:
 
 **Access:** signed in
 
+**Rate limits:** `net.requests`, `write.any`, `write.knowledge`
+
 Recorded as a dated, self-declared fact. Returns your current expertise.
 
 Request body: [`DeclareExpertiseRequest`](#schema-declareexpertiserequest)
@@ -348,6 +386,8 @@ Response `201`: [`Expertise`](#schema-expertise)[]
 **Withdraw declared expertise** · `revokeExpertise`
 
 **Access:** signed in
+
+**Rate limits:** `net.requests`, `write.any`, `write.knowledge`
 
 Path parameters:
 
@@ -363,6 +403,8 @@ Response `200`: [`Expertise`](#schema-expertise)[]
 
 **Access:** public
 
+**Rate limits:** `net.requests`
+
 Path parameters:
 
 | Name | Description |
@@ -376,6 +418,8 @@ Response `200`: [`Profile`](#schema-profile)
 **A person's activity** · `personActivity`
 
 **Access:** public
+
+**Rate limits:** `net.requests`, `read.heavy`
 
 Path parameters:
 
@@ -397,6 +441,8 @@ Response `200`: [`ActivityPage`](#schema-activitypage)
 **Deactivate an account** · `deactivatePerson`
 
 **Access:** signed in — Moderators (for members) and admins (for anyone).
+
+**Rate limits:** `net.requests`, `write.any`, `write.knowledge`
 
 The person can no longer sign in or act; their sessions end; their contributions stay attributed. Logged publicly with the reason.
 
@@ -421,6 +467,8 @@ Notable errors:
 
 **Access:** signed in — Moderators (for members) and admins (for anyone).
 
+**Rate limits:** `net.requests`, `write.any`, `write.knowledge`
+
 Path parameters:
 
 | Name | Description |
@@ -440,6 +488,8 @@ Notable errors:
 **Set a person's platform role** · `setRole`
 
 **Access:** signed in — Admins (not on themselves).
+
+**Rate limits:** `net.requests`, `write.any`, `write.knowledge`
 
 Path parameters:
 
@@ -461,7 +511,9 @@ Ideas, their narrative revisions, stewardship and lifecycle.
 
 **Access:** public
 
-Each lens measures something different and says so (see `GET /v1/vocabulary` → lenses). Filters combine with any lens.
+**Rate limits:** `net.requests`, `read.search`
+
+Each lens measures something different and says so (see `GET /v1/vocabulary` → lenses). Filters combine with any lens. The read.search policy applies when q contains search text.
 
 Query parameters:
 
@@ -483,6 +535,8 @@ Response `200`: [`IdeaPage`](#schema-ideapage)
 
 **Access:** signed in
 
+**Rate limits:** `net.requests`, `write.any`, `write.idea`
+
 Records the idea, its first revision, the proposer as originator steward and the `imagined` stage. Only title, summary and one topic are required.
 
 Request body: [`ProposeIdeaRequest`](#schema-proposeidearequest)
@@ -494,6 +548,8 @@ Response `201`: [`IdeaDetail`](#schema-ideadetail)
 **An idea in full** · `getIdea`
 
 **Access:** public
+
+**Rate limits:** `net.requests`
 
 Current narrative, stewards, derived signals, stage requirements and — when signed in — your own stances, ratings and involvements.
 
@@ -510,6 +566,8 @@ Response `200`: [`IdeaDetail`](#schema-ideadetail)
 **The idea's revision history (newest first, without content)** · `listRevisions`
 
 **Access:** public
+
+**Rate limits:** `net.requests`
 
 Path parameters:
 
@@ -530,6 +588,8 @@ Response `200`: [`RevisionSummary`](#schema-revisionsummary)[]
 **Publish or propose a new version of the narrative** · `submitRevision`
 
 **Access:** signed in
+
+**Rate limits:** `net.requests`, `write.any`, `write.idea`
 
 Stewards publish directly (`intent: auto|publish`); everyone else proposes. Publishing requires `baseRevisionId` to be the current revision.
 
@@ -554,6 +614,8 @@ Notable errors:
 
 **Access:** public
 
+**Rate limits:** `net.requests`
+
 Path parameters:
 
 | Name | Description |
@@ -568,6 +630,8 @@ Response `200`: [`Revision`](#schema-revision)
 **Accept or reject a proposed revision** · `decideRevision`
 
 **Access:** signed in — Stewards of the idea, or moderators.
+
+**Rate limits:** `net.requests`, `write.any`, `write.idea`
 
 Path parameters:
 
@@ -591,6 +655,8 @@ Notable errors:
 
 **Access:** signed in — The proposal's author, or moderators.
 
+**Rate limits:** `net.requests`, `write.any`, `write.idea`
+
 Path parameters:
 
 | Name | Description |
@@ -605,6 +671,8 @@ Response `200`: [`Revision`](#schema-revision)
 **Appoint a co-steward** · `appointSteward`
 
 **Access:** signed in — Stewards of the idea, or moderators.
+
+**Rate limits:** `net.requests`, `write.any`, `write.idea`
 
 Path parameters:
 
@@ -622,6 +690,8 @@ Response `201`: [`Steward`](#schema-steward)[]
 
 **Access:** public
 
+**Rate limits:** `net.requests`
+
 Path parameters:
 
 | Name | Description |
@@ -635,6 +705,8 @@ Response `200`: [`StageTransition`](#schema-stagetransition)[]
 **Record a lifecycle transition** · `transitionStage`
 
 **Access:** signed in — Stewards of the idea, or moderators.
+
+**Rate limits:** `net.requests`, `write.any`, `write.idea`
 
 Needs a rationale (≥ 10 characters). `examined`, `tested`, `implemented` and `learned_from` need proof on record — see the idea's `stageRequirements`.
 
@@ -657,6 +729,8 @@ Notable errors:
 **Everything that happened to the idea (newest first)** · `timeline`
 
 **Access:** public
+
+**Rate limits:** `net.requests`, `read.heavy`
 
 Path parameters:
 
@@ -683,6 +757,8 @@ Claims, sources, evidence and arguments — the epistemic structure of ideas.
 
 **Access:** public
 
+**Rate limits:** `net.requests`
+
 Path parameters:
 
 | Name | Description |
@@ -696,6 +772,8 @@ Response `200`: [`IdeaClaim`](#schema-ideaclaim)[]
 **State a new claim, or link an existing one, in a role** · `addClaim`
 
 **Access:** signed in
+
+**Rate limits:** `net.requests`, `write.any`, `write.knowledge`
 
 Path parameters:
 
@@ -717,6 +795,8 @@ Notable errors:
 
 **Access:** signed in — The person who linked it, stewards, or moderators.
 
+**Rate limits:** `net.requests`, `write.any`, `write.knowledge`
+
 Path parameters:
 
 | Name | Description |
@@ -732,6 +812,8 @@ Response `200`: [`Ok`](#schema-ok)
 
 **Access:** public
 
+**Rate limits:** `net.requests`
+
 Path parameters:
 
 | Name | Description |
@@ -746,6 +828,8 @@ Response `200`: [`Argument`](#schema-argument)[]
 
 **Access:** public
 
+**Rate limits:** `net.requests`
+
 Path parameters:
 
 | Name | Description |
@@ -759,6 +843,8 @@ Response `200`: [`ClaimDetail`](#schema-claimdetail)
 **Attach evidence to a claim** · `attachEvidence`
 
 **Access:** signed in
+
+**Rate limits:** `net.requests`, `write.any`, `write.knowledge`
 
 Path parameters:
 
@@ -780,6 +866,8 @@ Notable errors:
 
 **Access:** signed in — The contributor, or moderators.
 
+**Rate limits:** `net.requests`, `write.any`, `write.knowledge`
+
 Path parameters:
 
 | Name | Description |
@@ -796,6 +884,8 @@ Response `200`: [`Evidence`](#schema-evidence)
 
 **Access:** signed in
 
+**Rate limits:** `net.requests`, `write.any`, `write.knowledge`
+
 201 when created, 200 when an existing source matched.
 
 Request body: [`SourceInput`](#schema-sourceinput)
@@ -809,6 +899,8 @@ Response `200`: [`Source`](#schema-source)
 **A source and how often it is cited** · `getSource`
 
 **Access:** public
+
+**Rate limits:** `net.requests`
 
 Path parameters:
 
@@ -824,6 +916,8 @@ Response `200`: [`SourceDetail`](#schema-sourcedetail)
 
 **Access:** signed in
 
+**Rate limits:** `net.requests`, `write.any`, `write.discussion`
+
 Request body: [`CreateArgumentRequest`](#schema-createargumentrequest)
 
 Response `201`: [`Argument`](#schema-argument)
@@ -833,6 +927,8 @@ Response `201`: [`Argument`](#schema-argument)
 **An argument with its replies** · `getArgument`
 
 **Access:** public
+
+**Rate limits:** `net.requests`
 
 Path parameters:
 
@@ -847,6 +943,8 @@ Response `200`: [`ArgumentDetail`](#schema-argumentdetail)
 **Withdraw an argument** · `withdrawArgument`
 
 **Access:** signed in — The author, or moderators.
+
+**Rate limits:** `net.requests`, `write.any`, `write.discussion`
 
 Path parameters:
 
@@ -865,6 +963,8 @@ Evaluations, stances and involvements — what people assess, care about and com
 **Raw evaluations of one target** · `listEvaluations`
 
 **Access:** public
+
+**Rate limits:** `net.requests`, `read.heavy`
 
 `history=all` includes superseded ratings, so changes of opinion can be studied.
 
@@ -886,6 +986,8 @@ Response `200`: [`EvaluationPage`](#schema-evaluationpage)
 
 **Access:** signed in
 
+**Rate limits:** `net.requests`, `write.any`, `write.signal`
+
 Omit a dimension to say 'I don't know'. Re-rating supersedes your previous rating; repeating it is a no-op.
 
 Request body: [`SubmitEvaluationRequest`](#schema-submitevaluationrequest)
@@ -902,6 +1004,8 @@ Notable errors:
 
 **Access:** signed in
 
+**Rate limits:** `net.requests`, `write.any`, `write.signal`
+
 Request body: [`WithdrawEvaluationRequest`](#schema-withdrawevaluationrequest)
 
 Response `200`: [`WithdrawEvaluationResult`](#schema-withdrawevaluationresult)
@@ -911,6 +1015,8 @@ Response `200`: [`WithdrawEvaluationResult`](#schema-withdrawevaluationresult)
 **Take a stance on an idea (idempotent)** · `takeStance`
 
 **Access:** signed in
+
+**Rate limits:** `net.requests`, `write.any`, `write.signal`
 
 `plausible` and `doubtful` exclude each other. Returns your current stances.
 
@@ -929,6 +1035,8 @@ Response `200`: [`Stances`](#schema-stances)
 
 **Access:** signed in
 
+**Rate limits:** `net.requests`, `write.any`, `write.signal`
+
 Path parameters:
 
 | Name | Description |
@@ -944,6 +1052,8 @@ Response `200`: [`Stances`](#schema-stances)
 
 **Access:** public
 
+**Rate limits:** `net.requests`
+
 Path parameters:
 
 | Name | Description |
@@ -957,6 +1067,8 @@ Response `200`: [`Involvement`](#schema-involvement)[]
 **Declare your involvement in one capacity (idempotent)** · `declareInvolvement`
 
 **Access:** signed in
+
+**Rate limits:** `net.requests`, `write.any`, `write.signal`
 
 Path parameters:
 
@@ -974,6 +1086,8 @@ Response `200`: [`Involvement`](#schema-involvement)[]
 **Withdraw your involvement in one capacity** · `withdrawInvolvement`
 
 **Access:** signed in
+
+**Rate limits:** `net.requests`, `write.any`, `write.signal`
 
 Path parameters:
 
@@ -994,6 +1108,8 @@ Typed relations between ideas and graph traversal.
 
 **Access:** public
 
+**Rate limits:** `net.requests`
+
 Path parameters:
 
 | Name | Description |
@@ -1007,6 +1123,8 @@ Response `200`: [`IdeaRelation`](#schema-idearelation)[]
 **Traverse the idea graph** · `graph`
 
 **Access:** public
+
+**Rate limits:** `net.requests`, `read.heavy`
 
 `downstream`: what realising this idea would unlock. `upstream`: what must exist first. `both`: the whole neighbourhood.
 
@@ -1031,6 +1149,8 @@ Response `200`: [`Graph`](#schema-graph)
 
 **Access:** signed in
 
+**Rate limits:** `net.requests`, `write.any`, `write.knowledge`
+
 Request body: [`ProposeRelationRequest`](#schema-proposerelationrequest)
 
 Response `201`: [`Relation`](#schema-relation)
@@ -1045,6 +1165,8 @@ Notable errors:
 **Retract a relation** · `retractRelation`
 
 **Access:** signed in — The proposer, stewards of either idea, or moderators.
+
+**Rate limits:** `net.requests`, `write.any`, `write.knowledge`
 
 Path parameters:
 
@@ -1064,6 +1186,8 @@ Initiatives (real-world action) and their outcomes.
 
 **Access:** public
 
+**Rate limits:** `net.requests`
+
 Path parameters:
 
 | Name | Description |
@@ -1077,6 +1201,8 @@ Response `200`: [`Initiative`](#schema-initiative)[]
 **Record an initiative (it may be historical and already completed)** · `createInitiative`
 
 **Access:** signed in
+
+**Rate limits:** `net.requests`, `write.any`, `write.knowledge`
 
 Path parameters:
 
@@ -1094,6 +1220,8 @@ Response `201`: [`Initiative`](#schema-initiative)
 
 **Access:** public
 
+**Rate limits:** `net.requests`
+
 Path parameters:
 
 | Name | Description |
@@ -1107,6 +1235,8 @@ Response `200`: [`Initiative`](#schema-initiative)
 **Move an initiative forward (planned → active → completed | discontinued)** · `updateInitiativeStatus`
 
 **Access:** signed in — The initiative's creator, stewards of the idea, or moderators.
+
+**Rate limits:** `net.requests`, `write.any`, `write.knowledge`
 
 Path parameters:
 
@@ -1127,6 +1257,8 @@ Notable errors:
 **Record what an initiative produced — including failures** · `recordOutcome`
 
 **Access:** signed in — The initiative's creator, stewards of the idea, or moderators.
+
+**Rate limits:** `net.requests`, `write.any`, `write.knowledge`
 
 Path parameters:
 
@@ -1152,6 +1284,8 @@ Comments and moderation.
 
 **Access:** public
 
+**Rate limits:** `net.requests`
+
 Path parameters:
 
 | Name | Description |
@@ -1173,6 +1307,8 @@ Response `200`: [`CommentPage`](#schema-commentpage)
 
 **Access:** signed in
 
+**Rate limits:** `net.requests`, `write.any`, `write.discussion`
+
 Path parameters:
 
 | Name | Description |
@@ -1188,6 +1324,8 @@ Response `201`: [`Comment`](#schema-comment)
 **Hide or restore content** · `moderate`
 
 **Access:** signed in — Moderators.
+
+**Rate limits:** `net.requests`, `write.any`, `write.discussion`
 
 Content is never deleted. The action and reason are published in the moderation log.
 
@@ -1880,6 +2018,22 @@ Provide exactly one basis: `sourceId`, `source` (registered or matched by DOI/UR
 | `toIdeaId` | string (uuid) | yes |  |
 | `type` | `requires` \| `applies` \| `extends` \| `derived_from` \| `alternative_to` \| `complements` \| `conflicts_with` | yes |  |
 | `rationale` | string | no | length 0–4000 |
+
+### <a id="schema-ratelimited"></a>RateLimited
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `error` | object | yes |  |
+| `error.code` | `"rate_limited"` | yes |  |
+| `error.message` | string | yes |  |
+| `error.details` | object | yes |  |
+| `error.details.reason` | `"too_many_requests"` | yes |  |
+| `error.details.policy` | `net.requests` \| `auth.login` \| `auth.login.failures` \| `auth.register` \| `auth.recovery` \| `write.any` \| `write.signal` \| `write.discussion` \| `write.knowledge` \| `write.idea` \| `moderation.report` \| `read.search` \| `read.heavy` | yes |  |
+| `error.details.scope` | `account` \| `email` \| `network` | yes |  |
+| `error.details.limit` | integer | yes |  |
+| `error.details.periodSeconds` | integer | yes |  |
+| `error.details.retryAfterSeconds` | integer | yes |  |
+| `error.requestId` | string | no |  |
 
 ### <a id="schema-ratingsummary"></a>RatingSummary
 

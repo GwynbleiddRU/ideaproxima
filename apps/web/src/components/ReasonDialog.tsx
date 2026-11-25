@@ -69,7 +69,7 @@ export function ReasonDialog({
         <FormError error={error} />
         <div className={forms.actions}>
           <Button onClick={onClose}>{t("common.cancel")}</Button>
-          <Button type="submit" variant={danger ? "danger" : "primary"} loading={pending}>
+          <Button type="submit" variant={danger ? "danger" : "primary"} retryError={error} loading={pending}>
             {confirmLabel}
           </Button>
         </div>

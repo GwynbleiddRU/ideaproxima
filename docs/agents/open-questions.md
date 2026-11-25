@@ -57,9 +57,9 @@ default is fine; record the decision here and in the relevant document.
     contributions attributed to "a former contributor". _Default:_ the procedure is documented in
     `docs/developer/operations.md` ("Legally required erasure"), recorded as `moderation.erased`. Still open: who may
     authorise it, and whether to publish a redacted notice.
-20. **Rate limiting across instances.** _Default:_ in-memory, per-process limits on authentication and writes
-    (ADR-17), plus account deactivation by moderators. Open: a shared limiter for multi-instance deployments, spam
-    heuristics (new-account throttling, link counting), CAPTCHA on registration.
+20. **Rate limiting across instances.** _Resolved 2026-11-26:_ named GCRA policies use a shared PostgreSQL
+    store for multi-instance deployments and tighter budgets for new accounts (ADR-17). Registration proof
+    of work belongs to plan 03 phase C.
 21. **Authentication breadth.** _Default:_ email + password, server-side sessions. Needed: email verification,
     password reset, OAuth and ORCID (important for scientists and for verified expertise).
 22. **Concurrency on real Postgres.** _Resolved 2026-11-15:_ the suite runs on PostgreSQL 17 (`npm run test:pg`, CI

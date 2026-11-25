@@ -254,7 +254,15 @@ export async function register(ctx: Ctx, input: RegisterRequest, ttlDays: number
   });
 }
 
-export async function login(ctx: Ctx, input: LoginRequest, ttlDays: number): Promise<AuthResponse> {
+export type LoginFailureBudget = (email: string, operation: "peek" | "consume" | "reset") => Promise<void>;
+
+export async function login(
+  ctx: Ctx,
+  input: LoginRequest,
+  ttlDays: number,
+  failureBudget?: LoginFailureBudget,
+): Promise<AuthResponse> {
+  await failureBudget?.(input.email, "peek");
   const [row] = await ctx.db
     .select({ person: people, passwordHash: accounts.passwordHash, locale: accounts.locale })
     .from(accounts)
@@ -264,8 +272,10 @@ export async function login(ctx: Ctx, input: LoginRequest, ttlDays: number): Pro
   const active = row && !row.person.deactivatedAt;
   const matches = await verifyPassword(input.password, active ? row.passwordHash : undefined);
   if (!active || !matches) {
+    await failureBudget?.(input.email, "consume");
     throw new DomainError("unauthenticated", "wrong_credentials");
   }
+  await failureBudget?.(input.email, "reset");
   const session = await createSession(ctx.db, row.person.id, ttlDays);
   return {
     person: personDto(row.person),

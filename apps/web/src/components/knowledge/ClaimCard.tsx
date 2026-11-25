@@ -129,6 +129,7 @@ export function ClaimCard({
             <Button
               variant="quiet"
               size="sm"
+              retryError={unlink.error}
               loading={unlink.isPending}
               onClick={() => unlink.mutate(claim.linkId)}
             >

@@ -20,12 +20,21 @@ afterAll(async () => {
   await h.close();
 });
 
-it("limits the 601st API read before resolving its session, including the API index", async () => {
-  const app = createApp({ db: h.db, config: loadConfig({ NODE_ENV: "test", TRUST_PROXY_HOPS: "1" }) });
+it("limits the next API read after a burst before resolving its session, including the API index", async () => {
+  const app = createApp({
+    db: h.db,
+    config: loadConfig({
+      NODE_ENV: "test",
+      TRUST_PROXY_HOPS: "1",
+      RATE_LIMIT_OVERRIDES: JSON.stringify({
+        "net.requests": { anonymous: [{ limit: 2, periodSeconds: 60 }] },
+      }),
+    }),
+  });
   const headers = { "x-forwarded-for": "192.0.2.4" };
   const resolve = vi.spyOn(identity, "resolveSession");
   try {
-    for (let i = 0; i < 600; i++) expect((await app.request("/v1", { headers })).status).toBe(200);
+    for (let i = 0; i < 2; i++) expect((await app.request("/v1", { headers })).status).toBe(200);
     const response = await app.request("/v1/me", {
       headers: { ...headers, authorization: `Bearer ${"x".repeat(43)}` },
     });

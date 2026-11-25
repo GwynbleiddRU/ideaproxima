@@ -109,6 +109,7 @@ export const COMPILED_MESSAGES = {
       "No such endpoint. The API is served under /v1; GET /v1 lists its entry points.",
     ],
     "errors.request_body_too_large": ["Request body exceeds ", ["maximum"], " bytes."],
+    "errors.rate_limit_unavailable": ["Request limits could not be checked. Try again shortly."],
     "errors.too_many_requests": [
       "Too many requests (",
       ["policy"],
