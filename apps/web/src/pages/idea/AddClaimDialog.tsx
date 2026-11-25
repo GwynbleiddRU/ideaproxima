@@ -1,3 +1,5 @@
+import { vocabularyField } from "@/lib/vocabulary";
+import { useLocale } from "@/locales/react";
 import { useQuery } from "@tanstack/react-query";
 import { useState, type FormEvent } from "react";
 import type { AddClaimRequest, IdeaDetail } from "@ideaproxima/contracts";
@@ -48,6 +50,7 @@ export function AddClaimDialog({
 }
 
 function ClaimForm({ idea, onDone }: { idea: IdeaDetail; onDone: () => void }) {
+  useLocale();
   const add = useAddClaim(idea.slug);
   const [mode, setMode] = useState<"new" | "existing">("new");
   const [statement, setStatement] = useState("");
@@ -151,8 +154,8 @@ function ClaimForm({ idea, onDone }: { idea: IdeaDetail; onDone: () => void }) {
           {CLAIM_ROLES.map((r) => (
             <label key={r} className={forms.choice}>
               <input type="radio" name="role" checked={role === r} onChange={() => setRole(r)} />
-              <strong>{CLAIM_ROLE_INFO[r].label}</strong>
-              <span>{CLAIM_ROLE_INFO[r].description}</span>
+              <strong>{vocabularyField("claimRoles", r, "label", CLAIM_ROLE_INFO[r].label)}</strong>
+              <span>{vocabularyField("claimRoles", r, "description", CLAIM_ROLE_INFO[r].description)}</span>
             </label>
           ))}
         </div>
@@ -164,8 +167,17 @@ function ClaimForm({ idea, onDone }: { idea: IdeaDetail; onDone: () => void }) {
             {CONSEQUENCE_DEPTHS.map((d) => (
               <label key={d} className={forms.choice}>
                 <input type="radio" name="depth" checked={depth === d} onChange={() => setDepth(d)} />
-                <strong>{CONSEQUENCE_DEPTH_INFO[d].label}</strong>
-                <span>{CONSEQUENCE_DEPTH_INFO[d].description}</span>
+                <strong>
+                  {vocabularyField("consequenceDepths", d, "label", CONSEQUENCE_DEPTH_INFO[d].label)}
+                </strong>
+                <span>
+                  {vocabularyField(
+                    "consequenceDepths",
+                    d,
+                    "description",
+                    CONSEQUENCE_DEPTH_INFO[d].description,
+                  )}
+                </span>
               </label>
             ))}
           </div>
@@ -178,7 +190,7 @@ function ClaimForm({ idea, onDone }: { idea: IdeaDetail; onDone: () => void }) {
       >
         <div className={forms.row}>
           {(["support", "plausibility"] as const).map((d) => (
-            <Field key={d} label={DIMENSIONS[d].label} optional>
+            <Field key={d} label={vocabularyField("dimensions", d, "label", DIMENSIONS[d].label)} optional>
               {(p) => (
                 <select
                   {...p}

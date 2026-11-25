@@ -1,3 +1,5 @@
+import { vocabularyField } from "@/lib/vocabulary";
+import { useLocale } from "@/locales/react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
@@ -9,7 +11,7 @@ import { useAuthGate } from "@/components/auth";
 import { ClaimCard } from "@/components/knowledge/ClaimCard";
 import { SectionHeading } from "@/components/PageHeader";
 import { claimStatusColor, ClaimStatusBadge } from "@/components/status";
-import { plural } from "@/lib/format";
+import { formatCount } from "@/locales/runtime";
 import { Button } from "@/ui/Button";
 import { EmptyState, ErrorState, Skeleton } from "@/ui/Feedback";
 import { AddClaimDialog } from "./AddClaimDialog";
@@ -21,6 +23,7 @@ import styles from "./tabs.module.scss";
  * status and the evidence for and against it. Evidence supports claims, not ideas.
  */
 export function EvidenceTab() {
+  useLocale();
   const idea = useIdea();
   const can = usePermissions(idea);
   const gate = useAuthGate();
@@ -75,9 +78,12 @@ export function EvidenceTab() {
               <section key={role} className={styles.group} aria-labelledby={`role-${role}`}>
                 <header className={styles.groupHead}>
                   <h3 id={`role-${role}`} className={styles.groupTitle}>
-                    {CLAIM_ROLE_INFO[role].label}s <span>{group.length}</span>
+                    {vocabularyField("claimRoles", role, "label", CLAIM_ROLE_INFO[role].label)}s{" "}
+                    <span>{group.length}</span>
                   </h3>
-                  <p>{CLAIM_ROLE_INFO[role].description}</p>
+                  <p>
+                    {vocabularyField("claimRoles", role, "description", CLAIM_ROLE_INFO[role].description)}
+                  </p>
                 </header>
                 <div className={styles.stack}>
                   {group.map((claim) => (
@@ -122,7 +128,7 @@ function ClaimsOverview({ statuses, counts }: { statuses: ClaimStatus[]; counts:
         </ul>
         <p className={styles.muted}>
           {counts.evidence
-            ? `${plural(counts.evidence, "source")} · ${counts.evidenceSupporting} supporting · ${counts.evidenceChallenging} challenging`
+            ? `${formatCount("count.source", counts.evidence)} · ${counts.evidenceSupporting} supporting · ${counts.evidenceChallenging} challenging`
             : "No evidence attached yet"}
         </p>
       </div>

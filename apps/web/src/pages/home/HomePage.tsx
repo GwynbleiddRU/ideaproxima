@@ -1,10 +1,12 @@
+import { vocabularyField } from "@/lib/vocabulary";
+import { useLocale } from "@/locales/react";
 import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { ArrowRight, Gauge, Info, Lightbulb, Paperclip, Shuffle, Star } from "lucide-react";
 import type { IdeaListItem } from "@ideaproxima/contracts";
 import { LENS_INFO, type DimensionKey, type LensKey } from "@ideaproxima/domain";
-import { catalogQueries } from "@/api/catalog";
+import { catalogQueries, useTopicsQueryOptions } from "@/api/catalog";
 import { http } from "@/api/http";
 import { ideaQueries } from "@/api/ideas";
 import { ActivityFeed } from "@/components/ActivityFeed";
@@ -14,7 +16,7 @@ import { SectionHeading } from "@/components/PageHeader";
 import { isConfident, nearestAnchor } from "@/components/Ratings";
 import { StageBadge } from "@/components/Stage";
 import { cx } from "@/lib/cx";
-import { plural } from "@/lib/format";
+import { formatCount } from "@/locales/runtime";
 import { topicIcon } from "@/lib/topic-icons";
 import {
   DEFAULT_CARD_DIMENSIONS,
@@ -53,6 +55,7 @@ export function HomePage() {
  * its lens measures; attention and assessed quality are never blended.
  */
 function Showcase() {
+  useLocale();
   const [active, setActive] = useState<LensKey>(SHOWCASE[0]!);
   const tabs = useRef<(HTMLButtonElement | null)[]>([]);
   const onKey = (event: KeyboardEvent, index: number) => {
@@ -91,7 +94,7 @@ function Showcase() {
             onClick={() => setActive(lens)}
             onKeyDown={(e) => onKey(e, i)}
           >
-            {LENS_INFO[lens].label}
+            {vocabularyField("lenses", lens, "label", LENS_INFO[lens].label)}
           </button>
         ))}
       </div>
@@ -103,6 +106,7 @@ function Showcase() {
 }
 
 function LensPanel({ lens }: { lens: LensKey }) {
+  useLocale();
   const { data, isPending } = useQuery(ideaQueries.top(lens, 4));
   const info = LENS_INFO[lens];
   const dimensions = LENS_DIMENSIONS[lens] ?? DEFAULT_CARD_DIMENSIONS;
@@ -115,7 +119,7 @@ function LensPanel({ lens }: { lens: LensKey }) {
         >
           {SIGNAL_INFO[info.signal].label}
         </Badge>
-        {info.description}
+        {vocabularyField("lenses", lens, "description", info.description)}
       </p>
       {isPending ? (
         <Skeleton lines={6} />
@@ -153,7 +157,8 @@ function LensPanel({ lens }: { lens: LensKey }) {
               <p className={styles.alone}>The only idea in this lens so far.</p>
             )}
             <Link to="/explore" search={{ lens }} className={styles.more}>
-              See all: {info.label.toLowerCase()} <ArrowRight size={14} aria-hidden />
+              See all: {vocabularyField("lenses", lens, "label", info.label).toLowerCase()}{" "}
+              <ArrowRight size={14} aria-hidden />
             </Link>
           </div>
         </div>
@@ -189,8 +194,8 @@ function whyHere(lens: LensKey, idea: IdeaListItem): ReactNode {
     case "neglected": {
       const potential =
         impact && isConfident(impact)
-          ? `${plural(impact.n, "evaluator")} rated its potential ${nearestAnchor("impact", impact.mean)?.toLowerCase()} (${impact.mean.toFixed(1)}).`
-          : `It needs ${plural(needed(impact?.n), "more evaluation")} before its potential shows.`;
+          ? `${formatCount("count.evaluator", impact.n)} rated its potential ${nearestAnchor("impact", impact.mean)?.toLowerCase()} (${impact.mean.toFixed(1)}).`
+          : `It needs ${formatCount("count.moreEvaluation", needed(impact?.n))} before its potential shows.`;
       if (lens === "potential") return potential;
       return (
         <>
@@ -206,21 +211,21 @@ function whyHere(lens: LensKey, idea: IdeaListItem): ReactNode {
     }
     case "evidence":
       return ratings.evidence && isConfident(ratings.evidence)
-        ? `Evaluators rate its evidence ${nearestAnchor("evidence", ratings.evidence.mean)?.toLowerCase()} (${ratings.evidence.mean.toFixed(1)}, n=${ratings.evidence.n}); ${plural(counts.evidence, "source")} on its claims.`
-        : `${plural(counts.evidence, "source")} on its claims; its evidence rating is still too early to tell.`;
+        ? `Evaluators rate its evidence ${nearestAnchor("evidence", ratings.evidence.mean)?.toLowerCase()} (${ratings.evidence.mean.toFixed(1)}, n=${ratings.evidence.n}); ${formatCount("count.source", counts.evidence)} on its claims.`
+        : `${formatCount("count.source", counts.evidence)} on its claims; its evidence rating is still too early to tell.`;
     case "in_practice":
-      return `${plural(counts.initiatives, "initiative")} recorded — research, a pilot or a deployment — including how it went.`;
+      return `${formatCount("count.initiative", counts.initiatives)} recorded — research, a pilot or a deployment — including how it went.`;
     case "contested":
       return "Confident evaluators disagree widely on at least one of its dimensions.";
     default:
-      return LENS_INFO[lens].description;
+      return vocabularyField("lenses", lens, "description", LENS_INFO[lens].description);
   }
 }
 
 // ---------------------------------------------------------------- domains
 
 function Domains() {
-  const topics = useQuery(catalogQueries.topics());
+  const topics = useQuery(useTopicsQueryOptions());
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const all = (topics.data ?? []).filter((t) => !t.parentId);
@@ -267,7 +272,7 @@ function Domains() {
                     <Icon />
                   </span>
                   <b>{t.name}</b>
-                  <span>{t.ideaCount ? plural(t.ideaCount, "idea") : "Be the first"}</span>
+                  <span>{t.ideaCount ? formatCount("count.idea", t.ideaCount) : "Be the first"}</span>
                 </Link>
               </li>
             );

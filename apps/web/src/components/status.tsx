@@ -1,3 +1,5 @@
+import { vocabularyField } from "@/lib/vocabulary";
+import { useLocale } from "@/locales/react";
 import {
   CheckCheck,
   CircleCheck,
@@ -41,11 +43,16 @@ const CLAIM_STATUS_ICON: Record<ClaimStatus, LucideIcon> = {
 export const claimStatusColor = (status: ClaimStatus) => `var(--status-${status})`;
 
 export function ClaimStatusBadge({ status }: { status: ClaimStatus }) {
+  useLocale();
   const Icon = CLAIM_STATUS_ICON[status];
   const info = CLAIM_STATUS_INFO[status];
   return (
-    <Badge color={claimStatusColor(status)} icon={<Icon aria-hidden />} title={info.description}>
-      {info.label}
+    <Badge
+      color={claimStatusColor(status)}
+      icon={<Icon aria-hidden />}
+      title={vocabularyField("claimStatuses", status, "description", info.description)}
+    >
+      {vocabularyField("claimStatuses", status, "label", info.label)}
     </Badge>
   );
 }
@@ -59,19 +66,27 @@ const STANCE_COLOR = {
 } as const;
 
 export function EvidenceStanceBadge({ stance }: { stance: EvidenceStance }) {
+  useLocale();
   const info = EVIDENCE_STANCE_INFO[stance];
   return (
-    <Badge color={STANCE_COLOR[stance]} title={info.description}>
-      {info.label}
+    <Badge
+      color={STANCE_COLOR[stance]}
+      title={vocabularyField("evidenceStances", stance, "description", info.description)}
+    >
+      {vocabularyField("evidenceStances", stance, "label", info.label)}
     </Badge>
   );
 }
 
 export function ArgumentStanceBadge({ stance }: { stance: ArgumentStance }) {
+  useLocale();
   const info = ARGUMENT_STANCE_INFO[stance];
   return (
-    <Badge color={STANCE_COLOR[stance]} title={info.description}>
-      {info.label}
+    <Badge
+      color={STANCE_COLOR[stance]}
+      title={vocabularyField("argumentStances", stance, "description", info.description)}
+    >
+      {vocabularyField("argumentStances", stance, "label", info.label)}
     </Badge>
   );
 }
@@ -86,14 +101,15 @@ const OUTCOME_TONE: Record<OutcomeResult, "success" | "warning" | "danger" | "ne
 };
 
 export function OutcomeBadge({ result }: { result: OutcomeResult }) {
+  useLocale();
   const info = OUTCOME_RESULT_INFO[result];
   return (
     <Badge
       tone={OUTCOME_TONE[result]}
-      title={info.description}
+      title={vocabularyField("outcomeResults", result, "description", info.description)}
       icon={result === "failed" ? <CircleSlash aria-hidden /> : undefined}
     >
-      {info.label}
+      {vocabularyField("outcomeResults", result, "label", info.label)}
     </Badge>
   );
 }

@@ -176,7 +176,7 @@ Updated by whoever finishes a step: `Not started`, `In progress`, `Waiting for t
 | 4    | 02   | A     | Job queue, worker, schedules, `JOBS_MODE`                                                                  | —                     | Done 2026-11-25 |
 | 5    | 02   | B     | Purges, asynchronous metric refresh, compose worker service                                                | —                     | Done 2026-11-25 |
 | 6    | 05   | A     | `packages/i18n`, error reasons, localised vocabulary, topics and errors, `/v1/locales`                     | Decision 2            | Done 2026-11-25 |
-| 7    | 05   | B     | Web localisation runtime, language switcher, right-to-left, script fonts; shell and auth pages extracted   | Mock-ups              | Not started     |
+| 7    | 05   | B     | Web localisation runtime, language switcher, right-to-left, script fonts; shell and auth pages extracted   | Mock-ups              | Done 2026-11-25 |
 | 8    | 05   | C1    | Interface extraction: home, explore, the idea page and its tabs                                            | —                     | Not started     |
 | 9    | 05   | C2    | Interface extraction: editor, topics, search, activity, people, account, dialogs                           | —                     | Not started     |
 | 10   | 03   | A     | GCRA, memory and PostgreSQL stores, trust tiers, the policy catalogue                                      | —                     | Not started     |

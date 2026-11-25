@@ -3,7 +3,7 @@
 Part of the [production-readiness program](README.md). Prompt for the implementing agent:
 `prompts/api/05-localization-prompt.md`.
 
-| Status     | Phase A complete (step 6, 2026-11-25). Phase B next, with owner approval of mock-ups before interface implementation.                         |
+| Status     | Phases A and B complete (steps 6 and 7, 2026-11-25). Phase C1 (step 8) is next.                                                               |
 | ---------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
 | Depends on | [01](01-operational-foundations.md) (configuration, logs); phase D on every interface change before step 38                                   |
 | Unblocks   | Every later plan's strings and error reasons; [06](06-multilingual-content-and-search.md); localised e-mail in [04](04-accounts-and-trust.md) |
@@ -300,3 +300,106 @@ English source text or the canonical topic text. Full translation drafts and rel
 Step 7 (phase B) is the next sequence row. It can begin with the Lingui browser spike and mock-ups for the
 switcher, a right-to-left idea page, and CJK and Indic typography. Obtain owner approval of those mock-ups
 before implementing the web interface changes. See `prompts/api/05-localization-prompt.md`.
+
+### Phase B, step 7 (2026-11-25)
+
+The clean `main` checkout started at `1edb929`. Rows 1–6 were done, and their commits were present in order:
+`13e916b`, `0b237de`, `57d4f66`, `e6f463b`, `e29459e`, and `1edb929`. Phase A's locale metadata, catalogue
+endpoint, saved preference and request negotiation are in the checkout. The web entry and formatters still
+start in English. Program decision 2 is pending. These previews use the 12 phase A locales, all beta, with
+Latin digits in Arabic.
+
+**Owner review.** Open `designs/localization.html` for the header and account-settings switcher and the Japanese
+and Hindi samples. Open `designs/localization-rtl.html` for the Arabic idea page. The picker opens from both
+locations, lists the 12 endonyms with beta status, and previews selection or cancellation. The Arabic mock-up
+places navigation, stage progression, ratings and relation direction in RTL and keeps the English user text
+LTR. The static files and their light/dark desktop/mobile screenshots in `designs/localization-review/`
+are local by repository convention. The owner approved all four previews on 2026-11-25 before product
+interface implementation began.
+
+**Spike.** The ignored `designs/localization-spike/` harness used Node 24.16.0, Vite 8.3.8, React 19.3.1,
+Lingui core and React 6.12.0, and Chromium 153.0.8010.12. The React bindings declare Node ≥22.19 and React 19
+support. The harness injected a hidden React probe into a separate production build and served it from the
+same API static-file middleware and seeded demo workload as the baseline. It compiled ICU messages before
+bundling and used explicit message IDs, `I18nProvider`, `useLingui`, and `<Trans>` without a macro or Babel
+plugin. Cold visits loaded one requested locale chunk. Tests exercised plural rendering in `en`, `ru`, `ar`
+and `ja`, a translated Russian vocabulary label with English fallback, a rich-text link, and in-place English
+→ Arabic → Japanese switching with the expected `lang` and `dir`.
+
+The table reports cold Chromium JavaScript transfer in KiB, including response headers, with a 160 KiB
+budget. Each visit started in a fresh browser context. The full fixture duplicated the 309 English vocabulary
+messages in each chunk. The sparse fixture used the existing domain text as fallback and shipped only a
+Russian override with the ICU samples. Neither fixture measures finished interface catalogue sizes.
+
+| Build                             | Locale | Home   | Explore | Audited idea |
+| --------------------------------- | ------ | ------ | ------- | ------------ |
+| Baseline                          | en     | 138.15 | 125.42  | 155.70       |
+| Lingui, full                      | en     | 146.43 | 133.70  | 163.96       |
+| Lingui, full                      | ru     | 146.48 | 133.75  | 164.01       |
+| Lingui, full                      | ar     | 146.50 | 133.77  | 164.03       |
+| Lingui, full                      | ja     | 146.44 | 133.71  | 163.97       |
+| Lingui, sparse                    | en     | 142.49 | 129.76  | 160.02       |
+| Lingui, sparse                    | ru     | 142.63 | 129.91  | 160.17       |
+| Lingui, sparse                    | ar     | 142.60 | 129.88  | 160.14       |
+| Lingui, sparse                    | ja     | 142.47 | 129.75  | 160.01       |
+| Lingui, sparse with grouped icons | en     | 134.22 | 129.31  | 156.54       |
+| Lingui, sparse with grouped icons | ru     | 134.37 | 129.45  | 156.68       |
+| Lingui, sparse with grouped icons | ar     | 134.34 | 129.42  | 156.65       |
+| Lingui, sparse with grouped icons | ja     | 134.21 | 129.29  | 156.52       |
+
+| Fixture chunk, Brotli body KiB | en   | zh-Hans | es   | ar   | pt-BR | id   | fr   | ja   | ru   | de   | hi   | ko   |
+| ------------------------------ | ---- | ------- | ---- | ---- | ----- | ---- | ---- | ---- | ---- | ---- | ---- | ---- |
+| Full vocabulary                | 4.13 | 4.13    | 4.13 | 4.20 | 4.13  | 4.13 | 4.13 | 4.13 | 4.18 | 4.13 | 4.13 | 4.13 |
+| Sparse                         | 0.17 | 0.16    | 0.16 | 0.22 | 0.17  | 0.16 | 0.17 | 0.16 | 0.21 | 0.16 | 0.17 | 0.17 |
+
+Keep Lingui and explicit IDs. With sparse vocabulary overrides, grouping Lucide icon modules reduced the
+idea-page transfer across all four locales and kept all three pages within budget. The Russian idea visit
+left 3.32 KiB of headroom. The grouped build shipped the same locale bodies as the sparse build. Validate
+the trade-off with the real shell and auth catalogues before adopting the grouping in the product. To replay
+the spike against `1edb929`, copy the ignored harness into an isolated checkout and run
+`node designs/localization-spike/build.mjs --sparse --group-icons` and
+`node designs/localization-spike/measure.mjs --sparse --group-icons` to reproduce the grouped variant.
+
+| Verification                                 | Outcome                                                                                                                                                                                                                                                                                                                             |
+| -------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `npm.cmd run check`                          | Baseline passed. 211 tests passed, three PostgreSQL-only tests skipped, and all 68 endpoints were exercised.                                                                                                                                                                                                                        |
+| `npm.cmd run test:e2e`                       | Baseline passed all 54 Chromium checks using isolated port 3187.                                                                                                                                                                                                                                                                    |
+| `node designs/localization-spike/review.mjs` | Passed Chromium checks at 1440 and 375 px in both themes. Verified 12 options, shared selection, Escape cancellation, RTL meter start, LTR user title and no horizontal overflow. Axe found no serious or critical violations on the two preview pages. Chromium used Yu Gothic and Nirmala UI for the Japanese and Hindi headings. |
+
+The ignored harness and JSON measurements remain under `designs/localization-spike/`.
+
+#### Approved implementation
+
+- Phase B added 68 English message IDs for shell, navigation, auth, the switcher and shared count phrases. The
+  literal-text rule covers `app/Shell.tsx`, `components/LanguageSwitcher.tsx` and `pages/auth/`. Arabic, Hindi,
+  Japanese and Russian have small beta fixtures. Full drafts and the catalogue release gate stay with phase D.
+- Each web locale imports one Vite-compiled chunk with English UI fallback and its overrides. English fallback
+  uses English plural rules. Vocabulary overlays reuse the existing domain labels. Topic reads use explicit
+  locale parameters and locale-specific query keys. The API contract and database schema are the phase A versions.
+- The picker saves a device preference and, for signed-in readers, the account preference. The page applies
+  `lang` and `dir`, formats numbers and dates with `Intl`, and uses logical layout and per-script system fonts.
+  The graph mirrors the relationship geometry and keeps its text readable.
+- The integrated build was initially 174.7 KiB for the Russian idea. Grouping the shared application and icon
+  modules brought it under the budget. The Markdown parser and graph layout remain route-loaded. The audit
+  pins its default browser locale, tests the Arabic page in both themes, and includes a Russian cold visit.
+
+| Production catalogue, Brotli body KiB | en   | zh-Hans | es   | ar   | pt-BR | id   | fr   | ja   | ru   | de   | hi   | ko   |
+| ------------------------------------- | ---- | ------- | ---- | ---- | ----- | ---- | ---- | ---- | ---- | ---- | ---- | ---- |
+| Phase B                               | 1.03 | 1.03    | 1.03 | 1.39 | 1.03  | 1.03 | 1.03 | 1.08 | 1.11 | 1.03 | 1.08 | 1.03 |
+
+| Final cold visit | JavaScript (KiB) | CSS (KiB) | LCP (ms) | CLS   |
+| ---------------- | ---------------- | --------- | -------- | ----- |
+| Home, English    | 136.2            | 16.7      | 212      | 0.002 |
+| Explore, English | 129.0            | 14.2      | 128      | 0.005 |
+| Idea, English    | 156.5            | 15.9      | 192      | 0.021 |
+| Idea, Russian    | 156.6            | 15.9      | 204      | 0.021 |
+
+`npm run check` passed with 212 tests, three PostgreSQL-only skips, and all 68 endpoints exercised.
+`npm run test:e2e` passed all 59 Chromium checks, including the failed preference-write retry, the Arabic
+page in both themes, and the 160 KiB Russian first-visit budget. `npm run docs:api` regenerated identical
+artifacts. There were no SQL, transaction or locking changes in this phase. Arabic browser screenshots and
+the performance measurements are under the ignored `audit/artifacts/` directory.
+
+Program decision 2 remains pending. The next eligible row is **step 8 (plan 05, phase C1)**. Use
+`prompts/api/05-localization-prompt.md` to extract home, explore and the idea layout and tabs, add those
+areas to the existing lint rule, and exercise them with a pseudo-catalogue or fixture.

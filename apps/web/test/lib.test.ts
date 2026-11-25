@@ -5,7 +5,8 @@ import { parseExploreSearch, parseGraphSearch, parseRedirectSearch } from "@/app
 import type { ActivityDto } from "@ideaproxima/contracts";
 import { foldActivity } from "@/lib/activity";
 import { diffLines, hasChanges } from "@/lib/diff";
-import { dayLabel, initials, plural, shortAgo, timeAgo } from "@/lib/format";
+import { dayLabel, initials, shortAgo, timeAgo } from "@/lib/format";
+import { resolveLocale } from "@/locales/preferences";
 import { layoutGraph } from "@/lib/graph-layout";
 import { renderMarkdown } from "@/lib/markdown";
 
@@ -117,13 +118,21 @@ describe("errorMessage", () => {
 });
 
 describe("format", () => {
-  it("pluralises, makes initials and relative times", () => {
-    expect(plural(1, "claim")).toBe("1 claim");
-    expect(plural(3, "claim")).toBe("3 claims");
+  it("makes initials and relative times", () => {
     expect(initials("Mira Okafor (demo)")).toBe("MO");
     const now = Date.parse("2026-11-15T12:00:00Z");
     expect(timeAgo("2026-11-12T12:00:00Z", now)).toBe("3 days ago");
-    expect(timeAgo("2026-11-15T11:59:50Z", now)).toBe("just now");
+    expect(timeAgo("2026-11-15T11:59:50Z", now)).toBe("now");
+  });
+});
+
+describe("display locale resolution", () => {
+  it("uses the first supported preference and falls back to English", () => {
+    expect(resolveLocale("zh-TW", "hi", "ar", ["ja"])).toBe("zh-Hans");
+    expect(resolveLocale("xx", "pt-PT", "ar", ["ja"])).toBe("pt-BR");
+    expect(resolveLocale(undefined, "invalid", "ar", ["ja"])).toBe("ar");
+    expect(resolveLocale(undefined, undefined, undefined, ["xx", "ja-JP"])).toBe("ja");
+    expect(resolveLocale()).toBe("en");
   });
 });
 

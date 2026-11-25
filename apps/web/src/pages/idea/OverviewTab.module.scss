@@ -288,7 +288,7 @@
 }
 
 .perspectiveCount {
-  text-align: right;
+  text-align: end;
   color: var(--fg-muted);
   font-variant-numeric: tabular-nums;
 }
@@ -321,7 +321,7 @@
 
 .inlineAction {
   justify-self: start;
-  margin-left: calc(-1 * var(--space-2));
+  margin-inline-start: calc(-1 * var(--space-2));
 }
 
 .appoint {

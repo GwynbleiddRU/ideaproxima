@@ -19,6 +19,7 @@ Browsers: run `npx playwright install chromium` once if Playwright asks for them
 | `e2e/hero.spec.ts`          | The home hero fills exactly the visible area under the header, with headline, search and both calls to action fully visible and no horizontal scroll, on seven screens from 360×740 to 1440×900; `/` focuses the search.                                                              |
 | `e2e/contribute.spec.ts`    | The whole contribution loop as a newcomer: join → propose an idea → take a stance → evaluate → add a claim → attach evidence (with its limitations) → argue → comment → publish a revision → sign out.                                                                                |
 | `e2e/accessibility.spec.ts` | axe-core WCAG 2.1 AA scans of 14 pages in the light **and** dark theme. Serious and critical violations fail; minor ones are annotated in the report.                                                                                                                                 |
+| `e2e/localization.spec.ts`  | Anonymous and account language switching, failed-save retry, English fallback, RTL and LTR transitions, and Arabic mobile axe scans in both themes.                                                                                                                                   |
 | `e2e/performance.spec.ts`   | First-visit (cold cache) budgets for the entry pages: compressed JS ≤ 160 KB, CSS ≤ 25 KB, LCP ≤ 2.5 s, CLS ≤ 0.05. Measured values go to `artifacts/performance.json`.                                                                                                               |
 | `e2e/screenshots.spec.ts`   | Not a test: the screenshot set for visual review, `artifacts/screenshots/<viewport>-<theme>/<page>.png`.                                                                                                                                                                              |
 
@@ -28,7 +29,9 @@ Browsers: run `npx playwright install chromium` once if Playwright asks for them
 `apps/web/dist` + `apps/api/dist` on port 3100 (override with `AUDIT_PORT`). Rate limits are disabled there so the
 specs can sign in repeatedly. Specs run in one worker because they share the database.
 
-Everything under `artifacts/` is generated (reports, traces, screenshots, metrics) and ignored by git.
+The default browser context uses English. Locale scenarios set their own page preference, including the Russian
+idea-page visit in the performance audit. Everything under `artifacts/` is generated (reports, traces,
+screenshots, metrics) and ignored by git.
 
 ## Writing specs
 

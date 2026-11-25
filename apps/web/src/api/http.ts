@@ -1,3 +1,5 @@
+import { isLocale } from "@ideaproxima/i18n/locales";
+
 /**
  * The one place the web app talks HTTP. Same-origin requests to /v1; the session is the HttpOnly cookie the API
  * sets on login, so no token is ever readable by scripts.
@@ -62,10 +64,14 @@ async function request<T>(
   options: { body?: unknown; query?: Query; signal?: AbortSignal } = {},
 ): Promise<T> {
   const hasBody = options.body !== undefined;
+  const language = typeof document === "undefined" ? "" : document.documentElement.lang;
+  const headers = new Headers();
+  if (hasBody) headers.set("content-type", "application/json");
+  if (isLocale(language)) headers.set("accept-language", language);
   const response = await fetch(url(path, options.query), {
     method,
     credentials: "same-origin",
-    headers: hasBody ? { "content-type": "application/json" } : undefined,
+    headers,
     body: hasBody ? JSON.stringify(options.body) : undefined,
     signal: options.signal,
   });

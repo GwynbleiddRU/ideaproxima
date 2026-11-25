@@ -1,3 +1,5 @@
+import { vocabularyField } from "@/lib/vocabulary";
+import { useLocale } from "@/locales/react";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState, type FormEvent, type KeyboardEvent, type ReactNode } from "react";
 import { Check, ChevronDown, CircleCheck, CircleDashed, X } from "lucide-react";
@@ -8,7 +10,7 @@ import {
   normalizeTag,
   type IdeaSectionKey,
 } from "@ideaproxima/domain";
-import { catalogQueries } from "@/api/catalog";
+import { useTopicsQueryOptions } from "@/api/catalog";
 import { isApiError } from "@/api/http";
 import { StageBadge } from "@/components/Stage";
 import { cx } from "@/lib/cx";
@@ -54,8 +56,9 @@ export function IdeaEditor({
   footer?: ReactNode;
   onSubmit: (draft: IdeaDraft) => void;
 }) {
+  useLocale();
   const [draft, setDraft] = useState<IdeaDraft>(() => restore(draftKey) ?? initial);
-  const topics = useQuery(catalogQueries.topics());
+  const topics = useQuery(useTopicsQueryOptions());
   const [tagInput, setTagInput] = useState("");
   const [openSections, setOpenSections] = useState<Set<IdeaSectionKey>>(
     () => new Set(IDEA_SECTIONS.filter((k) => draft.sections[k]?.trim())),
@@ -246,9 +249,9 @@ export function IdeaEditor({
                       {value.trim() && <Check />}
                     </span>
                     <span className={styles.sectionText}>
-                      <strong>{info.label}</strong>
+                      <strong>{vocabularyField("sections", key, "label", info.label)}</strong>
                       {/* What the section is for; its prompt (often the label as a question) is the placeholder. */}
-                      <span>{info.description}</span>
+                      <span>{vocabularyField("sections", key, "description", info.description)}</span>
                     </span>
                     <span className={styles.sectionGo}>
                       {value.trim() ? "Written" : "Write"}
@@ -260,10 +263,12 @@ export function IdeaEditor({
                       className={control}
                       value={value}
                       onChange={(e) => setSection(key, e.target.value)}
-                      aria-label={info.label}
+                      aria-label={vocabularyField("sections", key, "label", info.label)}
                       // The overview's prompt is the title's question; ask for the detail instead.
                       placeholder={
-                        key === "overview" ? "What exactly is proposed, in more detail?" : info.prompt
+                        key === "overview"
+                          ? "What exactly is proposed, in more detail?"
+                          : vocabularyField("sections", key, "prompt", info.prompt)
                       }
                       maxLength={LIMITS.section.max}
                       rows={7}

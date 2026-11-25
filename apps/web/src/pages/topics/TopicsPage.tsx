@@ -2,13 +2,13 @@ import { useSuspenseQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { useState, type FormEvent } from "react";
 import { ArrowRight, Plus } from "lucide-react";
-import { catalogQueries, useCreateTopic } from "@/api/catalog";
+import { useCreateTopic, useTopicsQueryOptions } from "@/api/catalog";
 import { isApiError } from "@/api/http";
 import { useSession } from "@/api/session";
 import forms from "@/components/forms.module.scss";
 import { PageHeader } from "@/components/PageHeader";
 import { cx } from "@/lib/cx";
-import { plural } from "@/lib/format";
+import { formatCount } from "@/locales/runtime";
 import { topicIcon } from "@/lib/topic-icons";
 import { Button } from "@/ui/Button";
 import { Dialog } from "@/ui/Dialog";
@@ -17,7 +17,7 @@ import { FormError } from "@/ui/Feedback";
 import styles from "./topics.module.scss";
 
 export function TopicsPage() {
-  const topics = useSuspenseQuery(catalogQueries.topics()).data;
+  const topics = useSuspenseQuery(useTopicsQueryOptions()).data;
   const { isAdmin } = useSession();
   const [creating, setCreating] = useState(false);
   const roots = topics.filter((t) => !t.parentId);
@@ -55,7 +55,9 @@ export function TopicsPage() {
                     {topic.name}
                   </Link>
                 </h2>
-                <span className={styles.count}>{empty ? "—" : plural(topic.ideaCount, "idea")}</span>
+                <span className={styles.count}>
+                  {empty ? "—" : formatCount("count.idea", topic.ideaCount)}
+                </span>
               </div>
               <p className={styles.description}>{topic.description}</p>
               {children.length > 0 && (

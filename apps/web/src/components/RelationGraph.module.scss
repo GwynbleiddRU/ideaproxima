@@ -1,5 +1,11 @@
 @use "mixins" as *;
 
+.nodeTitle,
+.nodeMeta {
+  direction: ltr;
+  unicode-bidi: plaintext;
+}
+
 .scroller {
   margin: 0;
 

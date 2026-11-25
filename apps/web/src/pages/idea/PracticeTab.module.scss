@@ -70,7 +70,7 @@
   padding: var(--space-4);
   border-radius: var(--radius);
   background: var(--bg-sunken);
-  border-left: 3px solid var(--result);
+  border-inline-start: 3px solid var(--result);
 
   &[data-result="succeeded"] {
     --result: var(--success);

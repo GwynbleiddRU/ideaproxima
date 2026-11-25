@@ -1,3 +1,5 @@
+import { vocabularyField } from "@/lib/vocabulary";
+import { useLocale } from "@/locales/react";
 import { useQuery } from "@tanstack/react-query";
 import { useState, type CSSProperties, type FormEvent } from "react";
 import { ThumbsUp } from "lucide-react";
@@ -191,6 +193,7 @@ export function ArgumentComposer({
   /** Preselect a stance, e.g. when opened from the "against" column. */
   initialStance?: ArgumentStance;
 }) {
+  useLocale();
   const create = useCreateArgument(invalidate);
   const [stance, setStance] = useState<ArgumentStance>(
     initialStance ?? (target.kind === "argument" ? "opposes" : "supports"),
@@ -225,8 +228,12 @@ export function ArgumentComposer({
                 checked={stance === s}
                 onChange={() => setStance(s)}
               />
-              <strong>{ARGUMENT_STANCE_INFO[s].label}</strong>
-              {!compact && <span>{ARGUMENT_STANCE_INFO[s].description}</span>}
+              <strong>{vocabularyField("argumentStances", s, "label", ARGUMENT_STANCE_INFO[s].label)}</strong>
+              {!compact && (
+                <span>
+                  {vocabularyField("argumentStances", s, "description", ARGUMENT_STANCE_INFO[s].description)}
+                </span>
+              )}
             </label>
           ))}
         </div>

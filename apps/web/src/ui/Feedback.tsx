@@ -73,12 +73,18 @@ export function ErrorState({ error, onRetry }: { error: unknown; onRetry?: () =>
 }
 
 /** Inline form-level error (field errors are shown next to their fields). */
-export function FormError({ error }: { error: unknown }) {
+export function FormError({
+  error,
+  describe = errorMessage,
+}: {
+  error: unknown;
+  describe?: (error: unknown) => string;
+}) {
   if (!error) return null;
   return (
     <p className={styles.formError} role="alert">
       <AlertTriangle aria-hidden size={16} />
-      {errorMessage(error)}
+      {describe(error)}
     </p>
   );
 }

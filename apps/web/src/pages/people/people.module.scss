@@ -75,7 +75,7 @@
 }
 
 .tagLabel {
-  margin-right: var(--space-1);
+  margin-inline-end: var(--space-1);
   color: var(--fg-muted);
   font-size: var(--text-sm);
 }
@@ -184,8 +184,8 @@
     &::after {
       content: "";
       position: absolute;
-      left: 0.75rem;
-      right: 0.75rem;
+      inset-inline-start: 0.75rem;
+      inset-inline-end: 0.75rem;
       bottom: -1px;
       height: 2px;
       border-radius: 2px;

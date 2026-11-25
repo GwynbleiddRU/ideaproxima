@@ -48,7 +48,7 @@
 
   > * + *::before {
     content: "·";
-    margin-right: 0.6rem;
+    margin-inline-end: 0.6rem;
     color: var(--fg-subtle);
   }
 }

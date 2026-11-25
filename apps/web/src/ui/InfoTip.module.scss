@@ -26,7 +26,7 @@
   position: absolute;
   z-index: 40;
   top: calc(100% + 0.4rem);
-  left: 50%;
+  inset-inline-start: 50%;
   width: min(20rem, 80vw);
   transform: translateX(-50%);
   padding: var(--space-3) var(--space-4);
@@ -40,6 +40,10 @@
   line-height: 1.5;
   letter-spacing: normal;
   text-transform: none;
-  text-align: left;
+  text-align: start;
   white-space: normal;
+
+  &:dir(rtl) {
+    transform: translateX(50%);
+  }
 }

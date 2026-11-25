@@ -1,3 +1,4 @@
+import { vocabularyField } from "@/lib/vocabulary";
 import { Link } from "@tanstack/react-router";
 import { useState, type ReactNode } from "react";
 import {
@@ -39,7 +40,9 @@ import {
 } from "@ideaproxima/domain";
 import { cx } from "@/lib/cx";
 import { foldActivity, type ActivityGroup } from "@/lib/activity";
-import { clockTime, dayLabel, formatDateTime, isToday, plural, shortAgo } from "@/lib/format";
+import { clockTime, dayLabel, formatDateTime, isToday, shortAgo } from "@/lib/format";
+import { formatCount } from "@/locales/runtime";
+import { useLocale } from "@/locales/react";
 import { dimensionLabel } from "@/lib/vocabulary";
 import { PersonLink } from "./meta";
 import styles from "./ActivityFeed.module.scss";
@@ -141,7 +144,15 @@ function describe(e: ActivityDto, idea: ReactNode | null, count: number): ReactN
     case "stage.changed":
       return (
         <>
-          moved {subject} to <b>{IDEA_STAGE_INFO[p.to as IdeaStage]?.label ?? str(p.to)}</b>
+          moved {subject} to{" "}
+          <b>
+            {vocabularyField(
+              "stages",
+              p.to as IdeaStage,
+              "label",
+              IDEA_STAGE_INFO[p.to as IdeaStage]?.label,
+            ) ?? str(p.to)}
+          </b>
         </>
       );
     case "steward.appointed":
@@ -155,8 +166,15 @@ function describe(e: ActivityDto, idea: ReactNode | null, count: number): ReactN
     case "claim.linked":
       return (
         <>
-          linked {folded ? plural(count, "claim") : "a claim"} as{" "}
-          {lower(CLAIM_ROLE_INFO[p.role as ClaimRole]?.label)}
+          linked {folded ? formatCount("count.claim", count) : "a claim"} as{" "}
+          {lower(
+            vocabularyField(
+              "claimRoles",
+              p.role as ClaimRole,
+              "label",
+              CLAIM_ROLE_INFO[p.role as ClaimRole]?.label,
+            ),
+          )}
           {on("in")}
         </>
       );
@@ -228,13 +246,29 @@ function describe(e: ActivityDto, idea: ReactNode | null, count: number): ReactN
     case "stance.taken":
       return (
         <>
-          marked {subject} {lower(STANCE_KIND_INFO[p.kind as StanceKind]?.label) || str(p.kind)}
+          marked {subject}{" "}
+          {lower(
+            vocabularyField(
+              "stanceKinds",
+              p.kind as StanceKind,
+              "label",
+              STANCE_KIND_INFO[p.kind as StanceKind]?.label,
+            ),
+          ) || str(p.kind)}
         </>
       );
     case "stance.retracted":
       return <>retracted a perspective{on("on")}</>;
     case "involvement.declared": {
-      const capacity = lower(CAPACITY_INFO[p.capacity as Capacity]?.label) || str(p.capacity);
+      const capacity =
+        lower(
+          vocabularyField(
+            "capacities",
+            p.capacity as Capacity,
+            "label",
+            CAPACITY_INFO[p.capacity as Capacity]?.label,
+          ),
+        ) || str(p.capacity);
       return str(p.status) === "active" ? (
         <>
           started working on {subject} ({capacity})
@@ -254,7 +288,8 @@ function describe(e: ActivityDto, idea: ReactNode | null, count: number): ReactN
       const type = RELATION_TYPE_INFO[p.type as RelationType];
       return (
         <>
-          connected {subject} to another idea{type && ` (${type.forward})`}
+          connected {subject} to another idea
+          {type && ` (${vocabularyField("relationTypes", p.type as RelationType, "forward", type.forward)})`}
         </>
       );
     }
@@ -269,7 +304,15 @@ function describe(e: ActivityDto, idea: ReactNode | null, count: number): ReactN
     case "initiative.status_changed":
       return (
         <>
-          marked an initiative {lower(INITIATIVE_STATUS_INFO[p.to as InitiativeStatus]?.label) || str(p.to)}
+          marked an initiative{" "}
+          {lower(
+            vocabularyField(
+              "initiativeStatuses",
+              p.to as InitiativeStatus,
+              "label",
+              INITIATIVE_STATUS_INFO[p.to as InitiativeStatus]?.label,
+            ),
+          ) || str(p.to)}
           {on("on")}
         </>
       );
@@ -277,7 +320,16 @@ function describe(e: ActivityDto, idea: ReactNode | null, count: number): ReactN
       return (
         <>
           recorded an outcome —{" "}
-          <b>{lower(OUTCOME_RESULT_INFO[p.result as OutcomeResult]?.label) || str(p.result)}</b>
+          <b>
+            {lower(
+              vocabularyField(
+                "outcomeResults",
+                p.result as OutcomeResult,
+                "label",
+                OUTCOME_RESULT_INFO[p.result as OutcomeResult]?.label,
+              ),
+            ) || str(p.result)}
+          </b>
           {p.hasLessons ? ", with lessons" : ""}
           {on("for")}
         </>
@@ -398,6 +450,7 @@ export function ActivityFeed({
   /** Show at most this many lines (after folding), for compact previews of the record. */
   max?: number;
 }) {
+  useLocale();
   const groups = foldActivity(entries).slice(0, max);
   if (!byDay)
     return (

@@ -1,3 +1,5 @@
+import { vocabularyField } from "@/lib/vocabulary";
+import { useLocale } from "@/locales/react";
 import { Link } from "@tanstack/react-router";
 import {
   CLAIM_STATUSES,
@@ -40,6 +42,7 @@ const PRINCIPLES = [
 ];
 
 export function AboutPage() {
+  useLocale();
   return (
     <div className="container">
       <title>Principles · ideaproxima</title>
@@ -68,8 +71,8 @@ export function AboutPage() {
         <ol className={styles.stages} role="list">
           {IDEA_STAGES.map((s) => (
             <li key={s}>
-              <strong>{IDEA_STAGE_INFO[s].label}</strong>
-              <span>{IDEA_STAGE_INFO[s].description}</span>
+              <strong>{vocabularyField("stages", s, "label", IDEA_STAGE_INFO[s].label)}</strong>
+              <span>{vocabularyField("stages", s, "description", IDEA_STAGE_INFO[s].description)}</span>
             </li>
           ))}
         </ol>
@@ -87,7 +90,7 @@ export function AboutPage() {
               <dt>
                 <ClaimStatusBadge status={s} />
               </dt>
-              <dd>{CLAIM_STATUS_INFO[s].description}</dd>
+              <dd>{vocabularyField("claimStatuses", s, "description", CLAIM_STATUS_INFO[s].description)}</dd>
             </div>
           ))}
         </dl>
@@ -104,9 +107,9 @@ export function AboutPage() {
                 {group.lenses.map((key) => (
                   <li key={key}>
                     <Link to="/explore" search={{ lens: key }} className="link">
-                      {LENS_INFO[key].label}
+                      {vocabularyField("lenses", key, "label", LENS_INFO[key].label)}
                     </Link>
-                    <span>{LENS_INFO[key].description}</span>
+                    <span>{vocabularyField("lenses", key, "description", LENS_INFO[key].description)}</span>
                   </li>
                 ))}
               </ul>

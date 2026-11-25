@@ -1,13 +1,16 @@
 import { CircleCheck, Flag } from "lucide-react";
 import type { IdeaDetail } from "@ideaproxima/contracts";
-import { IDEA_STAGE_INFO, IDEA_STAGES, stageOrdinal, type IdeaStage } from "@ideaproxima/domain";
+import { IDEA_STAGES, stageOrdinal, type IdeaStage } from "@ideaproxima/domain";
 import { cx } from "@/lib/cx";
+import { formatList } from "@/lib/format";
+import { useVocabulary } from "@/lib/vocabulary";
 import { Badge } from "@/ui/Badge";
 import styles from "./Stage.module.scss";
 
 /** The lifecycle stage: what has been *done* with an idea (not what is known about it). */
 export function StageBadge({ stage }: { stage: IdeaStage }) {
-  const info = IDEA_STAGE_INFO[stage];
+  const vocabulary = useVocabulary();
+  const info = vocabulary.stage(stage);
   return (
     <Badge tone="outline" title={info.description} className={styles.badge}>
       <Pips stage={stage} />
@@ -32,41 +35,33 @@ function Pips({ stage }: { stage: IdeaStage }) {
  * Stages are not strictly sequential; the track shows order, not a gate.
  */
 export function StageProgress({ idea }: { idea: Pick<IdeaDetail, "stage" | "stageRequirements"> }) {
+  const vocabulary = useVocabulary();
   const current = stageOrdinal(idea.stage);
   const ahead = idea.stageRequirements.filter((r) => stageOrdinal(r.stage) > current);
   const ready = ahead.filter((r) => r.met);
   const next = ahead.find((r) => !r.met);
-  const label = (stage: IdeaStage) => <b key={stage}>{IDEA_STAGE_INFO[stage].label}</b>;
+  const label = (stage: IdeaStage) => vocabulary.stage(stage).label;
   return (
     <div className={styles.progress}>
       <div
         className={styles.track}
         role="img"
-        aria-label={`Stage ${current + 1} of ${IDEA_STAGES.length}: ${IDEA_STAGE_INFO[idea.stage].label}`}
+        aria-label={`Stage ${current + 1} of ${IDEA_STAGES.length}: ${label(idea.stage)}`}
       >
         {IDEA_STAGES.map((s, i) => (
-          <span
-            key={s}
-            className={cx(styles.segment, i <= current && styles.segmentOn)}
-            title={IDEA_STAGE_INFO[s].label}
-          />
+          <span key={s} className={cx(styles.segment, i <= current && styles.segmentOn)} title={label(s)} />
         ))}
       </div>
       <div className={styles.ends} aria-hidden>
-        <span>{IDEA_STAGE_INFO[IDEA_STAGES[0]].label}</span>
-        <span>{IDEA_STAGE_INFO[IDEA_STAGES[IDEA_STAGES.length - 1]!].label}</span>
+        <span>{label(IDEA_STAGES[0])}</span>
+        <span>{label(IDEA_STAGES[IDEA_STAGES.length - 1]!)}</span>
       </div>
       {ready.length > 0 && (
         <p className={cx(styles.next, styles.ready)}>
           <CircleCheck aria-hidden />
           <span>
-            {ready.map((r, i) => (
-              <span key={r.stage}>
-                {i > 0 && (i === ready.length - 1 ? " and " : ", ")}
-                {label(r.stage)}
-              </span>
-            ))}
-            : requirement{ready.length > 1 ? "s" : ""} met — a steward can move it on.
+            <b>{formatList(ready.map((r) => label(r.stage)))}</b>: requirement{ready.length > 1 ? "s" : ""}{" "}
+            met — a steward can move it on.
           </span>
         </p>
       )}
@@ -74,7 +69,7 @@ export function StageProgress({ idea }: { idea: Pick<IdeaDetail, "stage" | "stag
         <p className={styles.next}>
           <Flag aria-hidden />
           <span>
-            Next proof, for {label(next.stage)}: {next.requirement.replace(/\.$/, "")}.
+            Next proof, for <b>{label(next.stage)}</b>: {next.requirement.replace(/\.$/, "")}.
           </span>
         </p>
       ) : (

@@ -4,15 +4,33 @@
  */
 import {
   DIMENSIONS,
+  IDEA_STAGE_INFO,
   LENS_INFO,
   LENS_KEYS,
   MIN_RATINGS_FOR_CONFIDENCE,
   type DimensionKey,
+  type IdeaStage,
   type LensKey,
   type LensSignal,
 } from "@ideaproxima/domain";
+import { useLingui } from "@lingui/react";
+import { vocabularyText } from "@/locales/runtime";
 
 export { MIN_RATINGS_FOR_CONFIDENCE };
+
+export const vocabularyField = (group: string, key: string | number, field: string, fallback: string) =>
+  vocabularyText(`${group}.${key}.${field}`, fallback);
+
+export function useVocabulary() {
+  useLingui();
+  return {
+    text: vocabularyText,
+    stage: (key: IdeaStage) => ({
+      label: vocabularyText(`stages.${key}.label`, IDEA_STAGE_INFO[key].label),
+      description: vocabularyText(`stages.${key}.description`, IDEA_STAGE_INFO[key].description),
+    }),
+  };
+}
 
 export const SIGNAL_INFO: Record<LensSignal, { label: string; description: string }> = {
   time: { label: "Time", description: "Ordered by when things happened." },
@@ -52,12 +70,15 @@ export const IDEA_DIMENSIONS: DimensionKey[] = [
 ];
 
 export const dimensionLabel = (key: string) =>
-  key in DIMENSIONS ? DIMENSIONS[key as DimensionKey].label : key;
+  key in DIMENSIONS ? vocabularyText(`dimensions.${key}.label`, DIMENSIONS[key as DimensionKey].label) : key;
 
 /** Scale anchors of an ordinal dimension, e.g. 1 → "Marginal"; empty for binary ones. */
 export function anchorsOf(key: DimensionKey): [number, string][] {
   const scale = DIMENSIONS[key].scale;
   return scale.kind === "ordinal"
-    ? Object.entries(scale.anchors).map(([v, label]) => [Number(v), label] as [number, string])
+    ? Object.entries(scale.anchors).map(
+        ([v, label]) =>
+          [Number(v), vocabularyText(`dimensions.${key}.scale.anchors.${v}`, label)] as [number, string],
+      )
     : [];
 }

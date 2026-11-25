@@ -225,7 +225,7 @@
 
 .miniAction {
   flex: none;
-  margin-left: auto;
+  margin-inline-start: auto;
 
   @include down(md) {
     display: none;
@@ -236,18 +236,25 @@
   display: flex;
   gap: var(--space-1);
   min-width: 0;
-  margin-left: -0.75rem;
+  margin-inline-start: -0.75rem;
   overflow-x: auto;
   scrollbar-width: none;
-  // A fade at the right edge says there is more to scroll to.
+  // A fade at the inline end says there is more to scroll to.
   mask-image: linear-gradient(to right, #000 calc(100% - 2rem), transparent);
+
+  &:dir(rtl) {
+    mask-image: linear-gradient(to left, #000 calc(100% - 2rem), transparent);
+  }
 
   &::-webkit-scrollbar {
     display: none;
   }
 
   @include up(lg) {
-    mask-image: none;
+    &,
+    &:dir(rtl) {
+      mask-image: none;
+    }
   }
 }
 
@@ -273,8 +280,8 @@
     &::after {
       content: "";
       position: absolute;
-      left: 0.75rem;
-      right: 0.75rem;
+      inset-inline-start: 0.75rem;
+      inset-inline-end: 0.75rem;
       bottom: -1px;
       height: 2px;
       border-radius: 2px;

@@ -2,7 +2,7 @@ import { Link, Outlet, useNavigate, useParams } from "@tanstack/react-router";
 import { useEffect, useRef } from "react";
 import { ChevronRight, Flag, Gauge, HandHelping, PenLine, Star } from "lucide-react";
 import type { IdeaDetail, RatingSummaryDto } from "@ideaproxima/contracts";
-import { IDEA_STAGE_INFO, IDEA_STAGES, stageOrdinal, type DimensionKey } from "@ideaproxima/domain";
+import { IDEA_STAGES, stageOrdinal, type DimensionKey } from "@ideaproxima/domain";
 import { useStance } from "@/api/signals";
 import { useAuthGate } from "@/components/auth";
 import { PersonLink, TimeAgo } from "@/components/meta";
@@ -10,9 +10,9 @@ import { ModerateButton } from "@/components/ModerateButton";
 import { isConfident, nearestAnchor } from "@/components/Ratings";
 import { StageBadge } from "@/components/Stage";
 import { cx } from "@/lib/cx";
-import { plural } from "@/lib/format";
+import { formatCount } from "@/locales/runtime";
 import { useScrolledPast } from "@/lib/hooks";
-import { MIN_RATINGS_FOR_CONFIDENCE } from "@/lib/vocabulary";
+import { MIN_RATINGS_FOR_CONFIDENCE, useVocabulary } from "@/lib/vocabulary";
 import { Avatar } from "@/ui/Avatar";
 import { Badge } from "@/ui/Badge";
 import { Button, ButtonLink } from "@/ui/Button";
@@ -58,13 +58,15 @@ export function IdeaLayout() {
           <div className={styles.badges}>
             <StageBadge stage={idea.stage} />
             {idea.pendingRevisionProposals > 0 && (
-              <Badge tone="warning">{plural(idea.pendingRevisionProposals, "proposed revision")}</Badge>
+              <Badge tone="warning">{formatCount("count.revision", idea.pendingRevisionProposals)}</Badge>
             )}
           </div>
-          <h1 ref={title} className={styles.title}>
+          <h1 ref={title} className={styles.title} dir="auto">
             {idea.title}
           </h1>
-          <p className={styles.summary}>{idea.summary}</p>
+          <p className={styles.summary} dir="auto">
+            {idea.summary}
+          </p>
           <div className={styles.meta}>
             <span>
               <Avatar name={idea.proposedBy.displayName} seed={idea.proposedBy.handle} size={22} />
@@ -80,7 +82,9 @@ export function IdeaLayout() {
               )}{" "}
               · updated <TimeAgo iso={idea.updatedAt} />
             </span>
-            <span className={styles.wide}>{plural(idea.signals.counts.contributors, "contributor")}</span>
+            <span className={styles.wide}>
+              {formatCount("count.contributor", idea.signals.counts.contributors)}
+            </span>
             {idea.tags.length > 0 && (
               <span className={cx(styles.tags, styles.wide)}>
                 {idea.tags.map((tag) => (
@@ -105,6 +109,7 @@ export function IdeaLayout() {
 
 /** Phones and tablets: the sidebar's essentials under the summary, before the long text. */
 function Glance({ idea }: { idea: IdeaDetail }) {
+  const vocabulary = useVocabulary();
   const { ratings, counts } = idea.signals;
   const measure = (d: DimensionKey, label: string, summary: RatingSummaryDto | undefined) => (
     <div>
@@ -129,17 +134,17 @@ function Glance({ idea }: { idea: IdeaDetail }) {
   );
   const ordinal = stageOrdinal(idea.stage);
   return (
-    <div className={styles.glance} aria-label="At a glance" role="group">
+    <div className={styles.glance} aria-label="At a glance" role="group" tabIndex={0}>
       {measure("impact", "Potential impact", ratings.impact)}
       {measure("feasibility", "Feasibility", ratings.feasibility)}
       <div>
         <span>What is known</span>
-        <b>{plural(counts.claims, "claim")}</b>
-        <span>{counts.evidence ? plural(counts.evidence, "source") : "no evidence yet"}</span>
+        <b>{formatCount("count.claim", counts.claims)}</b>
+        <span>{counts.evidence ? formatCount("count.source", counts.evidence) : "no evidence yet"}</span>
       </div>
       <div>
         <span>Stage</span>
-        <b>{IDEA_STAGE_INFO[idea.stage].label}</b>
+        <b>{vocabulary.stage(idea.stage).label}</b>
         <span>
           {ordinal + 1} of {IDEA_STAGES.length}
         </span>

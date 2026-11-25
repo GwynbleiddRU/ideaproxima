@@ -1,3 +1,5 @@
+import { vocabularyField } from "@/lib/vocabulary";
+import { useLocale } from "@/locales/react";
 import { useInfiniteQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { getRouteApi, Link } from "@tanstack/react-router";
 import { useState } from "react";
@@ -37,6 +39,7 @@ type Tab = "ideas" | "helping" | "activity";
 
 /** A contributor's intellectual portfolio: what they proposed, contributed and are involved in. */
 export function PersonPage() {
+  useLocale();
   const { handle } = route.useParams();
   const profile = useSuspenseQuery(peopleQueries.profile(handle)).data;
   const { person } = profile;
@@ -92,7 +95,7 @@ export function PersonPage() {
                 <span className={styles.tagLabel}>Can help with</span>
                 {person.capacities.map((c) => (
                   <Badge key={c} tone="primary">
-                    {CAPACITY_INFO[c].label}
+                    {vocabularyField("capacities", c, "label", CAPACITY_INFO[c].label)}
                   </Badge>
                 ))}
               </p>
@@ -179,10 +182,16 @@ export function PersonPage() {
                     {i.idea.title}
                   </Link>
                   <Badge tone={i.status === "active" ? "success" : "primary"}>
-                    {CAPACITY_INFO[i.capacity].label}
+                    {vocabularyField("capacities", i.capacity, "label", CAPACITY_INFO[i.capacity].label)}
                   </Badge>
                   <span className={styles.muted}>
-                    {INVOLVEMENT_STATUS_INFO[i.status].label} · since <TimeAgo iso={i.since} />
+                    {vocabularyField(
+                      "involvementStatuses",
+                      i.status,
+                      "label",
+                      INVOLVEMENT_STATUS_INFO[i.status].label,
+                    )}{" "}
+                    · since <TimeAgo iso={i.since} />
                   </span>
                 </li>
               ))}

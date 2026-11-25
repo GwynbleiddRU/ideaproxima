@@ -1,3 +1,5 @@
+import { vocabularyField } from "@/lib/vocabulary";
+import { useLocale } from "@/locales/react";
 import { useState, type FormEvent } from "react";
 import type { IdeaDetail } from "@ideaproxima/contracts";
 import {
@@ -41,6 +43,7 @@ export function InvolveDialog({
 }
 
 function InvolveForm({ idea, onDone }: { idea: IdeaDetail; onDone: () => void }) {
+  useLocale();
   const existing = idea.viewer?.involvements ?? [];
   const [capacity, setCapacity] = useState<Capacity>(existing[0]?.capacity ?? "research");
   const current = existing.find((i) => i.capacity === capacity);
@@ -70,10 +73,10 @@ function InvolveForm({ idea, onDone }: { idea: IdeaDetail; onDone: () => void })
                 }}
               />
               <strong>
-                {CAPACITY_INFO[c].label}
+                {vocabularyField("capacities", c, "label", CAPACITY_INFO[c].label)}
                 {existing.some((i) => i.capacity === c) ? " ✓" : ""}
               </strong>
-              <span>{CAPACITY_INFO[c].description}</span>
+              <span>{vocabularyField("capacities", c, "description", CAPACITY_INFO[c].description)}</span>
             </label>
           ))}
         </div>
@@ -83,8 +86,17 @@ function InvolveForm({ idea, onDone }: { idea: IdeaDetail; onDone: () => void })
           {INVOLVEMENT_STATUSES.map((s) => (
             <label key={s} className={forms.choice}>
               <input type="radio" name="status" checked={status === s} onChange={() => setStatus(s)} />
-              <strong>{INVOLVEMENT_STATUS_INFO[s].label}</strong>
-              <span>{INVOLVEMENT_STATUS_INFO[s].description}</span>
+              <strong>
+                {vocabularyField("involvementStatuses", s, "label", INVOLVEMENT_STATUS_INFO[s].label)}
+              </strong>
+              <span>
+                {vocabularyField(
+                  "involvementStatuses",
+                  s,
+                  "description",
+                  INVOLVEMENT_STATUS_INFO[s].description,
+                )}
+              </span>
             </label>
           ))}
         </div>
@@ -109,7 +121,9 @@ function InvolveForm({ idea, onDone }: { idea: IdeaDetail; onDone: () => void })
             loading={withdraw.isPending}
             onClick={() => withdraw.mutate(capacity, { onSuccess: onDone })}
           >
-            Remove my {CAPACITY_INFO[capacity].label.toLowerCase()} involvement
+            Remove my{" "}
+            {vocabularyField("capacities", capacity, "label", CAPACITY_INFO[capacity].label).toLowerCase()}{" "}
+            involvement
           </Button>
         ) : (
           <span />

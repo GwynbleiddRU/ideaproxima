@@ -58,7 +58,7 @@
     display: inline-block;
     width: 0.5rem;
     height: 0.5rem;
-    margin-right: 0.35rem;
+    margin-inline-end: 0.35rem;
     border-radius: 50%;
     background: var(--dot);
   }
@@ -96,7 +96,7 @@
 }
 
 .addedBy {
-  margin-left: auto;
+  margin-inline-start: auto;
   font-size: var(--text-xs);
 }
 
@@ -116,7 +116,7 @@
   padding: var(--space-4);
   border-radius: var(--radius);
   background: var(--bg-sunken);
-  border-left: 3px solid var(--stance);
+  border-inline-start: 3px solid var(--stance);
 
   &[data-stance="supports"] {
     --stance: var(--status-established);
@@ -172,7 +172,7 @@
   display: inline-flex;
   align-items: center;
   gap: 0.2rem;
-  margin-left: 0.5rem;
+  margin-inline-start: 0.5rem;
   color: var(--primary);
   font-weight: 540;
 
@@ -213,7 +213,7 @@
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-1) var(--space-3);
-  margin-left: calc(-1 * var(--space-2));
+  margin-inline-start: calc(-1 * var(--space-2));
 }
 
 // ---------------------------------------------------------------- arguments
@@ -223,7 +223,7 @@
   gap: var(--space-3);
   padding: var(--space-4) var(--space-5);
   @include card;
-  border-left: 3px solid var(--stance);
+  border-inline-start: 3px solid var(--stance);
 }
 
 .argumentHead {
@@ -257,8 +257,8 @@
   display: grid;
   gap: var(--space-3);
   margin-top: var(--space-2);
-  padding-left: var(--space-4);
-  border-left: 1px dashed var(--border-strong);
+  padding-inline-start: var(--space-4);
+  border-inline-start: 1px dashed var(--border-strong);
 
   .argument {
     background: var(--bg);

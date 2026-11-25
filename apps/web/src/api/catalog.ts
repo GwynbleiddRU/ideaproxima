@@ -9,21 +9,23 @@ import type {
   TopicDetailDto,
   TopicDto,
 } from "@ideaproxima/contracts";
+import { useLocale } from "@/locales/react";
+import { activeLocale } from "@/locales/runtime";
 import { http } from "./http";
 import { keys } from "./keys";
 import { useApiMutation } from "./mutation";
 
 export const catalogQueries = {
-  topics: () =>
+  topics: (locale = activeLocale()) =>
     queryOptions({
-      queryKey: keys.topics,
-      queryFn: ({ signal }) => http.get<TopicDto[]>("/topics", undefined, signal),
+      queryKey: [...keys.topics, locale],
+      queryFn: ({ signal }) => http.get<TopicDto[]>("/topics", { locale }, signal),
       staleTime: 5 * 60_000,
     }),
-  topic: (slug: string) =>
+  topic: (slug: string, locale = activeLocale()) =>
     queryOptions({
-      queryKey: keys.topic(slug),
-      queryFn: ({ signal }) => http.get<TopicDetailDto>(`/topics/${slug}`, undefined, signal),
+      queryKey: [...keys.topic(slug), locale],
+      queryFn: ({ signal }) => http.get<TopicDetailDto>(`/topics/${slug}`, { locale }, signal),
     }),
   search: (q: string) =>
     queryOptions({
@@ -41,6 +43,9 @@ export const catalogQueries = {
       getNextPageParam: (last) => last.nextCursor ?? undefined,
     }),
 };
+
+export const useTopicsQueryOptions = () => catalogQueries.topics(useLocale());
+export const useTopicQueryOptions = (slug: string) => catalogQueries.topic(slug, useLocale());
 
 export function useCreateTopic() {
   return useApiMutation((input: CreateTopicRequest) => http.post<TopicDto>("/topics", input), [keys.topics], {

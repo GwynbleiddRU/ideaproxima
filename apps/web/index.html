@@ -18,6 +18,16 @@
         var t = localStorage.getItem("ip-theme");
         if (t === "light" || t === "dark") document.documentElement.dataset.theme = t;
       } catch (e) {}
+      var locales = "__LOCALE_BOOTSTRAP__";
+      var requested = new URLSearchParams(location.search).get("hl");
+      var saved;
+      try {
+        saved = localStorage.getItem(locales.storageKey);
+      } catch (e) {}
+      var language =
+        [requested, saved].find((tag) => Object.hasOwn(locales.directions, tag)) || locales.fallback;
+      document.documentElement.lang = language;
+      document.documentElement.dir = locales.directions[language];
     </script>
   </head>
   <body>

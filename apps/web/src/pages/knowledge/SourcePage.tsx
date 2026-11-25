@@ -1,3 +1,5 @@
+import { vocabularyField } from "@/lib/vocabulary";
+import { useLocale } from "@/locales/react";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { getRouteApi } from "@tanstack/react-router";
 import { ExternalLink } from "lucide-react";
@@ -11,6 +13,7 @@ const route = getRouteApi("/sources/$source");
 
 /** A publication, dataset or other source, registered once and cited as evidence wherever relevant. */
 export function SourcePage() {
+  useLocale();
   const { source: id } = route.useParams();
   const source = useSuspenseQuery(knowledgeQueries.source(id)).data;
   const details: [string, string | number | null][] = [
@@ -24,7 +27,9 @@ export function SourcePage() {
       <header className={styles.header}>
         <p className="eyebrow">Source</p>
         <div className={styles.badges}>
-          <Badge tone="outline">{SOURCE_KIND_INFO[source.kind].label}</Badge>
+          <Badge tone="outline">
+            {vocabularyField("sourceKinds", source.kind, "label", SOURCE_KIND_INFO[source.kind].label)}
+          </Badge>
           <Badge tone="primary">
             Cited as evidence {source.citedBy} time{source.citedBy === 1 ? "" : "s"}
           </Badge>

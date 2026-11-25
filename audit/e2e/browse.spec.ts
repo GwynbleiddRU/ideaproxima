@@ -154,6 +154,7 @@ test.describe("reading the archive (anonymous)", () => {
 
     // Explore: filters refine the list where it is.
     await page.goto("/explore");
+    await expect(page.getByLabel("Stage")).toBeVisible();
     await scrollTo(120);
     await page.getByLabel("Stage").selectOption("imagined");
     await expect(page).toHaveURL(/stage=imagined/);
@@ -161,20 +162,23 @@ test.describe("reading the archive (anonymous)", () => {
 
     // A topic's lens tabs change the list below them, not the page.
     await page.goto("/topics/environment");
+    const order = page.getByRole("navigation", { name: "Order" });
+    await expect(order).toBeVisible();
     await scrollTo(100);
-    await page.getByRole("navigation", { name: "Order" }).getByRole("link", { name: "Neglected" }).click();
+    await order.getByRole("link", { name: "Neglected" }).click();
     await expect(page).toHaveURL(/lens=neglected/);
     expect(await scrollY()).toBeGreaterThan(0);
 
     // Activity: a filter from the sticky rail shows the new feed from its first entry, not the page top.
     await page.goto("/activity");
+    const feed = page.getByRole("region", { name: "The record" });
+    await expect(feed.getByRole("listitem").first()).toBeVisible();
     await scrollTo(1500);
     await page
       .getByRole("navigation", { name: "Filter the record" })
       .getByRole("link", { name: "Evaluations" })
       .click();
     await expect(page).toHaveURL(/action=evaluation/);
-    const feed = page.getByRole("region", { name: "The record" });
     await expect(feed.getByRole("listitem").first()).toBeInViewport();
     expect(await scrollY()).toBeGreaterThan(0);
   });

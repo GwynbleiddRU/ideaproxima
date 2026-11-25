@@ -1,3 +1,5 @@
+import { vocabularyField } from "@/lib/vocabulary";
+import { useLocale } from "@/locales/react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { useMemo, useState, type FormEvent, type ReactNode } from "react";
@@ -25,7 +27,8 @@ import { isConfident, RatingMeter } from "@/components/Ratings";
 import { StageProgress } from "@/components/Stage";
 import { claimStatusColor, ClaimStatusBadge } from "@/components/status";
 import { cx } from "@/lib/cx";
-import { formatDateTime, percent, plural } from "@/lib/format";
+import { formatDateTime, percent } from "@/lib/format";
+import { formatCount } from "@/locales/runtime";
 import { IDEA_DIMENSIONS, MIN_RATINGS_FOR_CONFIDENCE } from "@/lib/vocabulary";
 import { Badge } from "@/ui/Badge";
 import { Button, ButtonLink } from "@/ui/Button";
@@ -38,6 +41,7 @@ import { useIdea, usePermissions } from "./use-idea";
 import styles from "./OverviewTab.module.scss";
 
 export function OverviewTab() {
+  useLocale();
   const idea = useIdea();
   const claims = useQuery(knowledgeQueries.ideaClaims(idea.slug));
   const claimsById = useMemo(() => new Map((claims.data ?? []).map((c) => [c.id, c])), [claims.data]);
@@ -51,7 +55,7 @@ export function OverviewTab() {
           <section key={key} id={key} className={styles.section} aria-labelledby={`${key}-title`}>
             <h2 id={`${key}-title`} className={styles.sectionTitle}>
               <span className={styles.sectionNumber}>{String(i + 1).padStart(2, "0")}</span>
-              {IDEA_SECTION_INFO[key].label}
+              {vocabularyField("sections", key, "label", IDEA_SECTION_INFO[key].label)}
             </h2>
             <Markdown source={idea.sections[key]!} claims={claimsById} ideaSlug={idea.slug} />
           </section>
@@ -63,7 +67,7 @@ export function OverviewTab() {
             </p>
             <ul className={styles.missingList} role="list">
               {missing.map((key) => (
-                <li key={key}>{IDEA_SECTION_INFO[key].label}</li>
+                <li key={key}>{vocabularyField("sections", key, "label", IDEA_SECTION_INFO[key].label)}</li>
               ))}
             </ul>
             <p>Speculation is allowed; incomplete ideas are welcome. Anyone can propose the missing parts.</p>
@@ -103,6 +107,7 @@ function RailCard({ title, aside, children }: { title: string; aside?: ReactNode
  * are confident, where potential meets feasibility.
  */
 function QualityCard({ idea }: { idea: IdeaDetail }) {
+  useLocale();
   const { signals } = idea;
   const actions = useIdeaActions();
   const confident = IDEA_DIMENSIONS.filter((d) => isConfident(signals.ratings[d]));
@@ -134,7 +139,7 @@ function QualityCard({ idea }: { idea: IdeaDetail }) {
           <ul role="list">
             {early.map((d) => (
               <li key={d}>
-                <span>{DIMENSIONS[d].label}</span>
+                <span>{vocabularyField("dimensions", d, "label", DIMENSIONS[d].label)}</span>
                 <span className={styles.earlyCount}>
                   <Dots n={signals.ratings[d]?.n ?? 0} of={MIN_RATINGS_FOR_CONFIDENCE} />
                   <span className="visually-hidden">
@@ -154,7 +159,8 @@ function QualityCard({ idea }: { idea: IdeaDetail }) {
         {ratedByMe ? "Update your evaluation" : "Add your evaluation"}
       </Button>
       <p className={styles.caption}>
-        {plural(signals.counts.evaluators, "evaluator")} · {percent(signals.completeness)} of sections written
+        {formatCount("count.evaluator", signals.counts.evaluators)} · {percent(signals.completeness)} of
+        sections written
       </p>
     </RailCard>
   );
@@ -202,7 +208,7 @@ function KnownCard({ idea, statuses }: { idea: IdeaDetail; statuses?: ClaimStatu
   return (
     <RailCard
       title="What is known"
-      aside={<span className={styles.caption}>{plural(c.claims, "claim")}</span>}
+      aside={<span className={styles.caption}>{formatCount("count.claim", c.claims)}</span>}
     >
       {present.length ? (
         <>
@@ -225,7 +231,7 @@ function KnownCard({ idea, statuses }: { idea: IdeaDetail; statuses?: ClaimStatu
       )}
       <p className={styles.caption}>
         {c.evidence
-          ? `${plural(c.evidence, "source")}: ${c.evidenceSupporting} supporting, ${c.evidenceChallenging} challenging.`
+          ? `${formatCount("count.source", c.evidence)}: ${c.evidenceSupporting} supporting, ${c.evidenceChallenging} challenging.`
           : "No evidence attached yet."}{" "}
         <Link to="/ideas/$idea/evidence" params={{ idea: idea.slug }} className={styles.cardLink}>
           Claims & evidence <ArrowRight size={13} aria-hidden />
@@ -237,6 +243,7 @@ function KnownCard({ idea, statuses }: { idea: IdeaDetail; statuses?: ClaimStatu
 
 /** The quick stances, as boxes the viewer can tick, with how many people share each. */
 function PerspectivesCard({ idea }: { idea: IdeaDetail }) {
+  useLocale();
   const stance = useStance(idea);
   const gate = useAuthGate();
   const mine = new Set(idea.viewer?.stances ?? []);
@@ -261,13 +268,13 @@ function PerspectivesCard({ idea }: { idea: IdeaDetail }) {
               type="button"
               aria-pressed={on}
               className={styles.perspective}
-              title={STANCE_KIND_INFO[kind].description}
+              title={vocabularyField("stanceKinds", kind, "description", STANCE_KIND_INFO[kind].description)}
               onClick={() => toggle(kind)}
             >
               <span className={cx(styles.box, on && styles.boxOn)} aria-hidden>
                 {on && <Check />}
               </span>
-              <span>{STANCE_KIND_INFO[kind].label}</span>
+              <span>{vocabularyField("stanceKinds", kind, "label", STANCE_KIND_INFO[kind].label)}</span>
               <span className={styles.bar} aria-hidden>
                 <span style={{ width: percent(p.share) }} />
               </span>
@@ -283,6 +290,7 @@ function PerspectivesCard({ idea }: { idea: IdeaDetail }) {
 
 /** Stewards and the people offering to help or working on it — who to talk to about this idea. */
 function PeopleCard({ idea }: { idea: IdeaDetail }) {
+  useLocale();
   const can = usePermissions(idea);
   const actions = useIdeaActions();
   const involvements = useQuery(signalQueries.involvements(idea.slug));
@@ -319,7 +327,7 @@ function PeopleCard({ idea }: { idea: IdeaDetail }) {
             <span className={styles.capacities}>
               {invs.map((inv) => (
                 <Badge key={inv.capacity} tone={inv.status === "active" ? "success" : "primary"}>
-                  {CAPACITY_INFO[inv.capacity].label}
+                  {vocabularyField("capacities", inv.capacity, "label", CAPACITY_INFO[inv.capacity].label)}
                 </Badge>
               ))}
             </span>

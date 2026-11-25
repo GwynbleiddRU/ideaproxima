@@ -1,3 +1,5 @@
+import { vocabularyField } from "@/lib/vocabulary";
+import { useLocale } from "@/locales/react";
 import { Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { ExternalLink } from "lucide-react";
@@ -22,6 +24,7 @@ import styles from "./knowledge.module.scss";
  * others assess its quality and relevance. Withdrawn evidence stays visible, struck through, with its reason.
  */
 export function EvidenceItem({ evidence, ideaSlug }: { evidence: EvidenceDto; ideaSlug?: string }) {
+  useLocale();
   const { me, isModerator } = useSession();
   const gate = useAuthGate();
   const withdraw = useWithdrawEvidence(evidence.claimId, ideaSlug);
@@ -33,7 +36,11 @@ export function EvidenceItem({ evidence, ideaSlug }: { evidence: EvidenceDto; id
     <article className={cx(styles.evidence, withdrawn && styles.withdrawn)} data-stance={evidence.stance}>
       <header className={styles.evidenceHead}>
         <EvidenceStanceBadge stance={evidence.stance} />
-        {source && <Badge tone="outline">{SOURCE_KIND_INFO[source.kind].label}</Badge>}
+        {source && (
+          <Badge tone="outline">
+            {vocabularyField("sourceKinds", source.kind, "label", SOURCE_KIND_INFO[source.kind].label)}
+          </Badge>
+        )}
         {evidence.outcome && <Badge tone="outline">Recorded outcome</Badge>}
         {withdrawn && <Badge tone="danger">Withdrawn</Badge>}
         {evidence.hidden && <Badge tone="warning">Hidden</Badge>}
@@ -77,7 +84,14 @@ export function EvidenceItem({ evidence, ideaSlug }: { evidence: EvidenceDto; id
       )}
       {evidence.outcome && (
         <p className={styles.source}>
-          From an outcome recorded on the platform: {OUTCOME_RESULT_INFO[evidence.outcome.result].label}.
+          From an outcome recorded on the platform:{" "}
+          {vocabularyField(
+            "outcomeResults",
+            evidence.outcome.result,
+            "label",
+            OUTCOME_RESULT_INFO[evidence.outcome.result].label,
+          )}
+          .
         </p>
       )}
       {withdrawn && evidence.withdrawnReason && (

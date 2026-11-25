@@ -1,10 +1,33 @@
-/** Formatting helpers. Pure and locale-stable (English UI), so output is the same on server and client. */
+import { intlLocale, isLocale } from "@ideaproxima/i18n/locales";
 
-const LOCALE = "en";
-const relative = new Intl.RelativeTimeFormat(LOCALE, { numeric: "auto" });
-const dateFormat = new Intl.DateTimeFormat(LOCALE, { year: "numeric", month: "short", day: "numeric" });
-const dateTimeFormat = new Intl.DateTimeFormat(LOCALE, { dateStyle: "medium", timeStyle: "short" });
-const compact = new Intl.NumberFormat(LOCALE, { notation: "compact", maximumFractionDigits: 1 });
+const formatters = (locale: string) => ({
+  relative: new Intl.RelativeTimeFormat(locale, { numeric: "auto" }),
+  date: new Intl.DateTimeFormat(locale, { year: "numeric", month: "short", day: "numeric" }),
+  dateTime: new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short" }),
+  shortDate: new Intl.DateTimeFormat(locale, { month: "short", day: "numeric" }),
+  clock: new Intl.DateTimeFormat(locale, { hour: "2-digit", minute: "2-digit", hourCycle: "h23" }),
+  compact: new Intl.NumberFormat(locale, { notation: "compact", maximumFractionDigits: 1 }),
+  percent: new Intl.NumberFormat(locale, { style: "percent", maximumFractionDigits: 0 }),
+  list: new Intl.ListFormat(locale),
+  shortUnits: Object.fromEntries(
+    SHORT_UNITS.map(([unit]) => [
+      unit,
+      new Intl.NumberFormat(locale, { style: "unit", unit, unitDisplay: "narrow" }),
+    ]),
+  ),
+});
+
+let activeIntl: string | undefined;
+let activeFormatters: ReturnType<typeof formatters>;
+function formats() {
+  const language = typeof document === "undefined" ? "en" : document.documentElement.lang;
+  const locale = isLocale(language) ? intlLocale(language) : "en";
+  if (activeIntl !== locale) {
+    activeFormatters = formatters(locale);
+    activeIntl = locale;
+  }
+  return activeFormatters;
+}
 
 const UNITS: [Intl.RelativeTimeFormatUnit, number][] = [
   ["year", 365 * 24 * 3600],
@@ -18,57 +41,59 @@ const UNITS: [Intl.RelativeTimeFormatUnit, number][] = [
 /** "3 days ago", "in 2 hours", "just now". */
 export function timeAgo(iso: string, now: number = Date.now()): string {
   const seconds = (new Date(iso).getTime() - now) / 1000;
+  const { relative } = formats();
   for (const [unit, size] of UNITS) {
     if (Math.abs(seconds) >= size) return relative.format(Math.round(seconds / size), unit);
   }
-  return "just now";
+  return relative.format(0, "second");
 }
 
-const shortDate = new Intl.DateTimeFormat(LOCALE, { month: "short", day: "numeric" });
-const clock = new Intl.DateTimeFormat(LOCALE, { hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
-const SHORT_UNITS: [string, number][] = [
-  ["w", 7 * 24 * 3600],
-  ["d", 24 * 3600],
-  ["h", 3600],
-  ["m", 60],
-];
+const SHORT_UNITS = [
+  ["week", 7 * 24 * 3600],
+  ["day", 24 * 3600],
+  ["hour", 3600],
+  ["minute", 60],
+] as const;
 
 /** Compact age for dense lists: "now", "5m", "2h", "3d", "2w", then the date ("Nov 3"). */
 export function shortAgo(iso: string, now: number = Date.now()): string {
   const seconds = (now - new Date(iso).getTime()) / 1000;
-  if (seconds < 60) return "now";
+  const { relative, shortDate, shortUnits } = formats();
+  if (seconds < 60) return relative.format(0, "second");
   if (seconds >= 5 * 7 * 24 * 3600) return shortDate.format(new Date(iso));
-  for (const [unit, size] of SHORT_UNITS) if (seconds >= size) return `${Math.floor(seconds / size)}${unit}`;
-  return "now";
+  for (const [unit, size] of SHORT_UNITS)
+    if (seconds >= size) return shortUnits[unit]!.format(Math.floor(seconds / size));
+  return relative.format(0, "second");
 }
 
 /** Time of day ("18:40"), for entries under a day heading. */
-export const clockTime = (iso: string) => clock.format(new Date(iso));
+export const clockTime = (iso: string) => formats().clock.format(new Date(iso));
 
 const dayKey = (d: Date) => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
 
 /** A day heading: "Today", "Yesterday", or the date ("Nov 14, 2026"). */
 export function dayLabel(iso: string, now: number = Date.now()): string {
   const day = dayKey(new Date(iso));
-  if (day === dayKey(new Date(now))) return "Today";
-  if (day === dayKey(new Date(now - 24 * 3600 * 1000))) return "Yesterday";
-  return dateFormat.format(new Date(iso));
+  const { relative, date } = formats();
+  const today = new Date(now);
+  if (day === dayKey(today)) return heading(relative.format(0, "day"));
+  today.setDate(today.getDate() - 1);
+  if (day === dayKey(today)) return heading(relative.format(-1, "day"));
+  return date.format(new Date(iso));
 }
+
+const heading = (value: string) => value.charAt(0).toLocaleUpperCase(activeIntl) + value.slice(1);
 
 export const isToday = (iso: string, now: number = Date.now()) =>
   dayKey(new Date(iso)) === dayKey(new Date(now));
 
-export const formatDate = (iso: string) => dateFormat.format(new Date(iso));
-export const formatDateTime = (iso: string) => dateTimeFormat.format(new Date(iso));
-export const formatCompact = (n: number) => compact.format(n);
-
-/** "1 claim", "3 claims". Irregular plurals pass `many`. */
-export function plural(n: number, one: string, many = `${one}s`): string {
-  return `${n} ${n === 1 ? one : many}`;
-}
+export const formatDate = (iso: string) => formats().date.format(new Date(iso));
+export const formatDateTime = (iso: string) => formats().dateTime.format(new Date(iso));
+export const formatCompact = (n: number) => formats().compact.format(n);
+export const formatList = (values: string[]) => formats().list.format(values);
 
 /** 0–1 share as a whole percentage. */
-export const percent = (share: number) => `${Math.round(share * 100)}%`;
+export const percent = (share: number) => formats().percent.format(share);
 
 /** First letters of the first two words, for avatars. */
 export function initials(name: string): string {

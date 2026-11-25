@@ -1,3 +1,5 @@
+import { vocabularyField } from "@/lib/vocabulary";
+import { useLocale } from "@/locales/react";
 import { useQuery } from "@tanstack/react-query";
 import { useState, type FormEvent } from "react";
 import type { AttachEvidenceRequest } from "@ideaproxima/contracts";
@@ -60,6 +62,7 @@ function EvidenceForm({
   ideaSlug?: string;
   onDone: () => void;
 }) {
+  useLocale();
   const attach = useAttachEvidence(claimId, ideaSlug);
   const initiatives = useQuery({ ...practiceQueries.initiatives(ideaSlug ?? ""), enabled: !!ideaSlug });
   const outcomes = (initiatives.data ?? []).flatMap((i) =>
@@ -119,8 +122,10 @@ function EvidenceForm({
           {EVIDENCE_STANCES.map((s) => (
             <label key={s} className={forms.choice}>
               <input type="radio" name="stance" checked={stance === s} onChange={() => setStance(s)} />
-              <strong>{EVIDENCE_STANCE_INFO[s].label}</strong>
-              <span>{EVIDENCE_STANCE_INFO[s].description}</span>
+              <strong>{vocabularyField("evidenceStances", s, "label", EVIDENCE_STANCE_INFO[s].label)}</strong>
+              <span>
+                {vocabularyField("evidenceStances", s, "description", EVIDENCE_STANCE_INFO[s].description)}
+              </span>
             </label>
           ))}
         </div>
@@ -146,7 +151,7 @@ function EvidenceForm({
                 <select {...p} className={control} value={source.kind} onChange={setField("kind")}>
                   {SOURCE_KINDS.map((k) => (
                     <option key={k} value={k}>
-                      {SOURCE_KIND_INFO[k].label}
+                      {vocabularyField("sourceKinds", k, "label", SOURCE_KIND_INFO[k].label)}
                     </option>
                   ))}
                 </select>
@@ -243,7 +248,8 @@ function EvidenceForm({
               <option value="">Choose an outcome</option>
               {outcomes.map((o) => (
                 <option key={o.id} value={o.id}>
-                  {o.initiative}: {OUTCOME_RESULT_INFO[o.result].label}
+                  {o.initiative}:{" "}
+                  {vocabularyField("outcomeResults", o.result, "label", OUTCOME_RESULT_INFO[o.result].label)}
                 </option>
               ))}
             </select>

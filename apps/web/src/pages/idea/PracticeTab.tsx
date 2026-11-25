@@ -1,3 +1,5 @@
+import { vocabularyField } from "@/lib/vocabulary";
+import { useLocale } from "@/locales/react";
 import { useQuery } from "@tanstack/react-query";
 import { useState, type FormEvent } from "react";
 import { ExternalLink, HandHelping, Lightbulb, Rocket } from "lucide-react";
@@ -57,6 +59,7 @@ export function PracticeTab() {
 }
 
 function People({ idea }: { idea: IdeaDetail }) {
+  useLocale();
   const gate = useAuthGate();
   const involvements = useQuery(signalQueries.involvements(idea.slug));
   const [open, setOpen] = useState(false);
@@ -81,12 +84,21 @@ function People({ idea }: { idea: IdeaDetail }) {
             if (!group.length) return null;
             return (
               <div key={status} className={styles.peopleGroup}>
-                <p className="eyebrow">{INVOLVEMENT_STATUS_INFO[status].label}</p>
+                <p className="eyebrow">
+                  {vocabularyField(
+                    "involvementStatuses",
+                    status,
+                    "label",
+                    INVOLVEMENT_STATUS_INFO[status].label,
+                  )}
+                </p>
                 <ul className={styles.peopleList} role="list">
                   {group.map((i) => (
                     <li key={`${i.person.id}-${i.capacity}`}>
                       <PersonLink person={i.person} avatar size={28} />
-                      <Badge tone="primary">{CAPACITY_INFO[i.capacity].label}</Badge>
+                      <Badge tone="primary">
+                        {vocabularyField("capacities", i.capacity, "label", CAPACITY_INFO[i.capacity].label)}
+                      </Badge>
                       {i.note && <p className={styles.note}>{i.note}</p>}
                     </li>
                   ))}
@@ -141,6 +153,7 @@ function Initiatives({ idea }: { idea: IdeaDetail }) {
 }
 
 function InitiativeCard({ initiative, idea }: { initiative: InitiativeDto; idea: IdeaDetail }) {
+  useLocale();
   const can = usePermissions(idea);
   const [dialog, setDialog] = useState<"status" | "outcome" | null>(null);
   const dates = [
@@ -152,7 +165,14 @@ function InitiativeCard({ initiative, idea }: { initiative: InitiativeDto; idea:
   return (
     <article className={styles.initiative}>
       <header className={styles.initiativeHead}>
-        <Badge tone="outline">{INITIATIVE_KIND_INFO[initiative.kind].label}</Badge>
+        <Badge tone="outline">
+          {vocabularyField(
+            "initiativeKinds",
+            initiative.kind,
+            "label",
+            INITIATIVE_KIND_INFO[initiative.kind].label,
+          )}
+        </Badge>
         <Badge
           tone={
             initiative.status === "active"
@@ -162,7 +182,12 @@ function InitiativeCard({ initiative, idea }: { initiative: InitiativeDto; idea:
                 : "neutral"
           }
         >
-          {INITIATIVE_STATUS_INFO[initiative.status].label}
+          {vocabularyField(
+            "initiativeStatuses",
+            initiative.status,
+            "label",
+            INITIATIVE_STATUS_INFO[initiative.status].label,
+          )}
         </Badge>
         {initiative.hidden && <Badge tone="warning">Hidden</Badge>}
       </header>
@@ -246,6 +271,7 @@ function CreateInitiativeDialog({
   onClose: () => void;
   idea: IdeaDetail;
 }) {
+  useLocale();
   const create = useCreateInitiative(idea.slug);
   const [kind, setKind] = useState<InitiativeKind>("research");
   const [status, setStatus] = useState<InitiativeStatus>("planned");
@@ -292,8 +318,12 @@ function CreateInitiativeDialog({
             {INITIATIVE_KINDS.map((k) => (
               <label key={k} className={forms.choice}>
                 <input type="radio" name="kind" checked={kind === k} onChange={() => setKind(k)} />
-                <strong>{INITIATIVE_KIND_INFO[k].label}</strong>
-                <span>{INITIATIVE_KIND_INFO[k].description}</span>
+                <strong>
+                  {vocabularyField("initiativeKinds", k, "label", INITIATIVE_KIND_INFO[k].label)}
+                </strong>
+                <span>
+                  {vocabularyField("initiativeKinds", k, "description", INITIATIVE_KIND_INFO[k].description)}
+                </span>
               </label>
             ))}
           </div>
@@ -361,7 +391,7 @@ function CreateInitiativeDialog({
               >
                 {INITIATIVE_STATUSES.map((s) => (
                   <option key={s} value={s}>
-                    {INITIATIVE_STATUS_INFO[s].label}
+                    {vocabularyField("initiativeStatuses", s, "label", INITIATIVE_STATUS_INFO[s].label)}
                   </option>
                 ))}
               </select>
@@ -407,6 +437,7 @@ function StatusDialog({
   initiative: InitiativeDto;
   slug: string;
 }) {
+  useLocale();
   const update = useUpdateInitiativeStatus(slug);
   const [status, setStatus] = useState<InitiativeStatus>(initiative.status);
   const [note, setNote] = useState("");
@@ -426,8 +457,17 @@ function StatusDialog({
             {INITIATIVE_STATUSES.map((s) => (
               <label key={s} className={forms.choice}>
                 <input type="radio" name="status" checked={status === s} onChange={() => setStatus(s)} />
-                <strong>{INITIATIVE_STATUS_INFO[s].label}</strong>
-                <span>{INITIATIVE_STATUS_INFO[s].description}</span>
+                <strong>
+                  {vocabularyField("initiativeStatuses", s, "label", INITIATIVE_STATUS_INFO[s].label)}
+                </strong>
+                <span>
+                  {vocabularyField(
+                    "initiativeStatuses",
+                    s,
+                    "description",
+                    INITIATIVE_STATUS_INFO[s].description,
+                  )}
+                </span>
               </label>
             ))}
           </div>
@@ -478,6 +518,7 @@ function OutcomeDialog({
   initiative: InitiativeDto;
   slug: string;
 }) {
+  useLocale();
   const record = useRecordOutcome(slug);
   const [result, setResult] = useState<OutcomeResult>("succeeded");
   const [summary, setSummary] = useState("");
@@ -498,8 +539,10 @@ function OutcomeDialog({
             {OUTCOME_RESULTS.map((r) => (
               <label key={r} className={forms.choice}>
                 <input type="radio" name="result" checked={result === r} onChange={() => setResult(r)} />
-                <strong>{OUTCOME_RESULT_INFO[r].label}</strong>
-                <span>{OUTCOME_RESULT_INFO[r].description}</span>
+                <strong>{vocabularyField("outcomeResults", r, "label", OUTCOME_RESULT_INFO[r].label)}</strong>
+                <span>
+                  {vocabularyField("outcomeResults", r, "description", OUTCOME_RESULT_INFO[r].description)}
+                </span>
               </label>
             ))}
           </div>

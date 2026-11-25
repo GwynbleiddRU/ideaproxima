@@ -4,6 +4,8 @@ import { LIMITS } from "@ideaproxima/domain";
 import { isApiError } from "@/api/http";
 import { useLogin, useRegister, useSession } from "@/api/session";
 import forms from "@/components/forms.module.scss";
+import { LocalizedText, useMessage } from "@/locales/react";
+import { activeLocale } from "@/locales/runtime";
 import { Button } from "@/ui/Button";
 import { control, Field } from "@/ui/Field";
 import { FormError } from "@/ui/Feedback";
@@ -24,6 +26,7 @@ function BackToApp({ redirect }: { redirect?: string }) {
 }
 
 export function SignInPage() {
+  const t = useMessage();
   const { me } = useSession();
   const { redirect } = useSearch({ from: "/sign-in" });
   const login = useLogin();
@@ -37,12 +40,9 @@ export function SignInPage() {
 
   if (me) return <BackToApp redirect={redirect} />;
   return (
-    <AuthLayout
-      title="Welcome back"
-      lede="Sign in to contribute: take stances, evaluate, add evidence, propose ideas."
-    >
+    <AuthLayout title={t("auth.welcome")} lede={t("auth.signInLede")}>
       <form onSubmit={submit} className={forms.form}>
-        <Field label="Email">
+        <Field label={t("auth.email")}>
           {(p) => (
             <input
               {...p}
@@ -56,7 +56,7 @@ export function SignInPage() {
             />
           )}
         </Field>
-        <Field label="Password">
+        <Field label={t("auth.password")}>
           {(p) => (
             <input
               {...p}
@@ -69,21 +69,23 @@ export function SignInPage() {
             />
           )}
         </Field>
-        <FormError error={login.error} />
+        <AuthError error={login.error} />
         <Button type="submit" variant="primary" size="lg" block loading={login.isPending}>
-          Sign in
+          {t("auth.signIn")}
         </Button>
       </form>
       <p className={styles.switch}>
-        New here?{" "}
-        <Link to="/join" search={{ redirect }} className="link">
-          Create an account
-        </Link>
+        <LocalizedText
+          id="auth.newHere"
+          components={{ 0: <Link to="/join" search={{ redirect }} className="link" /> }}
+        />
       </p>
       {isLocal && (
         <p className={styles.demo}>
-          Local demo data (after <code>npm run db:seed:demo</code>):{" "}
-          <code>demo-mira@demo.ideaproxima.invalid</code> / <code>demo-password-123</code>
+          <LocalizedText
+            id="auth.demo"
+            components={{ 0: <code dir="ltr" />, 1: <code dir="ltr" />, 2: <code dir="ltr" /> }}
+          />
         </p>
       )}
     </AuthLayout>
@@ -91,6 +93,7 @@ export function SignInPage() {
 }
 
 export function JoinPage() {
+  const t = useMessage();
   const { me } = useSession();
   const { redirect } = useSearch({ from: "/join" });
   const register = useRegister();
@@ -101,17 +104,14 @@ export function JoinPage() {
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
-    register.mutate(form);
+    register.mutate({ ...form, locale: activeLocale() });
   };
 
   if (me) return <BackToApp redirect={redirect} />;
   return (
-    <AuthLayout
-      title="Join the archive"
-      lede="Your name and contributions are public and attributed. Your email is never shown."
-    >
+    <AuthLayout title={t("auth.join")} lede={t("auth.joinLede")}>
       <form onSubmit={submit} className={forms.form}>
-        <Field label="Name" error={errors.displayName}>
+        <Field label={t("auth.name")} error={errors.displayName}>
           {(p) => (
             <input
               {...p}
@@ -126,11 +126,7 @@ export function JoinPage() {
             />
           )}
         </Field>
-        <Field
-          label="Handle"
-          hint="Lowercase letters, digits and hyphens. Appears in your profile address."
-          error={errors.handle}
-        >
+        <Field label={t("auth.handle")} hint={t("auth.handleHint")} error={errors.handle}>
           {(p) => (
             <input
               {...p}
@@ -145,7 +141,7 @@ export function JoinPage() {
             />
           )}
         </Field>
-        <Field label="Email" error={errors.email}>
+        <Field label={t("auth.email")} error={errors.email}>
           {(p) => (
             <input
               {...p}
@@ -158,7 +154,11 @@ export function JoinPage() {
             />
           )}
         </Field>
-        <Field label="Password" hint={`At least ${LIMITS.password.min} characters.`} error={errors.password}>
+        <Field
+          label={t("auth.password")}
+          hint={t("auth.passwordHint", { count: LIMITS.password.min })}
+          error={errors.password}
+        >
           {(p) => (
             <input
               {...p}
@@ -173,25 +173,39 @@ export function JoinPage() {
             />
           )}
         </Field>
-        <FormError error={register.error && !Object.keys(errors).length ? register.error : null} />
+        <AuthError error={register.error && !Object.keys(errors).length ? register.error : null} />
         <Button type="submit" variant="primary" size="lg" block loading={register.isPending}>
-          Create account
+          {t("auth.create")}
         </Button>
       </form>
       <p className={styles.switch}>
-        Already have an account?{" "}
-        <Link to="/sign-in" search={{ redirect }} className="link">
-          Sign in
-        </Link>
+        <LocalizedText
+          id="auth.haveAccount"
+          components={{ 0: <Link to="/sign-in" search={{ redirect }} className="link" /> }}
+        />
       </p>
     </AuthLayout>
   );
 }
 
+function AuthError({ error }: { error: unknown }) {
+  const t = useMessage();
+  return (
+    <FormError
+      error={error}
+      describe={(cause) => {
+        if (!isApiError(cause)) return t("auth.network");
+        return cause.status === 429 ? t("auth.rateLimit") : cause.message;
+      }}
+    />
+  );
+}
+
 function AuthLayout({ title, lede, children }: { title: string; lede: string; children: ReactNode }) {
+  const t = useMessage();
   return (
     <div className={styles.page}>
-      <title>{`${title} · ideaproxima`}</title>
+      <title>{t("auth.title", { title })}</title>
       <div className={styles.card}>
         <Logo size={36} />
         <h1 className={styles.title}>{title}</h1>

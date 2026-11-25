@@ -2,6 +2,8 @@ import { Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-route
 import { useEffect, useState, type FormEvent } from "react";
 import { LogOut, Menu, Moon, Plus, Search, Settings, Shield, Sun, User } from "lucide-react";
 import { useLogout, useSession } from "@/api/session";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { LocaleProvider, LocalizedText, useMessage } from "@/locales/react";
 import { cx } from "@/lib/cx";
 import { resolvedTheme, setTheme, useTheme, type ThemePreference } from "@/lib/theme";
 import { Avatar } from "@/ui/Avatar";
@@ -14,10 +16,10 @@ import { Toaster } from "@/ui/Toast";
 import styles from "./Shell.module.scss";
 
 const NAV = [
-  { to: "/explore", label: "Explore" },
-  { to: "/topics", label: "Topics" },
-  { to: "/activity", label: "Activity" },
-  { to: "/about", label: "Principles" },
+  { to: "/explore", label: "nav.explore" },
+  { to: "/topics", label: "nav.topics" },
+  { to: "/activity", label: "nav.activity" },
+  { to: "/about", label: "nav.principles" },
 ] as const;
 
 function ProgressBar() {
@@ -26,6 +28,7 @@ function ProgressBar() {
 }
 
 function ThemeButton() {
+  const t = useMessage();
   const preference = useTheme();
   const dark = resolvedTheme(preference) === "dark";
   return (
@@ -33,7 +36,7 @@ function ThemeButton() {
       variant="ghost"
       size="sm"
       iconOnly
-      aria-label={dark ? "Switch to light theme" : "Switch to dark theme"}
+      aria-label={dark ? t("theme.useLight") : t("theme.useDark")}
       onClick={() => setTheme(dark ? "light" : "dark")}
     >
       {dark ? <Sun /> : <Moon />}
@@ -42,6 +45,7 @@ function ThemeButton() {
 }
 
 function HeaderSearch() {
+  const t = useMessage();
   const navigate = useNavigate();
   const [q, setQ] = useState("");
   const submit = (event: FormEvent) => {
@@ -54,8 +58,8 @@ function HeaderSearch() {
       <input
         value={q}
         onChange={(e) => setQ(e.target.value)}
-        placeholder="Search ideas, claims, people"
-        aria-label="Search the archive"
+        placeholder={t("nav.searchPlaceholder")}
+        aria-label={t("nav.searchLabel")}
         type="search"
       />
     </form>
@@ -63,19 +67,22 @@ function HeaderSearch() {
 }
 
 function AccountMenu() {
+  const t = useMessage();
   const { me, isModerator } = useSession();
   const logout = useLogout();
   const navigate = useNavigate();
   if (!me) return null;
   return (
     <Dropdown
-      label="Your account"
+      label={t("nav.account")}
       triggerClassName={styles.avatarButton}
       trigger={<Avatar name={me.displayName} seed={me.handle} size={32} />}
     >
       {(close) => (
         <>
-          <p className={menuLabelClass}>Signed in as @{me.handle}</p>
+          <p className={menuLabelClass}>
+            <LocalizedText id="nav.signedIn" values={{ handle: me.handle }} components={{ 0: <bdi /> }} />
+          </p>
           <Link
             to="/people/$handle"
             params={{ handle: me.handle }}
@@ -83,10 +90,10 @@ function AccountMenu() {
             role="menuitem"
             onClick={close}
           >
-            <User /> Your profile
+            <User /> {t("nav.profile")}
           </Link>
           <Link to="/account" className={menuItemClass} role="menuitem" onClick={close}>
-            <Settings /> Account settings
+            <Settings /> {t("nav.settings")}
           </Link>
           {isModerator && (
             <Link
@@ -96,7 +103,7 @@ function AccountMenu() {
               role="menuitem"
               onClick={close}
             >
-              <Shield /> Moderation log
+              <Shield /> {t("nav.moderation")}
             </Link>
           )}
           <div className={menuSeparatorClass} />
@@ -109,7 +116,7 @@ function AccountMenu() {
               logout.mutate(undefined, { onSuccess: () => void navigate({ to: "/" }) });
             }}
           >
-            <LogOut /> Sign out
+            <LogOut /> {t("nav.signOut")}
           </button>
         </>
       )}
@@ -118,35 +125,36 @@ function AccountMenu() {
 }
 
 function MobileMenu({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const t = useMessage();
   const { me } = useSession();
   return (
-    <Dialog open={open} onClose={onClose} title="Menu" size="sm">
-      <nav aria-label="Main" className={styles.mobileNav}>
+    <Dialog open={open} onClose={onClose} title={t("nav.menu")} closeLabel={t("locale.close")} size="sm">
+      <nav aria-label={t("nav.main")} className={styles.mobileNav}>
         {NAV.map((item) => (
           <Link key={item.to} to={item.to} onClick={onClose}>
-            {item.label}
+            {t(item.label)}
           </Link>
         ))}
         <Link to="/search" onClick={onClose}>
-          Search
+          {t("nav.search")}
         </Link>
         <hr />
         {me ? (
           <>
             <Link to="/people/$handle" params={{ handle: me.handle }} onClick={onClose}>
-              Your profile
+              {t("nav.profile")}
             </Link>
             <Link to="/account" onClick={onClose}>
-              Account settings
+              {t("nav.settings")}
             </Link>
           </>
         ) : (
           <Link to="/sign-in" onClick={onClose}>
-            Sign in
+            {t("auth.signIn")}
           </Link>
         )}
         <Link to="/new" onClick={onClose} className={styles.mobilePrimary}>
-          Propose an idea
+          {t("nav.propose")}
         </Link>
       </nav>
     </Dialog>
@@ -154,52 +162,50 @@ function MobileMenu({ open, onClose }: { open: boolean; onClose: () => void }) {
 }
 
 function Footer() {
+  const t = useMessage();
   const preference = useTheme();
   return (
     <footer className={styles.footer}>
       <div className={cx("container", styles.footerInner)}>
         <div className={styles.footerBrand}>
           <Link to="/" className={styles.brand}>
-            <Logo size={22} /> ideaproxima
+            <Logo size={22} /> {t("brand.name")}
           </Link>
-          <p>
-            A persistent, open repository of humanity's possible futures. Facts are never rewritten;
-            popularity is never mistaken for quality.
-          </p>
+          <p>{t("footer.description")}</p>
         </div>
-        <nav aria-label="Footer" className={styles.footerLinks}>
+        <nav aria-label={t("nav.footer")} className={styles.footerLinks}>
           <div>
-            <p className="eyebrow">Discover</p>
-            <Link to="/explore">Explore</Link>
+            <p className="eyebrow">{t("footer.discover")}</p>
+            <Link to="/explore">{t("nav.explore")}</Link>
             <Link to="/explore" search={{ lens: "neglected" }}>
-              Neglected ideas
+              {t("footer.neglected")}
             </Link>
-            <Link to="/topics">Topics</Link>
+            <Link to="/topics">{t("nav.topics")}</Link>
           </div>
           <div>
-            <p className="eyebrow">Archive</p>
-            <Link to="/activity">Activity</Link>
+            <p className="eyebrow">{t("footer.archive")}</p>
+            <Link to="/activity">{t("nav.activity")}</Link>
             <Link to="/activity" search={{ action: "moderation." }}>
-              Moderation log
+              {t("nav.moderation")}
             </Link>
-            <Link to="/about">Principles</Link>
+            <Link to="/about">{t("nav.principles")}</Link>
           </div>
           <div>
-            <p className="eyebrow">Build on it</p>
-            <a href="/v1">API</a>
-            <a href="/v1/openapi.json">OpenAPI</a>
+            <p className="eyebrow">{t("footer.build")}</p>
+            <a href="/v1">{t("footer.api")}</a>
+            <a href="/v1/openapi.json">{t("footer.openApi")}</a>
           </div>
         </nav>
         <div className={styles.footerTheme}>
           <Segmented<ThemePreference>
-            label="Theme"
+            label={t("theme.name")}
             size="sm"
             value={preference}
             onChange={setTheme}
             options={[
-              { value: "system", label: "System" },
-              { value: "light", label: "Light" },
-              { value: "dark", label: "Dark" },
+              { value: "system", label: t("theme.system") },
+              { value: "light", label: t("theme.light") },
+              { value: "dark", label: t("theme.dark") },
             ]}
           />
         </div>
@@ -209,6 +215,15 @@ function Footer() {
 }
 
 export function Shell() {
+  return (
+    <LocaleProvider>
+      <ShellContent />
+    </LocaleProvider>
+  );
+}
+
+function ShellContent() {
+  const t = useMessage();
   const { me, loading } = useSession();
   const [menuOpen, setMenuOpen] = useState(false);
   const pathname = useRouterState({ select: (s) => s.location.pathname });
@@ -218,32 +233,33 @@ export function Shell() {
   return (
     <div className={styles.shell}>
       <a href="#main" className={styles.skip}>
-        Skip to content
+        {t("nav.skip")}
       </a>
       <header className={styles.header}>
         <div className={cx("container", styles.headerInner)}>
-          <Link to="/" className={styles.brand} aria-label="ideaproxima home">
-            <Logo /> <span>ideaproxima</span>
+          <Link to="/" className={styles.brand} aria-label={t("nav.home")}>
+            <Logo /> <span>{t("brand.name")}</span>
           </Link>
-          <nav aria-label="Main" className={styles.nav}>
+          <nav aria-label={t("nav.main")} className={styles.nav}>
             {NAV.map((item) => (
               <Link key={item.to} to={item.to} className={styles.navLink}>
-                {item.label}
+                {t(item.label)}
               </Link>
             ))}
           </nav>
           {/* Home and Search have their own search box; a second one in the header would only compete. */}
           {ownSearch ? <span className={styles.spacer} aria-hidden /> : <HeaderSearch />}
           <div className={styles.actions}>
+            <LanguageSwitcher />
             <ThemeButton />
             {!loading && !me && (
               <ButtonLink to="/sign-in" variant="ghost" size="sm" className={styles.signIn}>
-                Sign in
+                {t("auth.signIn")}
               </ButtonLink>
             )}
             <AccountMenu />
             <ButtonLink to="/new" variant="primary" size="sm" className={styles.propose}>
-              <Plus /> Propose an idea
+              <Plus /> {t("nav.propose")}
             </ButtonLink>
             {!ownSearch && (
               <ButtonLink
@@ -251,7 +267,7 @@ export function Shell() {
                 variant="ghost"
                 size="sm"
                 iconOnly
-                aria-label="Search"
+                aria-label={t("nav.search")}
                 className={styles.mobileOnly}
               >
                 <Search />
@@ -261,7 +277,7 @@ export function Shell() {
               variant="ghost"
               size="sm"
               iconOnly
-              aria-label="Open menu"
+              aria-label={t("nav.openMenu")}
               className={styles.mobileOnly}
               onClick={() => setMenuOpen(true)}
             >

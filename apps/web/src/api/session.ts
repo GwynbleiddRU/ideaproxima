@@ -1,5 +1,12 @@
 import { queryOptions, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { AuthResponse, LoginRequest, MeResponse, RegisterRequest } from "@ideaproxima/contracts";
+import type {
+  AuthResponse,
+  LoginRequest,
+  MeResponse,
+  PersonDto,
+  RegisterRequest,
+} from "@ideaproxima/contracts";
+import type { Locale } from "@ideaproxima/i18n/locales";
 import { ApiError, http } from "./http";
 import { keys } from "./keys";
 
@@ -23,10 +30,24 @@ export function useSession() {
   return {
     me,
     email: data?.email ?? null,
+    locale: data?.preferences.locale ?? null,
     loading: isPending,
     isModerator: me?.role === "moderator" || me?.role === "admin",
     isAdmin: me?.role === "admin",
   };
+}
+
+export function useSaveLocale() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (locale: Locale) => http.patch<PersonDto>("/me", { locale }),
+    meta: { inlineErrors: true },
+    onSuccess: (person, locale) => {
+      queryClient.setQueryData<MeResponse | null>(keys.me, (session) =>
+        session?.person.id === person.id ? { ...session, preferences: { locale } } : session,
+      );
+    },
+  });
 }
 
 /** Signing in or out changes viewer-specific data everywhere (stances, permissions): refetch it all. */

@@ -1,3 +1,5 @@
+import { vocabularyField } from "@/lib/vocabulary";
+import { useLocale } from "@/locales/react";
 import type { RatingSummaryDto } from "@ideaproxima/contracts";
 import { DIMENSIONS, type DimensionKey } from "@ideaproxima/domain";
 import { anchorsOf, MIN_RATINGS_FOR_CONFIDENCE } from "@/lib/vocabulary";
@@ -34,10 +36,11 @@ export function RatingMeter({
   /** A shorter label than the dimension's own (e.g. "Potential" in a narrow column). */
   label?: string;
 }) {
+  useLocale();
   const anchor = summary ? nearestAnchor(dimension, summary.mean) : undefined;
   return (
     <Meter
-      label={label ?? DIMENSIONS[dimension].label}
+      label={label ?? vocabularyField("dimensions", dimension, "label", DIMENSIONS[dimension].label)}
       value={summary ? summary.value : null}
       spread={summary?.dispersion}
       n={summary?.n}

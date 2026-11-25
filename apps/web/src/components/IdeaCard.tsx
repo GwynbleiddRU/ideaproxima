@@ -4,7 +4,8 @@ import { FileText, MessagesSquare, Rocket, Star } from "lucide-react";
 import type { IdeaListItem } from "@ideaproxima/contracts";
 import type { DimensionKey } from "@ideaproxima/domain";
 import { cx } from "@/lib/cx";
-import { plural } from "@/lib/format";
+import { formatCount } from "@/locales/runtime";
+import { useLocale } from "@/locales/react";
 import { DEFAULT_CARD_DIMENSIONS } from "@/lib/vocabulary";
 import { RatingMeter } from "./Ratings";
 import { StageBadge } from "./Stage";
@@ -58,12 +59,14 @@ export function IdeaCard({
           <TopicLinks topics={topics} limit={2} />
           {layout === "card" && <StageBadge stage={idea.stage} />}
         </div>
-        <h3 className={styles.title}>
+        <h3 className={styles.title} dir="auto">
           <Link to="/ideas/$idea" params={{ idea: idea.slug }} className={styles.link}>
             {idea.title}
           </Link>
         </h3>
-        <p className={styles.summary}>{idea.summary}</p>
+        <p className={styles.summary} dir="auto">
+          {idea.summary}
+        </p>
       </div>
       {measures}
       {children && <div className={styles.note}>{children}</div>}
@@ -85,6 +88,7 @@ export function IdeaCard({
 
 /** The non-zero facts about an idea: attention, claims, sources, discussion, initiatives. */
 export function IdeaFacts({ idea }: { idea: IdeaListItem }) {
+  useLocale();
   const { attention, counts } = idea.signals;
   const discussion = counts.arguments + counts.comments;
   return (
@@ -100,14 +104,14 @@ export function IdeaFacts({ idea }: { idea: IdeaListItem }) {
       )}
       {counts.claims > 0 && (
         <span title="Claims this idea rests on">
-          <FileText aria-hidden /> {plural(counts.claims, "claim")}
+          <FileText aria-hidden /> {formatCount("count.claim", counts.claims)}
         </span>
       )}
       {counts.evidence > 0 && (
         <span
           title={`Evidence on its claims: ${counts.evidenceSupporting} supporting, ${counts.evidenceChallenging} challenging`}
         >
-          {plural(counts.evidence, "source")}
+          {formatCount("count.source", counts.evidence)}
         </span>
       )}
       {discussion > 0 && (
@@ -118,7 +122,7 @@ export function IdeaFacts({ idea }: { idea: IdeaListItem }) {
       )}
       {counts.initiatives > 0 && (
         <span title="Research, experiments, pilots or deployments">
-          <Rocket aria-hidden /> {plural(counts.initiatives, "initiative")}
+          <Rocket aria-hidden /> {formatCount("count.initiative", counts.initiatives)}
         </span>
       )}
     </>

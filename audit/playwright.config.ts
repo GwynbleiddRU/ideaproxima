@@ -22,6 +22,7 @@ export default defineConfig({
   reporter: [["list"], ["html", { outputFolder: "./artifacts/report", open: "never" }]],
   use: {
     baseURL: `http://localhost:${PORT}`,
+    locale: "en-US",
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
   },

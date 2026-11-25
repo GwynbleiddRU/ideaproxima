@@ -1,3 +1,5 @@
+import { vocabularyField } from "@/lib/vocabulary";
+import { useLocale } from "@/locales/react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { useState, type CSSProperties } from "react";
@@ -12,7 +14,7 @@ import { ModerateButton } from "@/components/ModerateButton";
 import { RatingMeter } from "@/components/Ratings";
 import { ClaimStatusBadge } from "@/components/status";
 import { cx } from "@/lib/cx";
-import { plural } from "@/lib/format";
+import { formatCount } from "@/locales/runtime";
 import { Badge } from "@/ui/Badge";
 import { Button, ButtonLink } from "@/ui/Button";
 import { EmptyState, Skeleton } from "@/ui/Feedback";
@@ -35,6 +37,7 @@ export function ClaimCard({
   canUnlink: boolean;
   defaultOpen?: boolean;
 }) {
+  useLocale();
   const [open, setOpen] = useState(!!defaultOpen);
   const [dialog, setDialog] = useState<"assess" | "evidence" | null>(null);
   const gate = useAuthGate();
@@ -59,20 +62,30 @@ export function ClaimCard({
     >
       <header className={styles.claimHead}>
         <ClaimStatusBadge status={claim.derived.status} />
-        <Badge tone="outline" title={CLAIM_ROLE_INFO[claim.role].description}>
-          {CLAIM_ROLE_INFO[claim.role].label}
+        <Badge
+          tone="outline"
+          title={vocabularyField(
+            "claimRoles",
+            claim.role,
+            "description",
+            CLAIM_ROLE_INFO[claim.role].description,
+          )}
+        >
+          {vocabularyField("claimRoles", claim.role, "label", CLAIM_ROLE_INFO[claim.role].label)}
           {claim.depth
-            ? ` · ${CONSEQUENCE_DEPTH_INFO[claim.depth as ConsequenceDepth]?.label ?? claim.depth}`
+            ? ` · ${vocabularyField("consequenceDepths", claim.depth as ConsequenceDepth, "label", CONSEQUENCE_DEPTH_INFO[claim.depth as ConsequenceDepth]?.label) ?? claim.depth}`
             : ""}
         </Badge>
         {others > 0 && (
           <Link to="/claims/$claim" params={{ claim: claim.id }} className={styles.shared}>
-            <Link2 aria-hidden /> Also underpins {plural(others, "other idea")}
+            <Link2 aria-hidden /> Also underpins {formatCount("count.otherIdea", others)}
           </Link>
         )}
         {claim.hidden && <Badge tone="warning">Hidden</Badge>}
       </header>
-      <p className={styles.claimStatement}>{claim.statement}</p>
+      <p className={styles.claimStatement} dir="auto">
+        {claim.statement}
+      </p>
       <div className={styles.claimMeters}>
         <RatingMeter dimension="support" summary={claim.derived.support} size="sm" accent />
         <RatingMeter dimension="plausibility" summary={claim.derived.plausibility} size="sm" />

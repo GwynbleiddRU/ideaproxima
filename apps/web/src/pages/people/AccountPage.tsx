@@ -1,10 +1,12 @@
+import { vocabularyField } from "@/lib/vocabulary";
+import { useLocale } from "@/locales/react";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { useState, type FormEvent } from "react";
 import { X } from "lucide-react";
 import type { PersonDto } from "@ideaproxima/contracts";
 import { CAPACITIES, CAPACITY_INFO, LIMITS, type Capacity } from "@ideaproxima/domain";
-import { catalogQueries } from "@/api/catalog";
+import { useTopicsQueryOptions } from "@/api/catalog";
 import { isApiError } from "@/api/http";
 import {
   peopleQueries,
@@ -15,6 +17,7 @@ import {
 } from "@/api/people";
 import { useLogout, useSession } from "@/api/session";
 import forms from "@/components/forms.module.scss";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { PageHeader, SectionHeading } from "@/components/PageHeader";
 import { Badge } from "@/ui/Badge";
 import { Button } from "@/ui/Button";
@@ -45,6 +48,9 @@ export function AccountPage() {
         }
       />
       <div className={styles.account}>
+        <section className={styles.panel}>
+          <LanguageSwitcher settings />
+        </section>
         <ProfileForm me={me} />
         <ExpertiseForm handle={me.handle} />
         <PasswordForm />
@@ -54,6 +60,7 @@ export function AccountPage() {
 }
 
 function ProfileForm({ me }: { me: PersonDto }) {
+  useLocale();
   const update = useUpdateProfile(me.handle);
   const [displayName, setDisplayName] = useState(me.displayName);
   const [affiliation, setAffiliation] = useState(me.affiliation);
@@ -121,9 +128,9 @@ function ProfileForm({ me }: { me: PersonDto }) {
                 key={c}
                 pressed={capacities.includes(c)}
                 onClick={() => toggle(c)}
-                title={CAPACITY_INFO[c].description}
+                title={vocabularyField("capacities", c, "description", CAPACITY_INFO[c].description)}
               >
-                {CAPACITY_INFO[c].label}
+                {vocabularyField("capacities", c, "label", CAPACITY_INFO[c].label)}
               </Chip>
             ))}
           </div>
@@ -141,7 +148,7 @@ function ProfileForm({ me }: { me: PersonDto }) {
 
 function ExpertiseForm({ handle }: { handle: string }) {
   const profile = useQuery(peopleQueries.profile(handle));
-  const topics = useQuery(catalogQueries.topics());
+  const topics = useQuery(useTopicsQueryOptions());
   const declare = useDeclareExpertise(handle);
   const revoke = useRevokeExpertise(handle);
   const [topic, setTopic] = useState("");

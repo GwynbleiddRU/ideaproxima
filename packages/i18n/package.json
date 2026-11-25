@@ -6,7 +6,8 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./locales": "./src/locales.ts"
+    "./locales": "./src/locales.ts",
+    "./negotiate": "./src/negotiate.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json"

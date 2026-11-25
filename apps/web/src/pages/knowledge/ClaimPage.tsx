@@ -1,3 +1,5 @@
+import { vocabularyField } from "@/lib/vocabulary";
+import { useLocale } from "@/locales/react";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { getRouteApi, Link } from "@tanstack/react-router";
 import { useState } from "react";
@@ -25,6 +27,7 @@ const route = getRouteApi("/claims/$claim");
 
 /** One claim across every idea that rests on it, with all its evidence and arguments. */
 export function ClaimPage() {
+  useLocale();
   const { claim: id } = route.useParams();
   const claim = useSuspenseQuery(knowledgeQueries.claim(id)).data;
   const gate = useAuthGate();
@@ -41,7 +44,14 @@ export function ClaimPage() {
           {claim.hidden && <Badge tone="warning">Hidden</Badge>}
         </div>
         <h1 className={styles.statement}>{claim.statement}</h1>
-        <p className={styles.explain}>{CLAIM_STATUS_INFO[claim.derived.status].description}</p>
+        <p className={styles.explain}>
+          {vocabularyField(
+            "claimStatuses",
+            claim.derived.status,
+            "description",
+            CLAIM_STATUS_INFO[claim.derived.status].description,
+          )}
+        </p>
         <MetaLine>
           <span>
             Stated by <PersonLink person={claim.createdBy} />
@@ -122,7 +132,9 @@ export function ClaimPage() {
                   {idea.title}
                 </Link>
                 <span className={styles.ideaMeta}>
-                  <Badge tone="outline">{CLAIM_ROLE_INFO[idea.role].label}</Badge>
+                  <Badge tone="outline">
+                    {vocabularyField("claimRoles", idea.role, "label", CLAIM_ROLE_INFO[idea.role].label)}
+                  </Badge>
                   <StageBadge stage={idea.stage} />
                 </span>
               </li>

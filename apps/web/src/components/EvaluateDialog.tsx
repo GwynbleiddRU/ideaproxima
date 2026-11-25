@@ -1,3 +1,5 @@
+import { vocabularyField } from "@/lib/vocabulary";
+import { useLocale } from "@/locales/react";
 import { useQuery } from "@tanstack/react-query";
 import { useState, type FormEvent } from "react";
 import type { EvaluationTarget } from "@ideaproxima/contracts";
@@ -63,6 +65,7 @@ function EvaluateForm({
   invalidate: readonly (readonly unknown[])[];
   onDone: () => void;
 }) {
+  useLocale();
   const { me } = useSession();
   const current = useQuery(signalQueries.evaluations(target));
   const dimensions = dimensionsFor(target.kind).filter((d) => DIMENSIONS[d].scale.kind === "ordinal");
@@ -101,9 +104,13 @@ function EvaluateForm({
         const anchors = anchorsOf(d);
         return (
           <fieldset key={d} className={cx(styles.dimension, value === null && styles.skipped)}>
-            <legend className={styles.legend}>{definition.label}</legend>
+            <legend className={styles.legend}>
+              {vocabularyField("dimensions", d, "label", definition.label)}
+            </legend>
             <div className={styles.head}>
-              <p className={styles.question}>{definition.question}</p>
+              <p className={styles.question}>
+                {vocabularyField("dimensions", d, "question", definition.question)}
+              </p>
               <label className={styles.skip}>
                 <input
                   type="radio"
@@ -138,7 +145,7 @@ function EvaluateForm({
                 </span>
                 <span>How sure are you?</span>
                 <Segmented<ConfidenceLevel | "unset">
-                  label={`Confidence in your ${definition.label.toLowerCase()} rating`}
+                  label={`Confidence in your ${vocabularyField("dimensions", d, "label", definition.label).toLowerCase()} rating`}
                   size="sm"
                   value={values[d]?.confidence ?? "unset"}
                   onChange={(c) => set(d, { confidence: c === "unset" ? null : c })}

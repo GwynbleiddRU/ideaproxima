@@ -419,6 +419,13 @@ a source, a counterargument) belongs in an argument, evidence or claim, where ot
 - **Abuse protection:** sign-in and registration attempts are rate-limited per network address, and writes are
   rate-limited per account. Too many requests return _rate_limited_ with a time to wait.
 
+## Display language
+
+Open the language picker in the header or account settings, choose a language, and apply it. The choice stays
+on this device and is also saved to your account when you are signed in. Use a URL such as `/explore?hl=ar`
+to preview a language on that page. Beta languages fall back to English where interface text is still being
+translated. Ideas and other contributions remain in the language their authors used.
+
 ## Using the API directly
 
 Researchers and integrators can use the API without any interface. The base path is `/v1`. The complete list of

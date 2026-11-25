@@ -1,9 +1,11 @@
 import { fileURLToPath } from "node:url";
 import { defineConfig } from "vitest/config";
+import { localizationPlugin } from "./apps/web/localization-plugin.ts";
 
 // One test runner for the whole monorepo. Workspace packages are consumed as TypeScript source,
 // so no build step is needed before testing.
 export default defineConfig({
+  plugins: [localizationPlugin()],
   // The web app's "@/…" imports (apps/web/vite.config.ts), for its unit tests.
   resolve: { alias: { "@": fileURLToPath(new URL("./apps/web/src", import.meta.url)) } },
   test: {

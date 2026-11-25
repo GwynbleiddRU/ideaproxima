@@ -1,15 +1,17 @@
+import { vocabularyField } from "@/lib/vocabulary";
+import { useLocale } from "@/locales/react";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { Compass, Search, SlidersHorizontal, X } from "lucide-react";
 import { IDEA_STAGE_INFO, IDEA_STAGES, LENS_INFO, type IdeaStage } from "@ideaproxima/domain";
-import { catalogQueries } from "@/api/catalog";
+import { useTopicsQueryOptions } from "@/api/catalog";
 import { ideaQueries } from "@/api/ideas";
 import type { ExploreSearch } from "@/app/search-params";
 import { IdeaCard } from "@/components/IdeaCard";
 import { PageHeader } from "@/components/PageHeader";
 import { cx } from "@/lib/cx";
-import { plural } from "@/lib/format";
+import { formatCount } from "@/locales/runtime";
 import { useRevealOnChange } from "@/lib/hooks";
 import {
   DEFAULT_CARD_DIMENSIONS,
@@ -29,6 +31,7 @@ import styles from "./ExplorePage.module.scss";
 type Patch = (patch: Partial<ExploreSearch>, replace?: boolean) => void;
 
 export function ExplorePage() {
+  useLocale();
   const search = useSearch({ from: "/explore" });
   const navigate = useNavigate({ from: "/explore" });
   const lens = search.lens ?? "newest";
@@ -55,12 +58,12 @@ export function ExplorePage() {
   const count = query.isSuccess
     ? query.hasNextPage
       ? `${ideas.length}+ ideas`
-      : plural(ideas.length, "idea")
+      : formatCount("count.idea", ideas.length)
     : null;
 
   return (
     <div className="container">
-      <title>{`${info.label} · Explore · ideaproxima`}</title>
+      <title>{`${vocabularyField("lenses", lens, "label", info.label)} · Explore · ideaproxima`}</title>
       <PageHeader
         title="Explore ideas"
         lede="Choose a lens — each one ranks on a single, named signal and says so. Narrow it with a topic or a stage."
@@ -81,7 +84,7 @@ export function ExplorePage() {
                   className={cx(styles.lensLink, key === lens && styles.lensActive)}
                   aria-current={key === lens ? "page" : undefined}
                 >
-                  {LENS_INFO[key].label}
+                  {vocabularyField("lenses", key, "label", LENS_INFO[key].label)}
                 </Link>
               ))}
             </div>
@@ -100,7 +103,7 @@ export function ExplorePage() {
                     resetScroll={false}
                     aria-current={key === lens ? "page" : undefined}
                   >
-                    {LENS_INFO[key].label}
+                    {vocabularyField("lenses", key, "label", LENS_INFO[key].label)}
                   </ChipLink>
                 </span>
               ))}
@@ -127,7 +130,8 @@ export function ExplorePage() {
               {SIGNAL_INFO[info.signal].label}
             </Badge>
             <span>
-              <b>{info.label}</b> — {info.description}
+              <b>{vocabularyField("lenses", lens, "label", info.label)}</b> —{" "}
+              {vocabularyField("lenses", lens, "description", info.description)}
             </span>
             <ActiveFilters search={search} onChange={setSearch} />
             {count && <span className={cx(styles.count, styles.countWide)}>{count}</span>}
@@ -206,7 +210,8 @@ function Filters({
   onChange: Patch;
   stacked?: boolean;
 }) {
-  const topics = useQuery(catalogQueries.topics());
+  useLocale();
+  const topics = useQuery(useTopicsQueryOptions());
   const [q, setQ] = useState(search.q ?? "");
   const [urlQ, setUrlQ] = useState(search.q);
   // The URL changed from elsewhere (e.g. the filter chip was removed): adopt it.
@@ -262,7 +267,7 @@ function Filters({
           <option value="">Any stage</option>
           {IDEA_STAGES.map((s) => (
             <option key={s} value={s}>
-              {IDEA_STAGE_INFO[s].label}
+              {vocabularyField("stages", s, "label", IDEA_STAGE_INFO[s].label)}
             </option>
           ))}
         </select>
@@ -272,11 +277,15 @@ function Filters({
 }
 
 function ActiveFilters({ search, onChange }: { search: ExploreSearch; onChange: Patch }) {
-  const topics = useQuery(catalogQueries.topics());
+  useLocale();
+  const topics = useQuery(useTopicsQueryOptions());
   const topicName = topics.data?.find((t) => t.slug === search.topic)?.name ?? search.topic;
   const active = [
     search.topic && { key: "topic" as const, label: topicName },
-    search.stage && { key: "stage" as const, label: IDEA_STAGE_INFO[search.stage].label },
+    search.stage && {
+      key: "stage" as const,
+      label: vocabularyField("stages", search.stage, "label", IDEA_STAGE_INFO[search.stage].label),
+    },
     search.tag && { key: "tag" as const, label: `#${search.tag}` },
     search.q && { key: "q" as const, label: `“${search.q}”` },
   ].filter((f): f is { key: "topic" | "stage" | "tag" | "q"; label: string } => !!f);

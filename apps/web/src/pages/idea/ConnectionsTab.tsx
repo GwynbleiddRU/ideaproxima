@@ -1,3 +1,5 @@
+import { vocabularyField } from "@/lib/vocabulary";
+import { useLocale } from "@/locales/react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { useState, type FormEvent } from "react";
@@ -202,6 +204,7 @@ function ConnectDialog({ open, onClose, idea }: { open: boolean; onClose: () => 
 }
 
 function ConnectForm({ idea, onDone }: { idea: IdeaDetail; onDone: () => void }) {
+  useLocale();
   const [search, setSearch] = useState("");
   const q = useDebounced(search.trim());
   const candidates = useQuery(ideaQueries.top("newest", 8, { q: q || undefined }));
@@ -224,8 +227,8 @@ function ConnectForm({ idea, onDone }: { idea: IdeaDetail; onDone: () => void })
 
   const preview = other
     ? reversed && !info.symmetric
-      ? `“${other.title}” ${info.forward} “${idea.title}”`
-      : `“${idea.title}” ${info.forward} “${other.title}”`
+      ? `“${other.title}” ${vocabularyField("relationTypes", type, "forward", info.forward)} “${idea.title}”`
+      : `“${idea.title}” ${vocabularyField("relationTypes", type, "forward", info.forward)} “${other.title}”`
     : null;
 
   return (
@@ -262,8 +265,10 @@ function ConnectForm({ idea, onDone }: { idea: IdeaDetail; onDone: () => void })
           {RELATION_TYPES.map((t) => (
             <label key={t} className={forms.choice}>
               <input type="radio" name="type" checked={type === t} onChange={() => setType(t)} />
-              <strong>{RELATION_TYPE_INFO[t].label}</strong>
-              <span>{RELATION_TYPE_INFO[t].description}</span>
+              <strong>{vocabularyField("relationTypes", t, "label", RELATION_TYPE_INFO[t].label)}</strong>
+              <span>
+                {vocabularyField("relationTypes", t, "description", RELATION_TYPE_INFO[t].description)}
+              </span>
             </label>
           ))}
         </div>
@@ -274,8 +279,14 @@ function ConnectForm({ idea, onDone }: { idea: IdeaDetail; onDone: () => void })
           value={reversed ? "reverse" : "forward"}
           onChange={(v) => setReversed(v === "reverse")}
           options={[
-            { value: "forward", label: `This idea ${info.forward} the other` },
-            { value: "reverse", label: `The other ${info.forward} this idea` },
+            {
+              value: "forward",
+              label: `This idea ${vocabularyField("relationTypes", type, "forward", info.forward)} the other`,
+            },
+            {
+              value: "reverse",
+              label: `The other ${vocabularyField("relationTypes", type, "forward", info.forward)} this idea`,
+            },
           ]}
         />
       )}

@@ -1,3 +1,5 @@
+import { vocabularyField } from "@/lib/vocabulary";
+import { useLocale } from "@/locales/react";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { useState, type FormEvent } from "react";
 import type { IdeaContentDto, IdeaDetail, RevisionSummaryDto } from "@ideaproxima/contracts";
@@ -27,6 +29,7 @@ import tabs from "./tabs.module.scss";
 
 /** Nothing is rewritten: every revision, decision and stage change is preserved and can be inspected. */
 export function HistoryTab() {
+  useLocale();
   const idea = useIdea();
   const revisions = useQuery(ideaQueries.revisions(idea.slug));
   const stages = useQuery(ideaQueries.stages(idea.slug));
@@ -61,8 +64,10 @@ export function HistoryTab() {
                 <span className={styles.marker} aria-hidden />
                 <div>
                   <p className={styles.transition}>
-                    {t.from ? `${IDEA_STAGE_INFO[t.from].label} → ` : ""}
-                    <strong>{IDEA_STAGE_INFO[t.to].label}</strong>
+                    {t.from
+                      ? `${vocabularyField("stages", t.from, "label", IDEA_STAGE_INFO[t.from].label)} → `
+                      : ""}
+                    <strong>{vocabularyField("stages", t.to, "label", IDEA_STAGE_INFO[t.to].label)}</strong>
                   </p>
                   {t.rationale && <p className={tabs.muted}>{t.rationale}</p>}
                   <MetaLine>
@@ -108,6 +113,7 @@ function RevisionRow({
   idea: IdeaDetail;
   onView: () => void;
 }) {
+  useLocale();
   const can = usePermissions(idea);
   const withdraw = useWithdrawRevision(idea.slug);
   const [deciding, setDeciding] = useState(false);
@@ -128,7 +134,14 @@ function RevisionRow({
                   : "neutral"
           }
         >
-          {current ? "Current" : REVISION_STATUS_INFO[revision.status].label}
+          {current
+            ? "Current"
+            : vocabularyField(
+                "revisionStatuses",
+                revision.status,
+                "label",
+                REVISION_STATUS_INFO[revision.status].label,
+              )}
         </Badge>
         <p className={styles.changeNote}>{revision.changeNote || "Initial version"}</p>
       </div>
@@ -256,6 +269,7 @@ function RevisionDialog({
 }
 
 function RevisionDiff({ revision, idea }: { revision: RevisionSummaryDto; idea: IdeaDetail }) {
+  useLocale();
   const after = useQuery(ideaQueries.revision(idea.slug, revision.id));
   const before = useQuery({
     ...ideaQueries.revision(idea.slug, revision.baseRevisionId ?? ""),
@@ -269,7 +283,7 @@ function RevisionDiff({ revision, idea }: { revision: RevisionSummaryDto; idea: 
     { label: "Title", before: a?.title ?? "", after: b.title },
     { label: "Summary", before: a?.summary ?? "", after: b.summary },
     ...IDEA_SECTIONS.map((key) => ({
-      label: IDEA_SECTION_INFO[key].label,
+      label: vocabularyField("sections", key, "label", IDEA_SECTION_INFO[key].label),
       before: a?.sections[key] ?? "",
       after: b.sections[key] ?? "",
     })),

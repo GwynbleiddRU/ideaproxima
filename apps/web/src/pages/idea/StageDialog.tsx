@@ -1,3 +1,5 @@
+import { vocabularyField } from "@/lib/vocabulary";
+import { useLocale } from "@/locales/react";
 import { useQuery } from "@tanstack/react-query";
 import { useState, type FormEvent } from "react";
 import type { IdeaDetail } from "@ideaproxima/contracts";
@@ -36,6 +38,7 @@ export function StageDialog({
 }
 
 function StageForm({ idea, onDone }: { idea: IdeaDetail; onDone: () => void }) {
+  useLocale();
   const requirements = new Map(idea.stageRequirements.map((r) => [r.stage, r]));
   const [to, setTo] = useState<IdeaStage | null>(null);
   const [rationale, setRationale] = useState("");
@@ -54,20 +57,23 @@ function StageForm({ idea, onDone }: { idea: IdeaDetail; onDone: () => void }) {
 
   return (
     <form onSubmit={submit} className={forms.form}>
-      <Fieldset legend="New stage" hint={`Currently: ${IDEA_STAGE_INFO[idea.stage].label}.`}>
+      <Fieldset
+        legend="New stage"
+        hint={`Currently: ${vocabularyField("stages", idea.stage, "label", IDEA_STAGE_INFO[idea.stage].label)}.`}
+      >
         <div className={forms.choices}>
           {IDEA_STAGES.filter((s) => s !== idea.stage).map((s) => {
             const req = requirements.get(s);
             return (
               <label key={s} className={forms.choice}>
                 <input type="radio" name="stage" checked={to === s} onChange={() => setTo(s)} />
-                <strong>{IDEA_STAGE_INFO[s].label}</strong>
+                <strong>{vocabularyField("stages", s, "label", IDEA_STAGE_INFO[s].label)}</strong>
                 <span>
                   {req
                     ? req.met
                       ? "✓ Requirement met"
                       : `Needs: ${req.requirement}`
-                    : IDEA_STAGE_INFO[s].description}
+                    : vocabularyField("stages", s, "description", IDEA_STAGE_INFO[s].description)}
                 </span>
               </label>
             );

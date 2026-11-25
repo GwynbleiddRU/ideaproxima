@@ -288,18 +288,26 @@ so replaying a callback only repeats work that PostgreSQL rolled back.
 
 ## Text and languages
 
+- Add new interface text to the English source in `apps/web/src/locales/messages.ts`. Use an explicit typed ID
+  with `useMessage()` or `LocalizedText` for copy with links or emphasis. Note the context and any placeholders
+  in the catalogue. Vite compiles ICU messages into lazy locale chunks. The no-literal rule covers the shell,
+  the switcher and auth pages. Extend it as each UI area is extracted.
 - Add a domain error reason and English message to [the source catalogue](../../packages/domain/src/errors.en.ts).
   Pass its named arguments as parameters to `DomainError`. Add validation copy to the English validation
   catalogue and map the Zod issue in the HTTP validation layer. Run `npm run i18n:compile` after changing an ICU
   message. The tests compare the compiled messages against their sources.
 - Add a vocabulary term in the domain with its English labels and run `npm run i18n:extract`. Keep the stable
-  vocabulary identifiers in the domain. The generated English catalogue supplies the translation keys.
+  vocabulary identifiers in the domain. The generated English catalogue supplies the translation keys. Use
+  `useVocabulary()` or `vocabularyField()` to overlay web labels on the existing domain text.
 - To add a product language, add its tag, endonym, direction, status, fallback and formatting locale to the locale
   metadata. Add its glossary and source messages under `packages/i18n`, register the catalogues, and compile them.
   Keep the language in beta until native review. Use the existing seed to install base topic translations.
 - The API resolves a supported `?locale=` override, the account preference, `Accept-Language`, then English.
   Save canonical tags from `GET /v1/locales`. Send `{ "locale": null }` to `PATCH /v1/me` to clear a preference.
   The language of contributed content has its own [plan](../agents/production/06-multilingual-content-and-search.md).
+- The web app resolves `?hl=`, the device preference, the account preference, browser languages, then English.
+  Keep URLs canonical. Use logical CSS properties and isolate user text with `dir="auto"` until the content
+  language is available. Topic query keys include the display locale.
 
 ## Everyday commands
 

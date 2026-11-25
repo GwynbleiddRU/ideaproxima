@@ -86,7 +86,7 @@
 }
 
 .count {
-  margin-left: auto;
+  margin-inline-start: auto;
   color: var(--fg-muted);
   font-size: var(--text-sm);
   white-space: nowrap;
@@ -281,8 +281,8 @@
     &::after {
       content: "";
       position: absolute;
-      left: 0.75rem;
-      right: 0.75rem;
+      inset-inline-start: 0.75rem;
+      inset-inline-end: 0.75rem;
       bottom: -1px;
       height: 2px;
       border-radius: 2px;
@@ -337,7 +337,7 @@
   }
 
   .subtle {
-    margin-left: auto;
+    margin-inline-start: auto;
     font-size: var(--text-xs);
   }
 }

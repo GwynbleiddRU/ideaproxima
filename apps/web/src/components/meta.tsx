@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import type { PersonRef, TopicRef } from "@ideaproxima/contracts";
 import { cx } from "@/lib/cx";
 import { formatDateTime, timeAgo } from "@/lib/format";
+import { useLocale } from "@/locales/react";
 import { Avatar } from "@/ui/Avatar";
 import styles from "./meta.module.scss";
 
@@ -19,13 +20,14 @@ export function PersonLink({
   return (
     <Link to="/people/$handle" params={{ handle: person.handle }} className={styles.person}>
       {avatar && <Avatar name={person.displayName} seed={person.handle} size={size} />}
-      <span>{person.displayName}</span>
+      <bdi>{person.displayName}</bdi>
     </Link>
   );
 }
 
 /** Relative time with the exact timestamp as a tooltip and machine-readable value. */
 export function TimeAgo({ iso, className }: { iso: string; className?: string }) {
+  useLocale();
   return (
     <time dateTime={iso} title={formatDateTime(iso)} className={cx(styles.time, className)}>
       {timeAgo(iso)}

@@ -31,7 +31,7 @@
 
   ul,
   ol {
-    padding-left: 1.3em;
+    padding-inline-start: 1.3em;
   }
 
   li + li {
@@ -80,8 +80,8 @@
   }
 
   blockquote {
-    padding-left: 1em;
-    border-left: 3px solid var(--border-strong);
+    padding-inline-start: 1em;
+    border-inline-start: 3px solid var(--border-strong);
     color: var(--fg-muted);
     font-style: italic;
   }

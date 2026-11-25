@@ -9,12 +9,13 @@ app), one PostgreSQL database, and packages with strict dependency direction:
 packages/domain      pure TypeScript. Vocabulary, invariants, permission policy, provisional metrics.
       ▲              No I/O, no dependencies. Imported by the API, scripts and the web app (labels, limits).
       │
-packages/i18n        → domain. Locale metadata, negotiation, and translated catalogues for the API.
+packages/i18n        → domain. Shared locale metadata, negotiation, and catalogue overlays.
 packages/contracts   → domain. zod schemas, the endpoint catalogue, and the OpenAPI builder.
       ▲              The API boundary. The web app imports its types (not its runtime schemas).
       │
 apps/api             Hono HTTP layer → module services → Drizzle → Postgres (or PGlite). Serves apps/web/dist.
-apps/web             React SPA (Vite, TanStack Router + Query, SCSS modules). Talks to the API over /v1 only.
+apps/web             React SPA (Vite, TanStack Router + Query, SCSS modules). Uses i18n metadata and Lingui.
+                     Talks to the API over /v1 only.
 ```
 
 Around them: `scripts/` (dev runner, test runner with endpoint-coverage enforcement, API docs generator, doc link
@@ -306,6 +307,12 @@ then `Accept-Language` and English. Localised reads vary on `Accept-Language`, `
 Signed-in catalogue reads and all error responses are excluded from shared caches. Topic translations are
 mutable catalogue rows. Idea references keep canonical topic names. An administrator's translation change
 records its topic and locale in the ledger. [Localisation plan](production/05-localization.md)
+
+The web app resolves the page's `?hl=` override, the local device preference, the account preference, the
+browser languages and English. Vite compiles explicit ICU IDs and vocabulary overrides into one lazy chunk
+per locale. English fallback messages use English plural rules. The document language and direction follow
+the selected locale, and the content wrappers use bidirectional isolation until authored language metadata
+is available. Topic reads use explicit locale parameters and locale-specific cache keys.
 
 ## How to extend safely
 

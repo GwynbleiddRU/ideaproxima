@@ -1,14 +1,16 @@
+import { vocabularyField } from "@/lib/vocabulary";
+import { useLocale } from "@/locales/react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { useRef, useState, type FormEvent, type ReactNode } from "react";
 import { BookOpen, FileText, Lightbulb, Plus, Search, X } from "lucide-react";
 import type { SearchResults } from "@ideaproxima/contracts";
 import { SOURCE_KIND_INFO } from "@ideaproxima/domain";
-import { catalogQueries } from "@/api/catalog";
+import { catalogQueries, useTopicsQueryOptions } from "@/api/catalog";
 import { IdeaCard } from "@/components/IdeaCard";
 import { ClaimStatusBadge } from "@/components/status";
 import { cx } from "@/lib/cx";
-import { plural } from "@/lib/format";
+import { formatCount } from "@/locales/runtime";
 import { Avatar } from "@/ui/Avatar";
 import { Button, ButtonLink } from "@/ui/Button";
 import { ChipLink } from "@/ui/Chip";
@@ -122,7 +124,8 @@ function Results({
   kind: Kind;
   onKind: (kind: Kind) => void;
 }) {
-  const topics = useQuery(catalogQueries.topics());
+  useLocale();
+  const topics = useQuery(useTopicsQueryOptions());
   const total = data.ideas.length + data.claims.length + data.sources.length + data.people.length;
   const count = (k: Kind) => (k === "all" ? total : data[k].length);
   const show = (k: keyof SearchResults) => (kind === "all" || kind === k) && data[k].length > 0;
@@ -184,7 +187,7 @@ function Results({
                   </Link>
                   <span className={styles.resultMeta}>
                     <ClaimStatusBadge status={c.status} />
-                    Underpins {plural(c.ideaCount, "idea")}
+                    Underpins {formatCount("count.idea", c.ideaCount)}
                   </span>
                 </li>
               ))}
@@ -207,7 +210,13 @@ function Results({
                     {highlight(s.title, q)}
                   </Link>
                   <span className={styles.resultMeta}>
-                    {[SOURCE_KIND_INFO[s.kind].label, s.authors, s.year].filter(Boolean).join(" · ")}
+                    {[
+                      vocabularyField("sourceKinds", s.kind, "label", SOURCE_KIND_INFO[s.kind].label),
+                      s.authors,
+                      s.year,
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")}
                   </span>
                 </li>
               ))}
@@ -271,7 +280,7 @@ function Results({
 
 /** Before a query: ways in, so the empty page still leads somewhere. */
 function StartHere() {
-  const topics = useQuery(catalogQueries.topics());
+  const topics = useQuery(useTopicsQueryOptions());
   const active = (topics.data ?? []).filter((t) => !t.parentId && t.ideaCount > 0).slice(0, 8);
   return (
     <div className={styles.start}>

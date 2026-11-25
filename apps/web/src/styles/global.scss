@@ -19,6 +19,46 @@
   @include tokens.dark-palette;
 }
 
+:lang(ar) {
+  --font-sans: "Noto Sans Arabic", "Geeza Pro", "Segoe UI", Tahoma, sans-serif;
+  --font-serif: var(--font-sans);
+}
+
+:lang(zh) {
+  --font-sans: "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
+  --font-serif: var(--font-sans);
+}
+
+:lang(ja) {
+  --font-sans: "Hiragino Sans", "Yu Gothic", Meiryo, "Noto Sans CJK JP", sans-serif;
+  --font-serif: var(--font-sans);
+  line-break: strict;
+}
+
+:lang(ko) {
+  --font-sans: "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans CJK KR", sans-serif;
+  --font-serif: var(--font-sans);
+}
+
+:lang(hi) {
+  --font-sans: "Noto Sans Devanagari", "Kohinoor Devanagari", "Nirmala UI", Mangal, sans-serif;
+  --font-serif: var(--font-sans);
+}
+
+:is(:lang(ar), :lang(zh), :lang(ja), :lang(ko), :lang(hi)) {
+  letter-spacing: normal !important;
+  text-transform: none !important;
+  font-style: normal !important;
+}
+
+:is(h1, h2, h3, h4):is(:lang(ar), :lang(hi)) {
+  line-height: 1.5;
+}
+
+[dir="rtl"] :is(.lucide-arrow-right, .lucide-arrow-up-right, .lucide-chevron-right, .lucide-log-out) {
+  scale: -1 1;
+}
+
 // ---------------------------------------------------------------- reset
 
 *,
@@ -51,6 +91,10 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
+}
+
+body:is(:lang(ar), :lang(hi)) {
+  line-height: 1.7;
 }
 
 img,

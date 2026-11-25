@@ -80,9 +80,9 @@ async function measure(page: Page, path: string): Promise<Metrics> {
 
 const results: Metrics[] = [];
 
-for (const path of ["/", "/explore", `/ideas/${IDEA.slug}`]) {
+for (const path of ["/", "/explore", `/ideas/${IDEA.slug}`, `/ideas/${IDEA.slug}?hl=ru`]) {
   test(`first visit to ${path} stays within budget`, async ({ browser }) => {
-    const context = await browser.newContext();
+    const context = await browser.newContext({ locale: "en-US" });
     const page = await context.newPage();
     const metrics = await measure(page, path);
     await context.close();

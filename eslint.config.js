@@ -34,6 +34,24 @@ export default tseslint.config(
     },
   },
   {
+    files: [
+      "apps/web/src/app/Shell.tsx",
+      "apps/web/src/pages/auth/**/*.tsx",
+      "apps/web/src/components/LanguageSwitcher.tsx",
+    ],
+    rules: {
+      "no-restricted-syntax": [
+        "error",
+        { selector: "JSXText[value=/\\S/]", message: "Put visible copy in the English interface catalogue." },
+        {
+          selector:
+            "JSXAttribute[name.name=/^(aria-label|title|label|placeholder|hint|description|legend|closeLabel)$/] > Literal",
+          message: "Put visible and accessible labels in the English interface catalogue.",
+        },
+      ],
+    },
+  },
+  {
     // Integration tests assert on loosely-typed JSON responses on purpose.
     files: ["**/test/**/*.ts"],
     rules: { "@typescript-eslint/no-explicit-any": "off" },

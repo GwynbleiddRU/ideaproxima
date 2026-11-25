@@ -1,12 +1,14 @@
+import { vocabularyField } from "@/lib/vocabulary";
+import { useLocale } from "@/locales/react";
 import { useInfiniteQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { getRouteApi, Link } from "@tanstack/react-router";
 import { ArrowRight, Plus } from "lucide-react";
 import type { IdeaListItem, TopicRef } from "@ideaproxima/contracts";
 import { LENS_INFO, type LensKey } from "@ideaproxima/domain";
-import { catalogQueries } from "@/api/catalog";
+import { useTopicQueryOptions } from "@/api/catalog";
 import { ideaQueries } from "@/api/ideas";
 import { IdeaCard } from "@/components/IdeaCard";
-import { plural } from "@/lib/format";
+import { formatCount } from "@/locales/runtime";
 import { topicIcon } from "@/lib/topic-icons";
 import { DEFAULT_CARD_DIMENSIONS, LENS_DIMENSIONS } from "@/lib/vocabulary";
 import { Button, ButtonLink } from "@/ui/Button";
@@ -27,10 +29,11 @@ function relatedTopics(ideas: IdeaListItem[], exclude: Set<string>): (TopicRef &
 }
 
 export function TopicPage() {
+  useLocale();
   const { slug } = route.useParams();
   const { lens: lensParam } = route.useSearch();
   const lens = lensParam ?? "newest";
-  const topic = useSuspenseQuery(catalogQueries.topic(slug)).data;
+  const topic = useSuspenseQuery(useTopicQueryOptions(slug)).data;
   const ideas = useInfiniteQuery(ideaQueries.list({ topic: slug, lens, limit: 12 }));
   const list = ideas.data?.pages.flatMap((p) => p.items) ?? [];
   const Icon = topicIcon(topic.slug);
@@ -48,7 +51,8 @@ export function TopicPage() {
         </span>
         <h1 className={styles.title}>{topic.name}</h1>
         <p className={styles.lede}>
-          {topic.description} <span className={styles.subtle}>· {plural(topic.ideaCount, "idea")}</span>
+          {topic.description}{" "}
+          <span className={styles.subtle}>· {formatCount("count.idea", topic.ideaCount)}</span>
         </p>
         <ButtonLink to="/new" variant="secondary" size="sm" className={styles.headerAction}>
           <Plus /> Propose an idea here
@@ -78,13 +82,15 @@ export function TopicPage() {
                 resetScroll={false}
                 activeOptions={{ includeSearch: true }}
                 className={styles.lensTab}
-                title={LENS_INFO[key].description}
+                title={vocabularyField("lenses", key, "description", LENS_INFO[key].description)}
               >
-                {LENS_INFO[key].label}
+                {vocabularyField("lenses", key, "label", LENS_INFO[key].label)}
               </Link>
             ))}
           </nav>
-          <p className={styles.lensNote}>{LENS_INFO[lens].description}</p>
+          <p className={styles.lensNote}>
+            {vocabularyField("lenses", lens, "description", LENS_INFO[lens].description)}
+          </p>
           {ideas.isPending ? (
             <Skeleton lines={8} />
           ) : list.length ? (
