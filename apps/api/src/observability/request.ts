@@ -4,6 +4,7 @@ import { matchedRoutes } from "hono/route";
 import type { Logger } from "pino";
 import type { AppEnv } from "../http/env";
 import { uuidv7 } from "../lib/ids";
+import type { ErrorReporter } from "./errors";
 import { httpDuration, httpInFlight, httpRequests } from "./metrics";
 
 const REQUEST_ID_HEADER = "X-Request-Id";
@@ -25,9 +26,13 @@ export const identifyRequest: [MiddlewareHandler, MiddlewareHandler] = [
   },
 ];
 
-export function observeRequest(logger: Logger, logRequests: boolean): MiddlewareHandler<AppEnv> {
+export function observeRequest(
+  logger: Logger,
+  logRequests: boolean,
+  errorReporter: ErrorReporter,
+): MiddlewareHandler<AppEnv> {
   return async (c, next) => {
-    c.set("logger", logger);
+    c.set("errorReporter", errorReporter);
     const start = performance.now();
     httpInFlight.inc();
     try {

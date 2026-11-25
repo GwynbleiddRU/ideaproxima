@@ -238,19 +238,19 @@ is [`api/openapi.json`](api/openapi.json) and is also served live at `GET /v1/op
 - **Errors** use `{ "error": { "code", "message", "details"?, "requestId"? } }`. The API echoes a valid
   `X-Request-Id` or generates a UUIDv7 and sends it in the response header and error envelope.
 
-  | Status | `code`               | Meaning                                                                                     |
-  | ------ | -------------------- | ------------------------------------------------------------------------------------------- |
-  | 400    | `validation_failed`  | Malformed input. `details.issues[{ path, message }]` lists problems.                        |
-  | 401    | `unauthenticated`    | No valid session (or wrong credentials on login).                                           |
-  | 403    | `forbidden`          | Signed in, but not allowed.                                                                 |
-  | 404    | `not_found`          | No such resource, or hidden by moderation.                                                  |
-  | 405    | `validation_failed`  | A Hono handler rejected the HTTP method.                                                    |
-  | 409    | `conflict`           | Duplicate, or concurrent modification (revisions return `details.currentRevisionId`).       |
-  | 413    | `payload_too_large`  | Request body over the limit.                                                                |
-  | 422    | `invariant_violated` | Well-formed but breaks a domain rule (e.g. a stage without proof; `details.requirement`).   |
-  | 429    | `rate_limited`       | Too many requests. `Retry-After` header and `details.retryAfterSeconds`.                    |
-  | 500    | `internal_error`     | Unexpected failure, correlated with the request ID in the logs.                             |
-  | 503    | `unavailable`        | The password hashing queue is full. Retry after the interval in `Retry-After` (one second). |
+  | Status | `code`               | Meaning                                                                                   |
+  | ------ | -------------------- | ----------------------------------------------------------------------------------------- |
+  | 400    | `validation_failed`  | Malformed input. `details.issues[{ path, message }]` lists problems.                      |
+  | 401    | `unauthenticated`    | No valid session (or wrong credentials on login).                                         |
+  | 403    | `forbidden`          | Signed in, but not allowed.                                                               |
+  | 404    | `not_found`          | No such resource, or hidden by moderation.                                                |
+  | 405    | `validation_failed`  | A Hono handler rejected the HTTP method.                                                  |
+  | 409    | `conflict`           | Duplicate, or concurrent modification (revisions return `details.currentRevisionId`).     |
+  | 413    | `payload_too_large`  | Request body over the limit.                                                              |
+  | 422    | `invariant_violated` | Well-formed but breaks a domain rule (e.g. a stage without proof; `details.requirement`). |
+  | 429    | `rate_limited`       | Too many requests. `Retry-After` header and `details.retryAfterSeconds`.                  |
+  | 500    | `internal_error`     | Unexpected failure, correlated with the request ID in the logs.                           |
+  | 503    | `unavailable`        | Hash queue full, database timeout or retry exhausted. Retry after `Retry-After` (1 s).    |
 
 - **Pagination.** Lists return `{ items, nextCursor }`. Pass `cursor` back unchanged; `limit` is 1–100 (default
   20). Cursors are opaque: metric-sorted lists use offsets internally, chronological streams use keysets, and
@@ -272,6 +272,14 @@ Use the process logger in `apps/api/src/observability/logger.ts`. Request events
 and an authenticated actor's ID. Keep raw paths, headers, cookies, bodies, search terms, e-mail addresses and
 client network keys out of logs. Unexpected errors use a fixed message, the request ID and any SQLSTATE.
 Keep exception objects, error strings, stacks, SQL and database parameters out of those events.
+Report unexpected 500s and fatal process errors through `ErrorReporter`. The optional transport receives
+the same redacted fields.
+
+### Transaction retries
+
+`inTransaction()` replays the entire outer transaction once after a deadlock or a serialisation failure,
+with 20–50 ms of jitter. Nested calls create savepoints. Keep irreversible I/O outside transaction callbacks
+so replaying a callback only repeats work that PostgreSQL rolled back.
 
 ## Everyday commands
 

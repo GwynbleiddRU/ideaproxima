@@ -1,13 +1,13 @@
 import type { AppConfig } from "../config";
 import type { Ctx } from "../modules/shared/context";
-import type { Logger } from "pino";
+import type { ErrorReporter } from "../observability/errors";
 
 export type AppEnv = {
   Variables: {
     ctx: Ctx;
     sessionId: string | null;
     config: AppConfig;
-    logger: Logger;
+    errorReporter: ErrorReporter;
     webRoute?: "static" | "web";
   };
 };

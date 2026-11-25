@@ -11,6 +11,7 @@ import { SESSION_COOKIE, type AppEnv } from "./http/env";
 import { errorResponse, handleError } from "./http/errors";
 import { clientAddress } from "./http/client-address";
 import { rateLimit } from "./http/rate-limit";
+import { addProbes } from "./http/probes";
 import { catalogRoutes } from "./http/routes/catalog";
 import { identityRoutes } from "./http/routes/identity";
 import { ideaRoutes } from "./http/routes/ideas";
@@ -20,11 +21,14 @@ import { resolveSession } from "./modules/identity/service";
 import { createLogger } from "./observability/logger";
 import { identifyRequest, observeRequest } from "./observability/request";
 import { METRICS_PATH } from "./observability/metrics";
+import { createErrorReporter, type ErrorReporter } from "./observability/errors";
 
 export interface AppDeps {
   db: Database;
   config: AppConfig;
   logger?: Logger;
+  errorReporter?: ErrorReporter;
+  isDraining?: () => boolean;
   /** Evaluator weighting for derived metrics. Defaults to the uniform baseline. */
   weights?: WeightPolicy;
   /** Directory of the built web app to serve at `/` (see http/web.ts). Null or absent: API only. */
@@ -47,11 +51,14 @@ export function createApp(deps: AppDeps) {
   const { config } = deps;
   const { http } = config;
   const weights = deps.weights ?? uniformWeights;
+  const logger = deps.logger ?? createLogger(config.log);
+  const errorReporter = deps.errorReporter ?? createErrorReporter(logger);
   const app = new Hono<AppEnv>();
 
   app.use("*", ...identifyRequest);
-  app.use("*", observeRequest(deps.logger ?? createLogger(config.log), config.log.requests));
+  app.use("*", observeRequest(logger, config.log.requests, errorReporter));
   app.use("*", secureHeaders());
+  addProbes(app, deps.db, deps.isDraining ?? (() => false));
   // Keep the public endpoint absent even for browsers that would otherwise receive the SPA shell.
   app.use(METRICS_PATH, async (c) => c.notFound());
   if (deps.webRoot) app.use("*", webApp(deps.webRoot));

@@ -43,6 +43,14 @@ Invalid settings stop startup with one error listing the affected variables. Boo
 | `PORT`                           | `3000`                                          | HTTP port.                                                                                                                                                                       |
 | `INTERNAL_PORT`                  | unset                                           | Enables the private Prometheus listener on a port distinct from `PORT`.                                                                                                          |
 | `NODE_ENV`                       | —                                               | Set `production` in production (makes cookies Secure by default).                                                                                                                |
+| `APP_COMMIT`                     | `unknown`                                       | Short or full Git commit hash recorded at startup. Also a Docker build argument.                                                                                                 |
+| `DB_POOL_MAX`                    | `10`                                            | Maximum connections per API instance on PostgreSQL.                                                                                                                              |
+| `DB_STATEMENT_TIMEOUT_MS`        | `5000`                                          | Maximum execution time per API statement. Zero disables it.                                                                                                                      |
+| `DB_LOCK_TIMEOUT_MS`             | `3000`                                          | Maximum wait per API database lock, including advisory locks. Zero disables it.                                                                                                  |
+| `DB_IDLE_IN_TX_TIMEOUT_MS`       | `10000`                                         | Maximum idle time inside an API transaction. Zero disables it.                                                                                                                   |
+| `DB_CONNECT_TIMEOUT_MS`          | `5000`                                          | PostgreSQL connection establishment deadline in milliseconds.                                                                                                                    |
+| `SHUTDOWN_DELAY_MS`              | `5000`                                          | Wait after readiness fails so the load balancer can stop routing. Zero closes the listeners immediately.                                                                         |
+| `SHUTDOWN_TIMEOUT_MS`            | `25000`                                         | Maximum time to wait for active HTTP connections after closing the listeners.                                                                                                    |
 | `SESSION_TTL_DAYS`               | `30`                                            | Session lifetime.                                                                                                                                                                |
 | `COOKIE_SECURE`                  | `true` when `NODE_ENV=production`, else `false` | Mark the session cookie Secure (HTTPS only).                                                                                                                                     |
 | `ALLOW_INSECURE_COOKIES`         | `false`                                         | Explicit exception for local HTTP runs with production defaults and `COOKIE_SECURE=false`.                                                                                       |
@@ -60,6 +68,7 @@ Invalid settings stop startup with one error listing the affected variables. Boo
 | `LOG_REQUESTS`                   | `true` (unless `NODE_ENV=test`)                 | One log line per request.                                                                                                                                                        |
 | `LOG_LEVEL`                      | `info`                                          | Minimum log level. Values are `fatal`, `error`, `warn`, `info`, `debug`, `trace` and `silent`.                                                                                   |
 | `LOG_FORMAT`                     | `json` in production, else `pretty`             | Log format on stdout. Pretty formatting requires the development dependency; production-only installations emit JSON.                                                            |
+| `SENTRY_DSN`                     | unset                                           | Optional HTTP(S) DSN for forwarding redacted unexpected errors and fatal process events.                                                                                         |
 | `WEB_ROOT`                       | `apps/web/dist`, when it has been built         | Directory of the built web app to serve at `/`. `off` serves the API only (`GET /` then redirects to the `/v1` index).                                                           |
 
 ## Deploying with Docker
@@ -69,7 +78,7 @@ the API's production dependencies and the SQL migrations. The web app's packages
 installed in it.
 
 ```bash
-docker build -t ideaproxima .
+docker build --build-arg APP_COMMIT="$(git rev-parse HEAD)" -t ideaproxima .
 ```
 
 **Release steps** (once per deploy, before starting new instances):
@@ -87,7 +96,7 @@ docker run -d -p 3000:3000 \
   ideaproxima
 ```
 
-The image declares a `HEALTHCHECK` against `GET /v1/health`, runs as the unprivileged `node` user and listens on 3000.
+The image declares a `HEALTHCHECK` against `GET /readyz`, runs as the unprivileged `node` user and listens on 3000 by default.
 `CORS_ORIGINS` is needed only for a client hosted on another origin; the bundled web app is same-origin.
 
 **The same layout locally:** `docker compose up --build` runs PostgreSQL, then a one-off `migrate` service (the release
@@ -106,7 +115,16 @@ DATABASE_URL=… NODE_ENV=production node apps/api/dist/main.js
 ```
 
 `apps/api/dist/` must stay next to `apps/api/drizzle/` (migrations are read at runtime) and `apps/web/dist/` (or set
-`WEB_ROOT`). The process stops gracefully on SIGINT/SIGTERM.
+`WEB_ROOT`).
+
+### Shutdown
+
+On SIGINT or SIGTERM the process marks itself draining and readiness responds 503 immediately. After
+`SHUTDOWN_DELAY_MS` it closes both listeners to new connections and lets active requests finish for up to
+`SHUTDOWN_TIMEOUT_MS`. At the deadline it closes any remaining HTTP connections and forces the
+PostgreSQL pool closed. It closes the database, flushes pending error reports and exits 0. An uncaught exception
+or unhandled rejection emits a redacted fatal event and exits 1. Compose gives the app 40 seconds by default.
+When changing either shutdown setting, set the orchestrator's grace period above their sum with time for cleanup.
 
 ## First admin and roles
 
@@ -128,6 +146,10 @@ with no actor.
   `migrate.js` is safe to run repeatedly. Never edit an applied migration; add a new one.
 - **The API never migrates a PostgreSQL database by itself** (only embedded PGlite in development). Migrating is
   an explicit release step, so several instances can never race on it.
+- **Timeouts:** the API applies the configured pool and per-session settings. Operator commands retain their
+  driver and database defaults for long migrations and metric rebuilds. PGlite accepts the session settings
+  but uses one in-process connection, and its embedded runtime did not interrupt `pg_sleep` at the statement deadline.
+  Use PostgreSQL to verify enforced database deadlines and contention.
 - **History guards:** migration `0001_history_guards.sql` installs triggers that make recorded facts
   append-only. They also stop accidental `UPDATE`/`DELETE` by operators. That is intended.
 - **Backups:** use standard PostgreSQL tooling, e.g. `pg_dump --format=custom "$DATABASE_URL" > ideaproxima.dump`
@@ -153,12 +175,18 @@ with no actor.
 
 ## Monitoring
 
-- **Health:** `GET /v1/health` returns `200 {"ok":true,"database":"up"}`, or `503` when the database is
-  unreachable. Use it for load balancers and container orchestration.
+- **Probes:** `GET /livez` returns 200 without querying PostgreSQL. `GET /readyz` returns 200 when the
+  database answers and its newest migration matches the bundle. A 503 response names the failed check
+  (`database`, `migrations` or `draining`). Use readiness for load balancers and container orchestration.
+  The public `GET /v1/health` contract continues to report database connectivity only.
 - **Logs:** stdout carries one completion event per request when `LOG_REQUESTS=true`. The event records
   `requestId`, `method`, `route`, `status`, `durationMs`, `actorId` and `bytesOut` (`null` when the
   response length is unavailable at dispatch). Static files log at `debug`. Unexpected errors emit a separate
   event with the same request ID and the SQLSTATE when available.
+- **Error reporting:** startup logs the version, Git commit, driver and resolved settings with connection
+  strings and filesystem paths masked. With `SENTRY_DSN` set, the process also forwards the fixed error
+  message, source, SQLSTATE and request ID when present. The transport bounds pending sends and skips
+  delivery during Sentry's `Retry-After` window. It uses the [Sentry envelope protocol](https://develop.sentry.dev/sdk/foundations/envelopes/).
 - **Metrics:** scrape `GET /metrics` on `INTERNAL_PORT`. The listener binds to all container interfaces.
   Keep it on the monitoring network. The Compose file publishes only the app's public HTTP port for that
   service. Leave the internal port out of host port mappings and public proxy routes.

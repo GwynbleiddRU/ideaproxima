@@ -79,8 +79,12 @@ jobs:
       - uses: actions/checkout@v4
       # postgres → migrate (one-off job) → app; --wait returns once the app's health check passes.
       - run: docker compose up --build --detach --wait app
+        env:
+          APP_COMMIT: ${{ github.sha }}
       - name: Smoke test
         run: |
+          curl -fsS http://localhost:3000/livez
+          curl -fsS http://localhost:3000/readyz
           curl -fsS http://localhost:3000/v1/health
           curl -fsS http://localhost:3000/v1 | grep -q '"apiVersion":"v1"'
           curl -fsS -H 'accept: text/html' http://localhost:3000/ | grep -q '<div id="root">'

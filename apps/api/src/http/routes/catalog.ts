@@ -35,7 +35,7 @@ const API_INDEX: ApiIndexResponse = {
 export const catalogRoutes = new Hono<AppEnv>()
   .get("/", (c) => c.json(API_INDEX))
   .get("/openapi.json", (c) => c.json((openApiDocument ??= buildOpenApiDocument())))
-  // Readiness: 200 only when the database answers. Use it for load-balancer and container health checks.
+  // Public contract: this endpoint reports database connectivity only.
   .get("/health", async (c) => {
     try {
       await c.get("ctx").db.execute(sql`select 1`);

@@ -3,6 +3,7 @@ import { HTTPException } from "hono/http-exception";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
 import type { ErrorResponse } from "@ideaproxima/contracts";
 import { DomainError, type DomainErrorCode } from "@ideaproxima/domain";
+import { sqlState } from "../db/errors";
 import { dbErrors } from "../observability/metrics";
 import type { AppEnv } from "./env";
 
@@ -17,16 +18,6 @@ const STATUS: Record<DomainErrorCode, ContentfulStatusCode> = {
   invariant_violated: 422,
 };
 
-/** Postgres error code, whether thrown directly (postgres-js) or wrapped by Drizzle (`cause`). */
-function pgCode(err: unknown): string | undefined {
-  const e = err as { code?: unknown; cause?: { code?: unknown } };
-  // PostgreSQL's letter-prefixed classes, plus standard numeric classes. Node codes such as EPIPE differ.
-  const sqlState = /^(?:[0-9][0-9A-Z]|F0|HV|P0|XX)[0-9A-Z]{3}$/;
-  return [e?.code, e?.cause?.code].find(
-    (code): code is string => typeof code === "string" && sqlState.test(code),
-  );
-}
-
 export function errorResponse(
   c: Context<AppEnv>,
   status: ContentfulStatusCode,
@@ -38,14 +29,19 @@ export function errorResponse(
 }
 
 export function recordDatabaseError(err: unknown): string | undefined {
-  const code = pgCode(err);
+  const code = sqlState(err);
   if (code) dbErrors.inc({ code: code.slice(0, 2) });
   return code;
 }
 
+function unavailable(c: Context<AppEnv>, message: string, details?: unknown) {
+  c.header("Retry-After", "1");
+  return errorResponse(c, STATUS.unavailable, "unavailable", message, details);
+}
+
 export function handleError(err: Error, c: Context<AppEnv>) {
   if (err instanceof DomainError) {
-    if (err.code === "unavailable") c.header("Retry-After", "1");
+    if (err.code === "unavailable") return unavailable(c, err.message, err.details);
     return errorResponse(c, STATUS[err.code], err.code, err.message, err.details);
   }
   if (err instanceof HTTPException) {
@@ -60,8 +56,13 @@ export function handleError(err: Error, c: Context<AppEnv>) {
       return errorResponse(c, 422, "invariant_violated", "A referenced record does not exist.");
     case "23514":
       return errorResponse(c, 400, "validation_failed", "A value violates a database constraint.");
+    case "57014":
+    case "55P03":
+      return unavailable(c, "The database operation timed out. Try again shortly.");
+    case "40001":
+    case "40P01":
+      return unavailable(c, "The database operation could not complete. Try again shortly.");
   }
-  // Error messages, stacks and causes can contain SQL, parameters and credentials.
-  c.get("logger").error({ requestId: c.get("requestId"), pgCode: code }, "unexpected request error");
+  c.get("errorReporter").report(err, { source: "request", requestId: c.get("requestId") });
   return errorResponse(c, 500, "internal_error", "Something went wrong.");
 }

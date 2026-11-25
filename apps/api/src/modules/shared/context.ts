@@ -1,5 +1,10 @@
+import { randomInt } from "node:crypto";
+import { setTimeout as delay } from "node:timers/promises";
 import type { Actor, WeightPolicy } from "@ideaproxima/domain";
 import type { Database } from "../../db/client";
+import { isRetryableTransactionError, sqlState } from "../../db/errors";
+
+const inTransactionScope = Symbol("inTransactionScope");
 
 /**
  * Everything a service needs, passed explicitly. No globals, no service locator: a test builds a Ctx with an
@@ -10,11 +15,21 @@ export interface Ctx {
   actor: Actor | null;
   /** Evaluator weighting used by derived metrics. Baseline: uniform. The scoring system plugs in here. */
   weights: WeightPolicy;
+  [inTransactionScope]?: true;
 }
 
-/** Runs `fn` in a transaction. Nested calls become savepoints, so services can compose freely. */
-export function inTransaction<T>(ctx: Ctx, fn: (tx: Ctx) => Promise<T>): Promise<T> {
-  return ctx.db.transaction((tx) => fn({ ...ctx, db: tx as unknown as Database }));
+/** Replays the whole transaction once on a retryable SQLSTATE. Nested calls use savepoints. */
+export async function inTransaction<T>(ctx: Ctx, fn: (tx: Ctx) => Promise<T>): Promise<T> {
+  const attempt = () =>
+    ctx.db.transaction((tx) => fn({ ...ctx, db: tx as unknown as Database, [inTransactionScope]: true }));
+  if (ctx[inTransactionScope]) return attempt();
+  try {
+    return await attempt();
+  } catch (error) {
+    if (!isRetryableTransactionError(sqlState(error))) throw error;
+  }
+  await delay(randomInt(20, 51));
+  return attempt();
 }
 
 export const isModerator = (ctx: Ctx): boolean =>

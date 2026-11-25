@@ -13,7 +13,15 @@ export interface DatabaseHandle {
   db: Database;
   driver: "pglite" | "postgres";
   migrate(): Promise<void>;
-  close(): Promise<void>;
+  close(force?: boolean): Promise<void>;
+}
+
+export interface DatabaseOptions {
+  maxConnections?: number;
+  statementTimeoutMs?: number;
+  lockTimeoutMs?: number;
+  idleInTransactionTimeoutMs?: number;
+  connectTimeoutMs?: number;
 }
 
 /**
@@ -25,11 +33,13 @@ export interface DatabaseHandle {
  * Both drivers run the same schema and the same SQL migrations, so behaviour in tests matches production
  * (PGlite *is* Postgres compiled to WASM, not an emulation).
  */
-export async function openDatabase(
-  url: string,
-  options: { maxConnections?: number } = {},
-): Promise<DatabaseHandle> {
+export async function openDatabase(url: string, options: DatabaseOptions = {}): Promise<DatabaseHandle> {
   const migrationsFolder = findMigrationsFolder();
+  const timeouts = Object.entries({
+    statement_timeout: options.statementTimeoutMs,
+    lock_timeout: options.lockTimeoutMs,
+    idle_in_transaction_session_timeout: options.idleInTransactionTimeoutMs,
+  }).filter((entry): entry is [string, number] => entry[1] !== undefined);
 
   if (url.startsWith("pglite:")) {
     const { PGlite } = await import("@electric-sql/pglite");
@@ -38,6 +48,15 @@ export async function openDatabase(
     const location = url.slice("pglite:".length);
     if (location !== "memory") mkdirSync(location, { recursive: true });
     const client = location === "memory" ? new PGlite() : new PGlite(location);
+    try {
+      // set_config(..., false) is the parameterized form of session-level SET.
+      for (const [name, value] of timeouts) {
+        await client.query("select pg_catalog.set_config($1, $2, false)", [name, String(value)]);
+      }
+    } catch (error) {
+      await client.close();
+      throw error;
+    }
     const db = drizzle(client, { schema });
     return {
       db: db as unknown as Database,
@@ -51,21 +70,28 @@ export async function openDatabase(
     const { default: postgres } = await import("postgres");
     const { drizzle } = await import("drizzle-orm/postgres-js");
     const { migrate } = await import("drizzle-orm/postgres-js/migrator");
-    const client = postgres(url, { max: options.maxConnections ?? 10, onnotice: () => {} });
+    const client = postgres(url, {
+      max: options.maxConnections ?? 10,
+      ...(options.connectTimeoutMs === undefined
+        ? {}
+        : { connect_timeout: options.connectTimeoutMs / 1_000 }),
+      connection: Object.fromEntries(timeouts),
+      onnotice: () => {},
+    });
     const db = drizzle(client, { schema });
     return {
       db: db as unknown as Database,
       driver: "postgres",
       migrate: () => migrate(db, { migrationsFolder }),
-      close: () => client.end(),
+      close: (force) => client.end(force ? { timeout: 0 } : undefined),
     };
   }
 
-  throw new Error(`Unsupported DATABASE_URL "${url}". Use pglite:memory, pglite:<dir> or postgres://…`);
+  throw new Error("Unsupported DATABASE_URL. Use pglite:memory, pglite:<dir> or postgres://…");
 }
 
 /** Works both from source (src/db) and from the bundled build (dist). */
-function findMigrationsFolder(): string {
+export function findMigrationsFolder(): string {
   const here = dirname(fileURLToPath(import.meta.url));
   const candidates = [
     resolve(here, "../../drizzle"),

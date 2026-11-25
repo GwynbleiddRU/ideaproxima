@@ -124,4 +124,38 @@ describe("runtime configuration", () => {
     expect(configVariables.filter((name) => !exampleKeys.has(name))).toEqual([]);
     expect(configVariables.filter((name) => !tableKeys.has(name))).toEqual([]);
   });
+
+  it("validates shutdown, database and error-reporting settings together", () => {
+    const config = loadConfig({
+      APP_COMMIT: "0b237de",
+      SHUTDOWN_DELAY_MS: "0",
+      SHUTDOWN_TIMEOUT_MS: "300",
+      DB_POOL_MAX: "4",
+      DB_STATEMENT_TIMEOUT_MS: "0",
+      DB_LOCK_TIMEOUT_MS: "100",
+      DB_IDLE_IN_TX_TIMEOUT_MS: "200",
+      DB_CONNECT_TIMEOUT_MS: "350",
+      SENTRY_DSN: "https://key@example.test/1",
+    });
+    expect(config.commit).toBe("0b237de");
+    expect(config.http).toMatchObject({ shutdownDelayMs: 0, shutdownTimeoutMs: 300 });
+    expect(config.db).toMatchObject({
+      maxConnections: 4,
+      statementTimeoutMs: 0,
+      lockTimeoutMs: 100,
+      idleInTransactionTimeoutMs: 200,
+      connectTimeoutMs: 350,
+    });
+    expect(config.log.sentryDsn).toBe("https://key@example.test/1");
+    expect(() =>
+      loadConfig({
+        DB_POOL_MAX: "0",
+        SHUTDOWN_TIMEOUT_MS: "0",
+        SENTRY_DSN: "https://private@example.test/invalid",
+      }),
+    ).toThrow(/DB_POOL_MAX:[\s\S]*SHUTDOWN_TIMEOUT_MS:[\s\S]*SENTRY_DSN: expected/);
+    expect(() => loadConfig({ SENTRY_DSN: "https://private@example.test/invalid" })).toThrow(
+      /^Invalid configuration:\n- SENTRY_DSN: expected a Sentry HTTP\(S\) DSN with a key and numeric project ID$/,
+    );
+  });
 });

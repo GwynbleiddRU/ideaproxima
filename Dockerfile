@@ -28,7 +28,9 @@ COPY apps/web apps/web
 RUN npm run build
 
 FROM node:22-alpine AS runtime
+ARG APP_COMMIT=unknown
 ENV NODE_ENV=production
+ENV APP_COMMIT=$APP_COMMIT
 WORKDIR /app
 COPY package.json package-lock.json ./
 COPY packages/domain/package.json packages/domain/
@@ -43,5 +45,5 @@ COPY apps/api/drizzle apps/api/drizzle
 USER node
 EXPOSE 3000
 HEALTHCHECK --interval=10s --timeout=3s --start-period=10s --retries=3 \
-  CMD wget -qO- http://127.0.0.1:3000/v1/health >/dev/null || exit 1
+  CMD wget -qO- "http://127.0.0.1:${PORT:-3000}/readyz" >/dev/null || exit 1
 CMD ["node", "apps/api/dist/main.js"]

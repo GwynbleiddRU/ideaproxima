@@ -260,6 +260,21 @@ One `prom-client` registry collects process metrics and application counters. Pu
 bounded by the route definitions and a fixed set of methods. The optional `INTERNAL_PORT` listener
 serves the registry separately from the public API and SPA, without publishing a Compose port.
 
+### ADR-22 Readiness, process drain and database deadlines
+
+Liveness checks that the process can answer HTTP. Readiness reads the newest Drizzle ledger entry and compares
+its timestamp and hash with the bundled migration. It fails while draining, and concurrent probes share one
+database check. This keeps the load balancer away from an unready process while the public `/v1/health` endpoint
+continues to report database connectivity.
+
+On termination the API fails readiness before closing its listeners. It lets active requests finish up to the
+configured deadline before closing the database. The API passes database deadlines to `openDatabase()`.
+Operator commands keep their existing driver defaults. The outermost transaction can retry a deadlock or
+serialisation failure once after rollback, while savepoints leave the retry to the outer transaction.
+
+The error reporter logs unexpected HTTP errors and fatal process errors using safe fields. An explicitly configured
+Sentry destination can receive those fields through a bounded transport loaded at startup.
+
 ## How to extend safely
 
 - **New vocabulary value** (stage, relation type, stance kind, …): add it in `packages/domain/src/vocabulary/*`,

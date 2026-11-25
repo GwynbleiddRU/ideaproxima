@@ -96,7 +96,7 @@ What is missing is everything around it. The [audit](api-audit.md) records 58 fi
 | Moderation       | One endpoint that hides six kinds of content; no reports, queue, appeals or automation; hidden text leaks through the activity feed |
 | Languages        | English only: interface, vocabulary, errors, search stemming, URL slugs                                                             |
 | Scale            | Metrics recomputed inside every vote; unbounded lists; offset pagination; nothing cacheable                                         |
-| Operations       | A text log and one health check; no metrics, background work, release pipeline or rehearsed restore                                 |
+| Operations       | Structured logs, private metrics, probes, drain and database deadlines. Background jobs, releases and restore drills are pending.   |
 | Public web       | Every page is the same shell with status 200; no link previews; no policy pages; browser errors unseen; Chrome-only tests           |
 
 ## Target state
@@ -172,7 +172,7 @@ Updated by whoever finishes a step: `Not started`, `In progress`, `Waiting for t
 | ---- | ---- | ----- | ---------------------------------------------------------------------------------------------------------- | --------------------- | --------------- |
 | 1    | 00   | —     | Trusted network keys, bounded hashing, pre-session limits, redacted activity and evidence, capped offsets  | —                     | Done 2026-11-25 |
 | 2    | 01   | A     | Validated configuration, structured logs, request ids, metrics                                             | —                     | Done 2026-11-25 |
-| 3    | 01   | B     | Liveness and readiness, drain on shutdown, database guard rails, error reporter                            | —                     | Not started     |
+| 3    | 01   | B     | Liveness and readiness, drain on shutdown, database guard rails, error reporter                            | —                     | Done 2026-11-25 |
 | 4    | 02   | A     | Job queue, worker, schedules, `JOBS_MODE`                                                                  | —                     | Not started     |
 | 5    | 02   | B     | Purges, asynchronous metric refresh, compose worker service                                                | —                     | Not started     |
 | 6    | 05   | A     | `packages/i18n`, error reasons, localised vocabulary, topics and errors, `/v1/locales`                     | Decision 2            | Not started     |

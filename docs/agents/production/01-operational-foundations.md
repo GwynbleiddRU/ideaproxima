@@ -3,7 +3,7 @@
 Part of the [production-readiness program](README.md). Prompt for the implementing agent:
 `prompts/api/01-operational-foundations-prompt.md`.
 
-| Status     | Phase A done 2026-11-25 (step 2). Phase B pending (step 3).                          |
+| Status     | Done 2026-11-25 (steps 2 and 3).                                                     |
 | ---------- | ------------------------------------------------------------------------------------ |
 | Depends on | [00](00-immediate-hardening.md) (shares the error code `unavailable`)                |
 | Unblocks   | Every later plan: they all emit metrics and logs and rely on validated configuration |
@@ -212,3 +212,51 @@ Unexpected error event from the IPv4 fixture, with its timestamp omitted:
 
 Phase B owns drain verification, probes, database guard rails and the error reporter. The next eligible row
 after this commit is **step 3 (plan 01, phase B)**, using `prompts/api/01-operational-foundations-prompt.md`.
+
+### Step 3 · Phase B · 2026-11-25
+
+- Steps 1 and 2 were marked done and present on `main` at `13e916b` and `0b237de`. The baseline passed
+  154 tests with all 66 endpoints covered. Phase A had already replaced the old config, logger, request ID
+  and exception mapping discussed in the prompt.
+- `apps/api/src/http/probes.ts` checks the latest migration's timestamp and hash. Concurrent readiness
+  requests share one query with a two-second response deadline. Both probe routes run before the SPA.
+  `GET /v1/health` still reports only database connectivity, with the same body and status on either outcome.
+- `apps/api/src/observability/lifecycle.ts` marks the process draining before closing the listeners, then
+  waits for active connections and handlers, including handlers whose client disconnected. When the
+  deadline expires it closes remaining connections and forces the PostgreSQL pool closed. Docker uses
+  `/readyz` for its health check and Compose allows 40 seconds for shutdown by default.
+- `apps/api/src/db/client.ts` applies PostgreSQL pool and session options only when supplied by the caller.
+  The API passes its deadlines and the operator commands retain their existing driver defaults for long
+  operations. PGlite accepts the session settings. A direct check with a 50 ms setting still completed a
+  200 ms `pg_sleep`, so PostgreSQL is the verification target for enforced deadlines.
+- `inTransaction()` retries once at the outermost boundary after rollback. Controlled `40001` and `40P01`
+  failures inside a savepoint both produced exactly two outer attempts and one committed row. Exhaustion
+  and real PostgreSQL statement and advisory lock timeouts returned `503 unavailable` with
+  `Retry-After: 1`. The PostgreSQL test used 500 ms for statements and 100 ms for locks.
+- The logging error reporter forwards only redacted metadata to an optional, dynamically loaded Sentry
+  transport. The transport uses the built-in `fetch`, with at most four in-flight envelopes and a one-second
+  deadline per send. The local receiving fixture verified payload redaction and the 429 backoff. This phase
+  added no dependency. The startup event records the package version, Docker build commit and masked
+  settings. The [configuration table and metric catalogue](../../developer/operations.md#configuration)
+  document the operator settings.
+
+**Verification.** `npm run docs:api` regenerated the reference with no diff. `npm run check` passed 168 tests
+with one PostgreSQL-only skip. `npm run test:pg` passed all 169 tests on PostgreSQL 17.12. Both checked all
+66 endpoints. The Linux container ran all five shutdown tests with real SIGTERM delivery for the three drain
+cases. The Windows suite uses IPC to invoke Node's signal handler.
+
+The Linux fixture held a request until after listeners closed and proved that the handler could still query
+the database before it closed. It also covered a disconnected client, a stuck connection that exceeded the
+request deadline, and both fatal process handlers exiting 1. The local Compose smoke matched CI's probe,
+API index, SPA and demo data checks. Sending SIGTERM to the production container returned
+`503 {"ok":false,"check":"draining"}`, then exit 0 after 6.05 seconds of host command time with the default
+5-second routing delay.
+
+The Compose startup log showed version `0.1.0`, the supplied Git build commit, the PostgreSQL driver and
+`db.url: "[redacted]"`. The Linux fatal fixture logged the following fields:
+
+```json
+{ "level": 60, "source": "unhandledRejection", "msg": "fatal process error" }
+```
+
+**Next eligible row:** step 4 (plan 02, phase A), using `prompts/api/02-background-jobs-prompt.md`.

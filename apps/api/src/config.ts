@@ -52,10 +52,21 @@ const origins = z
 
 const envSettings = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).optional(),
+  APP_COMMIT: z
+    .string()
+    .regex(/^(?:[0-9a-f]{7,64}|unknown)$/i, "expected a Git commit hash or unknown")
+    .default("unknown"),
   DATABASE_URL: databaseUrl.default("pglite:./.data/pglite"),
   ALLOW_PGLITE_IN_PRODUCTION: boolean.default(false),
+  DB_POOL_MAX: integer(1, 2_147_483_647).default(10),
+  DB_STATEMENT_TIMEOUT_MS: integer(0, 2_147_483_647).default(5_000),
+  DB_LOCK_TIMEOUT_MS: integer(0, 2_147_483_647).default(3_000),
+  DB_IDLE_IN_TX_TIMEOUT_MS: integer(0, 2_147_483_647).default(10_000),
+  DB_CONNECT_TIMEOUT_MS: integer(1, 2_147_483_647).default(5_000),
   PORT: integer(0, 65_535).default(3000),
   INTERNAL_PORT: integer(1, 65_535).optional(),
+  SHUTDOWN_DELAY_MS: integer(0, 2_147_483_647).default(5_000),
+  SHUTDOWN_TIMEOUT_MS: integer(1, 2_147_483_647).default(25_000),
   SESSION_TTL_DAYS: integer(1).default(30),
   COOKIE_SECURE: boolean.optional(),
   ALLOW_INSECURE_COOKIES: boolean.default(false),
@@ -74,6 +85,21 @@ const envSettings = z.object({
   LOG_REQUESTS: boolean.optional(),
   LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"]).default("info"),
   LOG_FORMAT: z.enum(["json", "pretty"]).optional(),
+  SENTRY_DSN: z
+    .string()
+    .refine((value) => {
+      const url = URL.parse(value);
+      return (
+        url &&
+        ["http:", "https:"].includes(url.protocol) &&
+        url.hostname &&
+        url.username &&
+        !url.search &&
+        !url.hash &&
+        /\/\d+\/?$/.test(url.pathname)
+      );
+    }, "expected a Sentry HTTP(S) DSN with a key and numeric project ID")
+    .optional(),
 });
 
 // Run a cross-field check even when unrelated variables were invalid.
@@ -148,6 +174,8 @@ export function loadConfig(
   }
 
   return {
+    environment: values.NODE_ENV ?? "development",
+    commit: values.APP_COMMIT,
     http: {
       port: values.PORT,
       internalPort: values.INTERNAL_PORT,
@@ -158,8 +186,17 @@ export function loadConfig(
       clientIpHeader,
       maxBodyBytes: values.MAX_BODY_BYTES,
       webRoot: values.WEB_ROOT || undefined,
+      shutdownDelayMs: values.SHUTDOWN_DELAY_MS,
+      shutdownTimeoutMs: values.SHUTDOWN_TIMEOUT_MS,
     },
-    db: { url: values.DATABASE_URL },
+    db: {
+      url: values.DATABASE_URL,
+      maxConnections: values.DB_POOL_MAX,
+      statementTimeoutMs: values.DB_STATEMENT_TIMEOUT_MS,
+      lockTimeoutMs: values.DB_LOCK_TIMEOUT_MS,
+      idleInTransactionTimeoutMs: values.DB_IDLE_IN_TX_TIMEOUT_MS,
+      connectTimeoutMs: values.DB_CONNECT_TIMEOUT_MS,
+    },
     rateLimits: {
       requestsPerMinute: values.RATE_LIMIT_REQUESTS_PER_MINUTE,
       authPerMinute: values.RATE_LIMIT_AUTH_PER_MINUTE,
@@ -171,6 +208,7 @@ export function loadConfig(
       requests: values.LOG_REQUESTS ?? values.NODE_ENV !== "test",
       level: values.LOG_LEVEL,
       format: values.LOG_FORMAT ?? (production ? "json" : "pretty"),
+      sentryDsn: values.SENTRY_DSN,
     },
     jobs: {},
     mail: {},

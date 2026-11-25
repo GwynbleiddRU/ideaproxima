@@ -1,5 +1,5 @@
 import { randomBytes } from "node:crypto";
-import { openDatabase, type DatabaseHandle } from "../src/db/client";
+import { openDatabase, type DatabaseHandle, type DatabaseOptions } from "../src/db/client";
 
 export interface TestDatabase {
   handle: DatabaseHandle;
@@ -17,10 +17,10 @@ export interface TestDatabase {
  *    This exercises what PGlite cannot: multiple connections, row locks, advisory locks and real races.
  *    `npm run test:pg` sets the variable for you.
  */
-export async function openTestDatabase(): Promise<TestDatabase> {
+export async function openTestDatabase(options: DatabaseOptions = {}): Promise<TestDatabase> {
   const serverUrl = process.env.TEST_DATABASE_URL;
   if (!serverUrl) {
-    const handle = await openDatabase("pglite:memory");
+    const handle = await openDatabase("pglite:memory", options);
     await handle.migrate();
     return { handle, driver: handle.driver, dispose: () => handle.close() };
   }
@@ -35,7 +35,7 @@ export async function openTestDatabase(): Promise<TestDatabase> {
 
   const url = new URL(serverUrl);
   url.pathname = `/${name}`;
-  const handle = await openDatabase(url.toString(), { maxConnections: 4 });
+  const handle = await openDatabase(url.toString(), { maxConnections: 4, ...options });
   await handle.migrate();
   return {
     handle,
