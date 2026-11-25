@@ -3,7 +3,7 @@
 Part of the [production-readiness program](README.md). Prompt for the implementing agent:
 `prompts/api/05-localization-prompt.md`.
 
-| Status     | Phases A and B complete (steps 6 and 7, 2026-11-25). Phase C1 (step 8) is next.                                                               |
+| Status     | Phases A, B and C1 complete (steps 6–8, 2026-11-25). Phase C2 (step 9) is next.                                                               |
 | ---------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
 | Depends on | [01](01-operational-foundations.md) (configuration, logs); phase D on every interface change before step 38                                   |
 | Unblocks   | Every later plan's strings and error reasons; [06](06-multilingual-content-and-search.md); localised e-mail in [04](04-accounts-and-trust.md) |
@@ -403,3 +403,47 @@ the performance measurements are under the ignored `audit/artifacts/` directory.
 Program decision 2 remains pending. The next eligible row is **step 8 (plan 05, phase C1)**. Use
 `prompts/api/05-localization-prompt.md` to extract home, explore and the idea layout and tabs, add those
 areas to the existing lint rule, and exercise them with a pseudo-catalogue or fixture.
+
+### Phase C1, step 8 (2026-11-25)
+
+The checkout started on clean `main` at `3cbaf61`. Steps 1–7 were marked done and their commits were
+present in order (`13e916b`, `0b237de`, `57d4f66`, `e6f463b`, `e29459e`, `1edb929`, `3cbaf61`).
+Phase B's approved previews and production web runtime were in place. The clean baseline
+`npm run check` passed with 212 tests, three PostgreSQL-only skips and all 68 endpoints exercised.
+The Windows sandbox's `tsx` launcher could not read the OS account. The baseline and phase commands ran
+outside that sandbox.
+
+- Added 369 typed English messages in `apps/web/src/locales/messages.ts` for home, explore, the idea header
+  and all six tabs, including their reading components. ICU handles counts and word order. Rich placeholders
+  keep links, emphasis and author text in React elements. Cards and breadcrumbs reuse the locale-keyed topic
+  catalogue and fall back to the canonical label. Domain vocabulary and stage proof reasons retain their
+  stable keys. The stage proof text in the idea response remains the canonical fallback.
+- The literal-text rule now covers `pages/home/`, `pages/explore/`, `IdeaLayout.tsx`, all six idea tab files,
+  and the extracted card, graph, stage, Markdown, rating, meter and knowledge components. A negative ESLint
+  probe on every new route group rejected JSX text, both branches of a conditional label, and a template
+  label. The developer guide documents the coverage. The standalone dialogs, activity ledger rows shared by
+  home and history, generic errors and toasts are phase C2 work.
+- Owner decision 2 is pending. The twelve documented locales remain in beta, with English as fallback and
+  Latin digits for Arabic. Extended the existing Arabic fixture to exercise mobile discovery, translated
+  headers and controls in all six tabs, Arabic dual plurals, and English fallback. The audit also checks
+  the original idea title and right-to-left layout.
+- The first extraction build transferred 160.8 KiB on the cold Russian idea visit. The idea header now loads
+  its action dialogs on first use and keeps the native dialog elements mounted afterwards to preserve focus
+  restoration. The contribution audit covers opening, cancelling and reopening the evaluation dialog.
+
+| Final cold visit | JavaScript (KiB) | CSS (KiB) | LCP (ms) | CLS   |
+| ---------------- | ---------------- | --------- | -------- | ----- |
+| Home, English    | 141.3            | 16.7      | 208      | 0.002 |
+| Explore, English | 134.6            | 14.2      | 132      | 0.005 |
+| Idea, English    | 157.3            | 14.8      | 224      | 0.015 |
+| Idea, Russian    | 157.4            | 14.8      | 216      | 0.014 |
+
+`npm run check` passed with 212 tests, three PostgreSQL-only skips and all 68 endpoints exercised.
+`npm run docs:api` regenerated identical artifacts. `npm run test:e2e` passed all 60 Chromium checks on
+isolated port 3188, including both themes' Arabic idea accessibility checks and all first-visit budgets.
+The Arabic fixture saved eight screenshots under the ignored `audit/artifacts/test-results/` directory.
+The audit wrote the measurements to `audit/artifacts/performance.json`.
+
+The next eligible row is **step 9 (plan 05, phase C2)**. Use `prompts/api/05-localization-prompt.md` for the
+remaining interface extraction and its lint and fixture coverage. Keep the documented locale defaults while
+program decision 2 is pending.

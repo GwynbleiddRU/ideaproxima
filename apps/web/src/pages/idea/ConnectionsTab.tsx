@@ -1,5 +1,6 @@
 import { vocabularyField } from "@/lib/vocabulary";
-import { useLocale } from "@/locales/react";
+import { useMessage } from "@/locales/react";
+import { formatList, formatNumber } from "@/lib/format";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { useState, type FormEvent } from "react";
@@ -14,6 +15,7 @@ import {
   type RelationType,
 } from "@ideaproxima/domain";
 import { graphQueries, useProposeRelation, useRetractRelation } from "@/api/graph";
+import { useTopicNames } from "@/api/catalog";
 import { ideaQueries } from "@/api/ideas";
 import { useAuthGate } from "@/components/auth";
 import { EvaluateDialog } from "@/components/EvaluateDialog";
@@ -33,11 +35,17 @@ import { useIdea, usePermissions } from "./use-idea";
 import styles from "./ConnectionsTab.module.scss";
 import tabs from "./tabs.module.scss";
 
+function relationPhrase(relation: IdeaRelationView) {
+  const field = relation.direction === "incoming" ? "inverse" : "forward";
+  return vocabularyField("relationTypes", relation.type, field, relation.phrase);
+}
+
 /**
  * How this idea connects to others. For a scientist, the killer views: what must exist first (upstream) and
  * what it would unlock once realised (downstream). Every connection is typed; there is no vague "related".
  */
 export function ConnectionsTab() {
+  const t = useMessage();
   const idea = useIdea();
   const gate = useAuthGate();
   const search = useSearch({ from: "/ideas/$idea/connections" });
@@ -54,8 +62,8 @@ export function ConnectionsTab() {
   return (
     <div className={`${tabs.tab} ${tabs.wide}`}>
       <SectionHeading
-        eyebrow="Connected ideas"
-        title="Connections"
+        eyebrow={t("idea.connections.title")}
+        title={t("idea.tabs.connections")}
         action={
           <Button
             variant="primary"
@@ -63,18 +71,15 @@ export function ConnectionsTab() {
             icon={<ArrowLeftRight />}
             onClick={() => gate(() => setConnecting(true))}
           >
-            Connect to another idea
+            {t("idea.connections.connect")}
           </Button>
         }
       />
-      <p className={tabs.lede}>
-        Upstream: what this idea builds on and needs first. Downstream: what builds on it, everything that
-        becomes reachable once it is realised.
-      </p>
+      <p className={tabs.lede}>{t("idea.connections.directionsHelp")}</p>
       {/* The view changes in place: keep the reader where they are (the router resets scroll by default). */}
       <div className={tabs.toolbar}>
         <Segmented<GraphDirection>
-          label="Direction"
+          label={t("idea.connections.filterDirection")}
           value={direction}
           onChange={(d) =>
             void navigate({
@@ -84,13 +89,13 @@ export function ConnectionsTab() {
             })
           }
           options={[
-            { value: "both", label: "Both directions" },
-            { value: "upstream", label: "What it needs" },
-            { value: "downstream", label: "What it enables" },
+            { value: "both", label: t("idea.connections.both") },
+            { value: "upstream", label: t("idea.connections.upstream") },
+            { value: "downstream", label: t("idea.connections.downstream") },
           ]}
         />
         <Segmented<number>
-          label="Depth"
+          label={t("idea.connections.depth")}
           size="sm"
           value={depth}
           onChange={(d) =>
@@ -102,7 +107,7 @@ export function ConnectionsTab() {
           }
           options={Array.from({ length: MAX_GRAPH_DEPTH }, (_, i) => ({
             value: i + 1,
-            label: `${i + 1} step${i ? "s" : ""}`,
+            label: t("idea.connections.steps", { count: i + 1 }),
           }))}
         />
       </div>
@@ -111,9 +116,8 @@ export function ConnectionsTab() {
       ) : graph.data && graph.data.nodes.length > 1 ? (
         <RelationGraph graph={graph.data} showEnables={direction !== "upstream"} />
       ) : (
-        <EmptyState icon={<Network />} title="No connections in this direction yet">
-          Does this idea require another? Is it an application of one? Connecting ideas lets someone who
-          realises one find everything else it unlocks.
+        <EmptyState icon={<Network />} title={t("idea.connections.emptyTitle")}>
+          {t("idea.connections.empty")}
         </EmptyState>
       )}
 
@@ -122,7 +126,8 @@ export function ConnectionsTab() {
           {[...byPhrase].map(([phrase, list]) => (
             <section key={phrase} className={tabs.group}>
               <h3 className={tabs.groupTitle}>
-                This idea {phrase} <span>{list.length}</span>
+                {t("idea.connections.group", { relation: relationPhrase(list[0]!) })}{" "}
+                <span>{formatNumber(list.length)}</span>
               </h3>
               <ul className={tabs.list} role="list">
                 {list.map((r) => (
@@ -139,6 +144,7 @@ export function ConnectionsTab() {
 }
 
 function RelationRow({ relation, idea }: { relation: IdeaRelationView; idea: IdeaDetail }) {
+  const t = useMessage();
   const can = usePermissions(idea);
   const gate = useAuthGate();
   const retract = useRetractRelation(idea.slug);
@@ -164,7 +170,7 @@ function RelationRow({ relation, idea }: { relation: IdeaRelationView; idea: Ide
         </div>
         <div className={styles.actions}>
           <Button variant="quiet" size="sm" onClick={() => gate(() => setAssessing(true))}>
-            Is this accurate?
+            {t("idea.connections.accurate")}
           </Button>
           {can.canCurate(relation.proposedBy.id) && (
             <Button
@@ -173,7 +179,7 @@ function RelationRow({ relation, idea }: { relation: IdeaRelationView; idea: Ide
               loading={retract.isPending}
               onClick={() => retract.mutate(relation.id)}
             >
-              Retract
+              {t("idea.connections.retract")}
             </Button>
           )}
         </div>
@@ -182,7 +188,11 @@ function RelationRow({ relation, idea }: { relation: IdeaRelationView; idea: Ide
         open={assessing}
         onClose={() => setAssessing(false)}
         target={{ kind: "relation", id: relation.id }}
-        subject={`“${idea.title}” ${relation.phrase} “${relation.other.title}”`}
+        subject={t("idea.connections.sentence", {
+          from: idea.title,
+          relation: relationPhrase(relation),
+          to: relation.other.title,
+        })}
         invalidate={[["idea", idea.slug, "relations"]]}
       />
     </li>
@@ -190,13 +200,14 @@ function RelationRow({ relation, idea }: { relation: IdeaRelationView; idea: Ide
 }
 
 function ConnectDialog({ open, onClose, idea }: { open: boolean; onClose: () => void; idea: IdeaDetail }) {
+  const t = useMessage();
   return (
     <Dialog
       open={open}
       onClose={onClose}
       size="lg"
-      title="Connect to another idea"
-      description="Say exactly how the two ideas relate."
+      title={t("idea.connections.connect")}
+      description={t("idea.connections.describe")}
     >
       <ConnectForm idea={idea} onDone={onClose} />
     </Dialog>
@@ -204,7 +215,8 @@ function ConnectDialog({ open, onClose, idea }: { open: boolean; onClose: () => 
 }
 
 function ConnectForm({ idea, onDone }: { idea: IdeaDetail; onDone: () => void }) {
-  useLocale();
+  const t = useMessage();
+  const topicNames = useTopicNames();
   const [search, setSearch] = useState("");
   const q = useDebounced(search.trim());
   const candidates = useQuery(ideaQueries.top("newest", 8, { q: q || undefined }));
@@ -225,22 +237,26 @@ function ConnectForm({ idea, onDone }: { idea: IdeaDetail; onDone: () => void })
     );
   };
 
-  const preview = other
-    ? reversed && !info.symmetric
-      ? `“${other.title}” ${vocabularyField("relationTypes", type, "forward", info.forward)} “${idea.title}”`
-      : `“${idea.title}” ${vocabularyField("relationTypes", type, "forward", info.forward)} “${other.title}”`
-    : null;
+  const relation = vocabularyField("relationTypes", type, "forward", info.forward);
+  const reverse = reversed && !info.symmetric;
+  const preview =
+    other &&
+    t("idea.connections.sentence", {
+      from: reverse ? other.title : idea.title,
+      relation,
+      to: reverse ? idea.title : other.title,
+    });
 
   return (
     <form onSubmit={submit} className={forms.form}>
-      <Fieldset legend="The other idea">
+      <Fieldset legend={t("idea.connections.otherIdea")}>
         <input
           className={control}
           type="search"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search by title or text"
-          aria-label="Search ideas"
+          placeholder={t("idea.connections.searchPlaceholder")}
+          aria-label={t("idea.connections.search")}
         />
         <div className={forms.choices}>
           {(candidates.data?.items ?? [])
@@ -255,12 +271,12 @@ function ConnectForm({ idea, onDone }: { idea: IdeaDetail; onDone: () => void })
                   required
                 />
                 <strong>{i.title}</strong>
-                <span>{i.topics.map((t) => t.name).join(", ")}</span>
+                <span>{formatList(i.topics.map((topic) => topicNames?.get(topic.slug) ?? topic.name))}</span>
               </label>
             ))}
         </div>
       </Fieldset>
-      <Fieldset legend="How they relate">
+      <Fieldset legend={t("idea.connections.type")}>
         <div className={forms.choices}>
           {RELATION_TYPES.map((t) => (
             <label key={t} className={forms.choice}>
@@ -275,23 +291,23 @@ function ConnectForm({ idea, onDone }: { idea: IdeaDetail; onDone: () => void })
       </Fieldset>
       {!info.symmetric && (
         <Segmented
-          label="Direction of the relation"
+          label={t("idea.connections.direction")}
           value={reversed ? "reverse" : "forward"}
           onChange={(v) => setReversed(v === "reverse")}
           options={[
             {
               value: "forward",
-              label: `This idea ${vocabularyField("relationTypes", type, "forward", info.forward)} the other`,
+              label: t("idea.connections.forward", { relation }),
             },
             {
               value: "reverse",
-              label: `The other ${vocabularyField("relationTypes", type, "forward", info.forward)} this idea`,
+              label: t("idea.connections.reverse", { relation }),
             },
           ]}
         />
       )}
       {preview && <p className={styles.preview}>{preview}</p>}
-      <Field label="Why" optional hint="A sentence that would convince a sceptical reader.">
+      <Field label={t("idea.connections.why")} optional hint={t("idea.connections.rationaleHint")}>
         {(p) => (
           <textarea
             {...p}
@@ -305,9 +321,9 @@ function ConnectForm({ idea, onDone }: { idea: IdeaDetail; onDone: () => void })
       </Field>
       <FormError error={propose.error} />
       <div className={forms.actions}>
-        <Button onClick={onDone}>Cancel</Button>
+        <Button onClick={onDone}>{t("common.cancel")}</Button>
         <Button type="submit" variant="primary" loading={propose.isPending} disabled={!otherId}>
-          Record connection
+          {t("idea.connections.record")}
         </Button>
       </div>
     </form>

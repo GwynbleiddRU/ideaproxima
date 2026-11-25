@@ -36,7 +36,15 @@ export function TimeAgo({ iso, className }: { iso: string; className?: string })
 }
 
 /** Topic links; the first (primary) topic is emphasised. */
-export function TopicLinks({ topics, limit = 4 }: { topics: TopicRef[]; limit?: number }) {
+export function TopicLinks({
+  topics,
+  limit = 4,
+  topicNames,
+}: {
+  topics: TopicRef[];
+  limit?: number;
+  topicNames?: ReadonlyMap<string, string>;
+}) {
   return (
     <span className={styles.topics}>
       {topics.slice(0, limit).map((topic, i) => (
@@ -46,7 +54,7 @@ export function TopicLinks({ topics, limit = 4 }: { topics: TopicRef[]; limit?: 
           params={{ slug: topic.slug }}
           className={cx(styles.topic, i === 0 && styles.primary)}
         >
-          {topic.name}
+          {topicNames?.get(topic.slug) ?? topic.name}
         </Link>
       ))}
     </span>

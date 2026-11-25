@@ -1,5 +1,5 @@
 import { vocabularyField } from "@/lib/vocabulary";
-import { useLocale } from "@/locales/react";
+import { useMessage } from "@/locales/react";
 import { useQuery } from "@tanstack/react-query";
 import { useState, type CSSProperties, type FormEvent } from "react";
 import { ThumbsUp } from "lucide-react";
@@ -38,6 +38,7 @@ export function UsefulButton({
   count: number;
   invalidate: Keys;
 }) {
+  const t = useMessage();
   const gate = useAuthGate();
   const mark = useMarkUseful(invalidate);
   const [marked, setMarked] = useState(false);
@@ -53,7 +54,7 @@ export function UsefulButton({
         gate(() => mark.mutate({ kind, id, useful: !marked }, { onSuccess: () => setMarked(!marked) }))
       }
     >
-      Useful{count > 0 ? ` · ${count}` : ""}
+      {count > 0 ? t("idea.argument.usefulCount", { count }) : t("idea.argument.useful")}
     </Button>
   );
 }
@@ -68,6 +69,7 @@ export function ArgumentCard({
   invalidate: Keys;
   depth?: number;
 }) {
+  const t = useMessage();
   const { me, isModerator } = useSession();
   const gate = useAuthGate();
   const [open, setOpen] = useState(false);
@@ -80,8 +82,8 @@ export function ArgumentCard({
     <article className={cx(styles.argument, withdrawn && styles.withdrawn)} style={style}>
       <header className={styles.argumentHead}>
         <ArgumentStanceBadge stance={argument.stance} />
-        {withdrawn && <Badge tone="danger">Withdrawn</Badge>}
-        {argument.hidden && <Badge tone="warning">Hidden</Badge>}
+        {withdrawn && <Badge tone="danger">{t("common.withdrawn")}</Badge>}
+        {argument.hidden && <Badge tone="warning">{t("common.hidden")}</Badge>}
       </header>
       <h3 className={styles.argumentTitle}>{argument.title}</h3>
       <p className={styles.argumentBody}>{argument.body}</p>
@@ -106,22 +108,24 @@ export function ArgumentCard({
           />
           {!withdrawn && (
             <Button variant="quiet" size="sm" onClick={() => gate(() => setDialog("assess"))}>
-              Assess
+              {t("common.assess")}
             </Button>
           )}
           {depth < 3 && !withdrawn && (
             <Button variant="quiet" size="sm" onClick={() => gate(() => setDialog("reply"))}>
-              Respond
+              {t("idea.argument.respond")}
             </Button>
           )}
           {argument.replyCount > 0 && (
             <Button variant="quiet" size="sm" aria-expanded={open} onClick={() => setOpen(!open)}>
-              {open ? "Hide" : "Show"} {argument.replyCount} response{argument.replyCount === 1 ? "" : "s"}
+              {t(open ? "idea.argument.hideResponses" : "idea.argument.showResponses", {
+                count: argument.replyCount,
+              })}
             </Button>
           )}
           {!withdrawn && (isModerator || me?.id === argument.author.id) && (
             <Button variant="quiet" size="sm" onClick={() => setDialog("withdraw")}>
-              Withdraw
+              {t("common.withdraw")}
             </Button>
           )}
           <ModerateButton kind="argument" id={argument.id} hidden={argument.hidden} />
@@ -151,9 +155,9 @@ export function ArgumentCard({
       <ReasonDialog
         open={dialog === "withdraw"}
         onClose={() => setDialog(null)}
-        title="Withdraw this argument"
-        description="It stays in the discussion, marked as withdrawn."
-        confirmLabel="Withdraw"
+        title={t("idea.argument.withdrawTitle")}
+        description={t("idea.argument.withdrawHelp")}
+        confirmLabel={t("common.withdraw")}
         danger
         onConfirm={(reason) => withdraw.mutateAsync({ argumentId: argument.id, reason })}
       />
@@ -193,7 +197,7 @@ export function ArgumentComposer({
   /** Preselect a stance, e.g. when opened from the "against" column. */
   initialStance?: ArgumentStance;
 }) {
-  useLocale();
+  const t = useMessage();
   const create = useCreateArgument(invalidate);
   const [stance, setStance] = useState<ArgumentStance>(
     initialStance ?? (target.kind === "argument" ? "opposes" : "supports"),
@@ -218,7 +222,7 @@ export function ArgumentComposer({
 
   return (
     <form onSubmit={submit} className={cx(forms.form, forms.tight)}>
-      <Fieldset legend={target.kind === "argument" ? "Your response" : "Your argument"}>
+      <Fieldset legend={target.kind === "argument" ? t("idea.argument.reply") : t("idea.argument.write")}>
         <div className={forms.choices}>
           {ARGUMENT_STANCES.map((s) => (
             <label key={s} className={forms.choice}>
@@ -238,7 +242,7 @@ export function ArgumentComposer({
           ))}
         </div>
       </Fieldset>
-      <Field label="In one line" error={errors.title}>
+      <Field label={t("idea.argument.title")} error={errors.title}>
         {(p) => (
           <input
             {...p}
@@ -251,11 +255,7 @@ export function ArgumentComposer({
           />
         )}
       </Field>
-      <Field
-        label="Reasoning"
-        error={errors.body}
-        hint="Make the strongest version of the case. Cite evidence where you can."
-      >
+      <Field label={t("idea.argument.reasoning")} error={errors.body} hint={t("idea.argument.reasoningHint")}>
         {(p) => (
           <textarea
             {...p}
@@ -271,9 +271,9 @@ export function ArgumentComposer({
       </Field>
       <FormError error={create.error} />
       <div className={forms.actions}>
-        {onDone && <Button onClick={onDone}>Cancel</Button>}
+        {onDone && <Button onClick={onDone}>{t("common.cancel")}</Button>}
         <Button type="submit" variant="primary" loading={create.isPending}>
-          Post argument
+          {t("idea.argument.post")}
         </Button>
       </div>
     </form>

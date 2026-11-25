@@ -1,16 +1,17 @@
 import { vocabularyField } from "@/lib/vocabulary";
-import { useLocale } from "@/locales/react";
+import { LocalizedText, useMessage } from "@/locales/react";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { Compass, Search, SlidersHorizontal, X } from "lucide-react";
 import { IDEA_STAGE_INFO, IDEA_STAGES, LENS_INFO, type IdeaStage } from "@ideaproxima/domain";
-import { useTopicsQueryOptions } from "@/api/catalog";
+import { useTopicNames, useTopicsQueryOptions } from "@/api/catalog";
 import { ideaQueries } from "@/api/ideas";
 import type { ExploreSearch } from "@/app/search-params";
 import { IdeaCard } from "@/components/IdeaCard";
 import { PageHeader } from "@/components/PageHeader";
 import { cx } from "@/lib/cx";
+import { formatNumber } from "@/lib/format";
 import { formatCount } from "@/locales/runtime";
 import { useRevealOnChange } from "@/lib/hooks";
 import {
@@ -18,7 +19,6 @@ import {
   LENS_DIMENSIONS,
   LENS_GROUPS,
   MIN_RATINGS_FOR_CONFIDENCE,
-  SIGNAL_INFO,
 } from "@/lib/vocabulary";
 import { Badge } from "@/ui/Badge";
 import { Button, ButtonLink } from "@/ui/Button";
@@ -31,7 +31,8 @@ import styles from "./ExplorePage.module.scss";
 type Patch = (patch: Partial<ExploreSearch>, replace?: boolean) => void;
 
 export function ExplorePage() {
-  useLocale();
+  const t = useMessage();
+  const topicNames = useTopicNames();
   const search = useSearch({ from: "/explore" });
   const navigate = useNavigate({ from: "/explore" });
   const lens = search.lens ?? "newest";
@@ -57,23 +58,22 @@ export function ExplorePage() {
   const activeCount = [search.topic, search.stage, search.tag, search.q].filter(Boolean).length;
   const count = query.isSuccess
     ? query.hasNextPage
-      ? `${ideas.length}+ ideas`
+      ? t("explore.atLeast", { count: ideas.length })
       : formatCount("count.idea", ideas.length)
     : null;
 
   return (
     <div className="container">
-      <title>{`${vocabularyField("lenses", lens, "label", info.label)} · Explore · ideaproxima`}</title>
-      <PageHeader
-        title="Explore ideas"
-        lede="Choose a lens — each one ranks on a single, named signal and says so. Narrow it with a topic or a stage."
-      />
+      <title>
+        {t("explore.documentTitle", { lens: vocabularyField("lenses", lens, "label", info.label) })}
+      </title>
+      <PageHeader title={t("explore.title")} lede={t("explore.lede")} />
       <div className={styles.layout}>
-        <nav className={styles.rail} aria-label="Lenses">
+        <nav className={styles.rail} aria-label={t("explore.lenses")}>
           {LENS_GROUPS.map((group) => (
             <div key={group.signal} className={styles.lensGroup}>
-              <p className={styles.groupLabel} title={SIGNAL_INFO[group.signal].description}>
-                {SIGNAL_INFO[group.signal].label}
+              <p className={styles.groupLabel} title={t(`lensSignal.${group.signal}.description`)}>
+                {t(`lensSignal.${group.signal}.label`)}
               </p>
               {group.lenses.map((key) => (
                 <Link
@@ -91,10 +91,10 @@ export function ExplorePage() {
           ))}
         </nav>
 
-        <section ref={results} className={styles.results} aria-label="Results">
+        <section ref={results} className={styles.results} aria-label={t("explore.results")}>
           {/* Phones and tablets: lenses as a scrolling row, filters in a sheet. */}
           <div className={styles.compactBar}>
-            <div className={styles.lensChips} role="list" aria-label="Lenses">
+            <div className={styles.lensChips} role="list" aria-label={t("explore.lenses")}>
               {LENS_GROUPS.flatMap((g) => g.lenses).map((key) => (
                 <span role="listitem" key={key}>
                   <ChipLink
@@ -110,8 +110,8 @@ export function ExplorePage() {
             </div>
             <div className={styles.compactActions}>
               <Button size="sm" icon={<SlidersHorizontal />} onClick={() => setSheet(true)}>
-                Filters
-                {activeCount > 0 && <span className={styles.filterCount}>{activeCount}</span>}
+                {t("explore.filters")}
+                {activeCount > 0 && <span className={styles.filterCount}>{formatNumber(activeCount)}</span>}
               </Button>
               {count && <span className={styles.count}>{count}</span>}
             </div>
@@ -127,11 +127,17 @@ export function ExplorePage() {
                 info.signal === "attention" ? "warning" : info.signal === "quality" ? "primary" : "neutral"
               }
             >
-              {SIGNAL_INFO[info.signal].label}
+              {t(`lensSignal.${info.signal}.label`)}
             </Badge>
             <span>
-              <b>{vocabularyField("lenses", lens, "label", info.label)}</b> —{" "}
-              {vocabularyField("lenses", lens, "description", info.description)}
+              <LocalizedText
+                id="explore.lensDescription"
+                components={{ 0: <b /> }}
+                values={{
+                  lens: vocabularyField("lenses", lens, "label", info.label),
+                  description: vocabularyField("lenses", lens, "description", info.description),
+                }}
+              />
             </span>
             <ActiveFilters search={search} onChange={setSearch} />
             {count && <span className={cx(styles.count, styles.countWide)}>{count}</span>}
@@ -144,15 +150,14 @@ export function ExplorePage() {
           ) : !ideas.length ? (
             <EmptyState
               icon={<Compass />}
-              title="No ideas match"
+              title={t("explore.emptyTitle")}
               action={
                 <ButtonLink to="/explore" variant="secondary">
-                  Clear filters
+                  {t("explore.clear")}
                 </ButtonLink>
               }
             >
-              Lenses based on assessments only include ideas with enough independent ratings. Try another
-              lens, or help by evaluating ideas under “Needs review”.
+              {t("explore.empty")}
             </EmptyState>
           ) : (
             <>
@@ -162,6 +167,7 @@ export function ExplorePage() {
                     <IdeaCard
                       idea={idea}
                       layout="row"
+                      topicNames={topicNames}
                       dimensions={LENS_DIMENSIONS[lens] ?? DEFAULT_CARD_DIMENSIONS}
                     />
                   </li>
@@ -170,14 +176,12 @@ export function ExplorePage() {
               {query.hasNextPage && (
                 <div className={styles.more}>
                   <Button onClick={() => void query.fetchNextPage()} loading={query.isFetchingNextPage}>
-                    Show more
+                    {t("explore.more")}
                   </Button>
                 </div>
               )}
               <p className={styles.legend}>
-                Measures show the scale anchor nearest the mean, the mean and n (how many evaluators); the
-                whisker is their spread. Under {MIN_RATINGS_FOR_CONFIDENCE} evaluations a measure reads “too
-                early” (●○○).
+                {t("explore.measureLegend", { minimum: MIN_RATINGS_FOR_CONFIDENCE })}
               </p>
             </>
           )}
@@ -188,10 +192,10 @@ export function ExplorePage() {
         open={sheet}
         onClose={() => setSheet(false)}
         size="sm"
-        title="Filters"
+        title={t("explore.filters")}
         footer={
           <Button variant="primary" onClick={() => setSheet(false)}>
-            {count ? `Show ${count}` : "Show results"}
+            {count ? t("explore.showCount", { results: count }) : t("explore.showResults")}
           </Button>
         }
       >
@@ -210,7 +214,7 @@ function Filters({
   onChange: Patch;
   stacked?: boolean;
 }) {
-  useLocale();
+  const t = useMessage();
   const topics = useQuery(useTopicsQueryOptions());
   const [q, setQ] = useState(search.q ?? "");
   const [urlQ, setUrlQ] = useState(search.q);
@@ -231,40 +235,40 @@ function Filters({
   return (
     <div className={cx(styles.filters, stacked && styles.stacked)}>
       <label className={styles.words}>
-        <span className={stacked ? styles.filterLabel : "visually-hidden"}>Words</span>
+        <span className={stacked ? styles.filterLabel : "visually-hidden"}>{t("explore.words")}</span>
         <Search aria-hidden className={styles.wordsIcon} />
         <input
           className={control}
           type="search"
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="Filter by words in title or text"
+          placeholder={t("explore.wordsPlaceholder")}
         />
       </label>
       <label>
-        <span className={stacked ? styles.filterLabel : "visually-hidden"}>Topic</span>
+        <span className={stacked ? styles.filterLabel : "visually-hidden"}>{t("explore.topic")}</span>
         <select
           className={control}
           value={search.topic ?? ""}
           onChange={(e) => onChange({ topic: e.target.value || undefined })}
         >
-          <option value="">All topics</option>
-          {topics.data?.map((t) => (
-            <option key={t.id} value={t.slug}>
-              {t.parentId ? "  " : ""}
-              {t.name} ({t.ideaCount})
+          <option value="">{t("explore.allTopics")}</option>
+          {topics.data?.map((topic) => (
+            <option key={topic.id} value={topic.slug}>
+              {topic.parentId ? "  " : ""}
+              {t("explore.topicOption", { topic: topic.name, count: topic.ideaCount })}
             </option>
           ))}
         </select>
       </label>
       <label>
-        <span className={stacked ? styles.filterLabel : "visually-hidden"}>Stage</span>
+        <span className={stacked ? styles.filterLabel : "visually-hidden"}>{t("idea.stage")}</span>
         <select
           className={control}
           value={search.stage ?? ""}
           onChange={(e) => onChange({ stage: (e.target.value || undefined) as IdeaStage | undefined })}
         >
-          <option value="">Any stage</option>
+          <option value="">{t("explore.anyStage")}</option>
           {IDEA_STAGES.map((s) => (
             <option key={s} value={s}>
               {vocabularyField("stages", s, "label", IDEA_STAGE_INFO[s].label)}
@@ -277,7 +281,7 @@ function Filters({
 }
 
 function ActiveFilters({ search, onChange }: { search: ExploreSearch; onChange: Patch }) {
-  useLocale();
+  const t = useMessage();
   const topics = useQuery(useTopicsQueryOptions());
   const topicName = topics.data?.find((t) => t.slug === search.topic)?.name ?? search.topic;
   const active = [
@@ -287,7 +291,7 @@ function ActiveFilters({ search, onChange }: { search: ExploreSearch; onChange: 
       label: vocabularyField("stages", search.stage, "label", IDEA_STAGE_INFO[search.stage].label),
     },
     search.tag && { key: "tag" as const, label: `#${search.tag}` },
-    search.q && { key: "q" as const, label: `“${search.q}”` },
+    search.q && { key: "q" as const, label: t("explore.quotedWords", { words: search.q }) },
   ].filter((f): f is { key: "topic" | "stage" | "tag" | "q"; label: string } => !!f);
   if (!active.length) return null;
   return (
@@ -298,7 +302,7 @@ function ActiveFilters({ search, onChange }: { search: ExploreSearch; onChange: 
           <button
             type="button"
             onClick={() => onChange({ [f.key]: undefined })}
-            aria-label={`Remove ${f.label}`}
+            aria-label={t("explore.removeFilter", { filter: f.label })}
           >
             <X aria-hidden />
           </button>

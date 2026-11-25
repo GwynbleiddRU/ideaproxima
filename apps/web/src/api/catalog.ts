@@ -1,4 +1,4 @@
-import { infiniteQueryOptions, queryOptions } from "@tanstack/react-query";
+import { infiniteQueryOptions, queryOptions, useQuery } from "@tanstack/react-query";
 import type {
   ActivityDto,
   CreateTopicRequest,
@@ -46,6 +46,13 @@ export const catalogQueries = {
 
 export const useTopicsQueryOptions = () => catalogQueries.topics(useLocale());
 export const useTopicQueryOptions = (slug: string) => catalogQueries.topic(slug, useLocale());
+
+const topicNamesBySlug = (topics: TopicDto[]) => new Map(topics.map(({ slug, name }) => [slug, name]));
+
+/** Resolve locale-neutral topic references using the shared catalogue query. */
+export function useTopicNames() {
+  return useQuery({ ...useTopicsQueryOptions(), select: topicNamesBySlug }).data;
+}
 
 export function useCreateTopic() {
   return useApiMutation((input: CreateTopicRequest) => http.post<TopicDto>("/topics", input), [keys.topics], {

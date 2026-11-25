@@ -77,6 +77,50 @@ test("the account picker saves its preference and an explicit URL overrides it",
   await expect(page.locator("html")).toHaveAttribute("lang", "hi");
 });
 
+test("the Arabic fixture reaches discovery, the idea layout and each idea tab", async ({ page }, info) => {
+  const errors = watchErrors(page);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.addInitScript(() => localStorage.setItem("ip-locale", "ar"));
+
+  await page.goto("/");
+  await expect(page.getByRole("heading", { level: 1 }).locator("em")).toHaveText("البشرية؟");
+  await expect(page.getByPlaceholder("ابحث في الأفكار والادعاءات")).toBeVisible();
+  await settle(page);
+  await page.screenshot({ path: info.outputPath("home.png"), fullPage: true });
+
+  await page.getByRole("link", { name: "استكشف الأفكار", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "استكشف الأفكار" })).toBeVisible();
+  await page.getByRole("button", { name: "عوامل التصفية" }).click();
+  const filters = page.getByRole("dialog", { name: "عوامل التصفية" });
+  await expect(filters.getByPlaceholder("Filter by words in title or text")).toBeVisible();
+  await page.keyboard.press("Escape");
+  await settle(page);
+  await page.screenshot({ path: info.outputPath("explore.png"), fullPage: true });
+
+  await page.goto(ideaPath);
+  await expect(page.getByRole("heading", { name: IDEA.title, exact: true })).toBeVisible();
+  const sections = page.getByRole("navigation", { name: "أقسام الفكرة" });
+  for (const [path, tab, heading] of [
+    ["overview", "نظرة عامة", "الجودة المقدّرة"],
+    ["evidence", "الادعاءات والأدلة", "الادعاءات والأدلة"],
+    ["discussion", "النقاش", "الحجج"],
+    ["connections", "الروابط", "الروابط"],
+    ["practice", "في الواقع", "المبادرات والنتائج"],
+    ["history", "السجل", "سجل المراحل"],
+  ] as const) {
+    await sections.getByRole("link", { name: new RegExp(tab) }).click();
+    await expect(page.getByRole("heading", { name: heading, exact: true })).toBeVisible();
+    if (path === "connections") {
+      await expect(page.getByRole("radio", { name: "خطوتان" })).toBeChecked();
+    }
+    await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+    await settle(page);
+    await page.screenshot({ path: info.outputPath(`${path}.png`), fullPage: true });
+  }
+  expect(errors).toEqual([]);
+});
+
 for (const colorScheme of ["light", "dark"] as const) {
   test(`Arabic idea page stays readable and accessible in ${colorScheme}`, async ({ page }) => {
     await page.emulateMedia({ colorScheme });

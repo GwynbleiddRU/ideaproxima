@@ -32,14 +32,6 @@ export function useVocabulary() {
   };
 }
 
-export const SIGNAL_INFO: Record<LensSignal, { label: string; description: string }> = {
-  time: { label: "Time", description: "Ordered by when things happened." },
-  attention: { label: "Attention", description: "What people care about. Popularity, not quality." },
-  quality: { label: "Assessed quality", description: "Independent, multi-dimensional evaluations." },
-  uncertainty: { label: "Uncertainty", description: "Where knowledge is thin or contested." },
-  practice: { label: "Practice", description: "What happened when ideas met the real world." },
-};
-
 /** Lenses grouped by the kind of signal they rank on, in display order. */
 export const LENS_GROUPS: { signal: LensSignal; lenses: LensKey[] }[] = (
   ["time", "attention", "quality", "uncertainty", "practice"] as const

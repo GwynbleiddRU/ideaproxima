@@ -1,12 +1,12 @@
 import { vocabularyField } from "@/lib/vocabulary";
-import { useLocale } from "@/locales/react";
+import { LocalizedText, useMessage } from "@/locales/react";
 import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { useRef, useState, type KeyboardEvent, type ReactNode } from "react";
+import { useRef, useState, type KeyboardEvent } from "react";
 import { ArrowRight, Gauge, Info, Lightbulb, Paperclip, Shuffle, Star } from "lucide-react";
 import type { IdeaListItem } from "@ideaproxima/contracts";
 import { LENS_INFO, type DimensionKey, type LensKey } from "@ideaproxima/domain";
-import { catalogQueries, useTopicsQueryOptions } from "@/api/catalog";
+import { catalogQueries, useTopicNames, useTopicsQueryOptions } from "@/api/catalog";
 import { http } from "@/api/http";
 import { ideaQueries } from "@/api/ideas";
 import { ActivityFeed } from "@/components/ActivityFeed";
@@ -16,14 +16,10 @@ import { SectionHeading } from "@/components/PageHeader";
 import { isConfident, nearestAnchor } from "@/components/Ratings";
 import { StageBadge } from "@/components/Stage";
 import { cx } from "@/lib/cx";
+import { formatDecimal, formatPaddedNumber } from "@/lib/format";
 import { formatCount } from "@/locales/runtime";
 import { topicIcon } from "@/lib/topic-icons";
-import {
-  DEFAULT_CARD_DIMENSIONS,
-  LENS_DIMENSIONS,
-  MIN_RATINGS_FOR_CONFIDENCE,
-  SIGNAL_INFO,
-} from "@/lib/vocabulary";
+import { DEFAULT_CARD_DIMENSIONS, LENS_DIMENSIONS, MIN_RATINGS_FOR_CONFIDENCE } from "@/lib/vocabulary";
 import { Badge } from "@/ui/Badge";
 import { ButtonLink } from "@/ui/Button";
 import { EmptyState, Skeleton } from "@/ui/Feedback";
@@ -35,9 +31,10 @@ import styles from "./HomePage.module.scss";
 const SHOWCASE: LensKey[] = ["potential", "neglected", "evidence", "in_practice", "contested"];
 
 export function HomePage() {
+  const t = useMessage();
   return (
     <div className={styles.page}>
-      <title>ideaproxima · humanity's possible futures</title>
+      <title>{t("home.title")}</title>
       <Hero />
       <Showcase />
       <Domains />
@@ -55,7 +52,7 @@ export function HomePage() {
  * its lens measures; attention and assessed quality are never blended.
  */
 function Showcase() {
-  useLocale();
+  const t = useMessage();
   const [active, setActive] = useState<LensKey>(SHOWCASE[0]!);
   const tabs = useRef<(HTMLButtonElement | null)[]>([]);
   const onKey = (event: KeyboardEvent, index: number) => {
@@ -69,15 +66,15 @@ function Showcase() {
     <section id="discover" className="container" aria-labelledby="discover-title">
       <SectionHeading
         id="discover-title"
-        eyebrow="Ways to discover"
-        title="Many ways to look, never one ranking"
+        eyebrow={t("home.showcase.eyebrow")}
+        title={t("home.showcase.title")}
         action={
           <ButtonLink to="/explore" variant="secondary" size="sm">
-            All lenses <ArrowRight />
+            {t("home.showcase.allLenses")} <ArrowRight />
           </ButtonLink>
         }
       />
-      <div className={styles.lensTabs} role="tablist" aria-label="Lenses">
+      <div className={styles.lensTabs} role="tablist" aria-label={t("explore.lenses")}>
         {SHOWCASE.map((lens, i) => (
           <button
             key={lens}
@@ -106,7 +103,8 @@ function Showcase() {
 }
 
 function LensPanel({ lens }: { lens: LensKey }) {
-  useLocale();
+  const t = useMessage();
+  const topicNames = useTopicNames();
   const { data, isPending } = useQuery(ideaQueries.top(lens, 4));
   const info = LENS_INFO[lens];
   const dimensions = LENS_DIMENSIONS[lens] ?? DEFAULT_CARD_DIMENSIONS;
@@ -117,23 +115,23 @@ function LensPanel({ lens }: { lens: LensKey }) {
         <Badge
           tone={info.signal === "attention" ? "warning" : info.signal === "quality" ? "primary" : "neutral"}
         >
-          {SIGNAL_INFO[info.signal].label}
+          {t(`lensSignal.${info.signal}.label`)}
         </Badge>
         {vocabularyField("lenses", lens, "description", info.description)}
       </p>
       {isPending ? (
         <Skeleton lines={6} />
       ) : !first ? (
-        <EmptyState compact title="Nothing qualifies yet">
-          {lens === "contested"
-            ? "An idea appears here when confident evaluators split widely on one of its dimensions."
-            : "That is information too. As ideas are evaluated and tried, this lens fills."}
+        <EmptyState compact title={t("home.showcase.emptyTitle")}>
+          {lens === "contested" ? t("home.showcase.contestedEmpty") : t("home.showcase.empty")}
         </EmptyState>
       ) : (
         <div className={styles.showcase}>
-          <IdeaCard idea={first} featured dimensions={dimensions}>
+          <IdeaCard idea={first} featured dimensions={dimensions} topicNames={topicNames}>
             <Info aria-hidden />
-            <span>{whyHere(lens, first)}</span>
+            <span>
+              <LensExplanation lens={lens} idea={first} />
+            </span>
           </IdeaCard>
           <div className={styles.ranked}>
             {rest.length > 0 ? (
@@ -141,7 +139,7 @@ function LensPanel({ lens }: { lens: LensKey }) {
                 {rest.map((idea, i) => (
                   <li key={idea.id}>
                     <span className={styles.rank} aria-hidden>
-                      {String(i + 2).padStart(2, "0")}
+                      {formatPaddedNumber(i + 2)}
                     </span>
                     <Link to="/ideas/$idea" params={{ idea: idea.slug }} className={styles.rankedTitle}>
                       {idea.title}
@@ -154,10 +152,10 @@ function LensPanel({ lens }: { lens: LensKey }) {
                 ))}
               </ol>
             ) : (
-              <p className={styles.alone}>The only idea in this lens so far.</p>
+              <p className={styles.alone}>{t("home.showcase.onlyIdea")}</p>
             )}
             <Link to="/explore" search={{ lens }} className={styles.more}>
-              See all: {vocabularyField("lenses", lens, "label", info.label).toLowerCase()}{" "}
+              {t("home.showcase.seeAll", { lens: vocabularyField("lenses", lens, "label", info.label) })}{" "}
               <ArrowRight size={14} aria-hidden />
             </Link>
           </div>
@@ -169,23 +167,25 @@ function LensPanel({ lens }: { lens: LensKey }) {
 
 /** The measure a lens ranks on, in words: "Potential Civilization-scale 4.7", or "too early · 1 of 3". */
 function KeyMeasure({ idea, dimension }: { idea: IdeaListItem; dimension: DimensionKey }) {
+  const t = useMessage();
   const summary = idea.signals.ratings[dimension];
   if (summary && isConfident(summary))
     return (
       <span>
-        <b>{nearestAnchor(dimension, summary.mean)}</b> {summary.mean.toFixed(1)}
+        <b>{nearestAnchor(dimension, summary.mean)}</b> {formatDecimal(summary.mean)}
       </span>
     );
   return (
     <span className={styles.early}>
-      <Dots n={summary?.n ?? 0} of={MIN_RATINGS_FOR_CONFIDENCE} /> too early · {summary?.n ?? 0} of{" "}
-      {MIN_RATINGS_FOR_CONFIDENCE}
+      <Dots n={summary?.n ?? 0} of={MIN_RATINGS_FOR_CONFIDENCE} />{" "}
+      {t("home.showcase.early", { count: summary?.n ?? 0, total: MIN_RATINGS_FOR_CONFIDENCE })}
     </span>
   );
 }
 
 /** One honest line on why the featured idea is in this lens, from its own signals. */
-function whyHere(lens: LensKey, idea: IdeaListItem): ReactNode {
+function LensExplanation({ lens, idea }: { lens: LensKey; idea: IdeaListItem }) {
+  const t = useMessage();
   const { ratings, attention, counts } = idea.signals;
   const impact = ratings.impact;
   const needed = (n = 0) => MIN_RATINGS_FOR_CONFIDENCE - n;
@@ -194,29 +194,34 @@ function whyHere(lens: LensKey, idea: IdeaListItem): ReactNode {
     case "neglected": {
       const potential =
         impact && isConfident(impact)
-          ? `${formatCount("count.evaluator", impact.n)} rated its potential ${nearestAnchor("impact", impact.mean)?.toLowerCase()} (${impact.mean.toFixed(1)}).`
-          : `It needs ${formatCount("count.moreEvaluation", needed(impact?.n))} before its potential shows.`;
+          ? t("home.showcase.potential", {
+              count: impact.n,
+              anchor: nearestAnchor("impact", impact.mean),
+              mean: formatDecimal(impact.mean),
+            })
+          : t("home.showcase.potentialEarly", { count: needed(impact?.n) });
       if (lens === "potential") return potential;
       return (
-        <>
-          {attention === 0
-            ? "Nobody has marked it important yet. "
-            : `Only ${attention} marked it important. `}
-          {potential}{" "}
-          <Link to="/ideas/$idea" params={{ idea: idea.slug }}>
-            Take a look
-          </Link>
-        </>
+        <LocalizedText
+          id="home.showcase.neglected"
+          values={{ attention, potential }}
+          components={{ 0: <Link to="/ideas/$idea" params={{ idea: idea.slug }} /> }}
+        />
       );
     }
     case "evidence":
       return ratings.evidence && isConfident(ratings.evidence)
-        ? `Evaluators rate its evidence ${nearestAnchor("evidence", ratings.evidence.mean)?.toLowerCase()} (${ratings.evidence.mean.toFixed(1)}, n=${ratings.evidence.n}); ${formatCount("count.source", counts.evidence)} on its claims.`
-        : `${formatCount("count.source", counts.evidence)} on its claims; its evidence rating is still too early to tell.`;
+        ? t("home.showcase.evidence", {
+            anchor: nearestAnchor("evidence", ratings.evidence.mean),
+            mean: formatDecimal(ratings.evidence.mean),
+            evaluators: ratings.evidence.n,
+            count: counts.evidence,
+          })
+        : t("home.showcase.evidenceEarly", { count: counts.evidence });
     case "in_practice":
-      return `${formatCount("count.initiative", counts.initiatives)} recorded — research, a pilot or a deployment — including how it went.`;
+      return t("home.showcase.practice", { count: counts.initiatives });
     case "contested":
-      return "Confident evaluators disagree widely on at least one of its dimensions.";
+      return t("home.showcase.contested");
     default:
       return vocabularyField("lenses", lens, "description", LENS_INFO[lens].description);
   }
@@ -225,6 +230,7 @@ function whyHere(lens: LensKey, idea: IdeaListItem): ReactNode {
 // ---------------------------------------------------------------- domains
 
 function Domains() {
+  const t = useMessage();
   const topics = useQuery(useTopicsQueryOptions());
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -247,11 +253,11 @@ function Domains() {
     <section className="container" aria-labelledby="domains-title">
       <SectionHeading
         id="domains-title"
-        eyebrow="Or start from a domain"
-        title="Domains of possibility"
+        eyebrow={t("home.domains.eyebrow")}
+        title={t("home.domains.title")}
         action={
           <ButtonLink to="/topics" variant="secondary" size="sm">
-            All topics <ArrowRight />
+            {t("explore.allTopics")} <ArrowRight />
           </ButtonLink>
         }
       />
@@ -259,20 +265,22 @@ function Domains() {
         <Skeleton lines={3} />
       ) : (
         <ul className={styles.tiles} role="list">
-          {sorted.map((t) => {
-            const Icon = topicIcon(t.slug);
+          {sorted.map((topic) => {
+            const Icon = topicIcon(topic.slug);
             return (
-              <li key={t.id}>
+              <li key={topic.id}>
                 <Link
                   to="/topics/$slug"
-                  params={{ slug: t.slug }}
-                  className={cx(styles.tile, t.ideaCount === 0 && styles.tileEmpty)}
+                  params={{ slug: topic.slug }}
+                  className={cx(styles.tile, topic.ideaCount === 0 && styles.tileEmpty)}
                 >
                   <span className={styles.tileIcon} aria-hidden>
                     <Icon />
                   </span>
-                  <b>{t.name}</b>
-                  <span>{t.ideaCount ? formatCount("count.idea", t.ideaCount) : "Be the first"}</span>
+                  <b>{topic.name}</b>
+                  <span>
+                    {topic.ideaCount ? formatCount("count.idea", topic.ideaCount) : t("home.domains.first")}
+                  </span>
                 </Link>
               </li>
             );
@@ -286,8 +294,8 @@ function Domains() {
               <span className={styles.tileIcon} aria-hidden>
                 <Shuffle />
               </span>
-              <b>Surprise me</b>
-              <span>A random idea</span>
+              <b>{t("home.domains.surprise")}</b>
+              <span>{t("home.domains.random")}</span>
             </button>
           </li>
         </ul>
@@ -301,45 +309,46 @@ function Domains() {
 const RUNGS = [
   {
     icon: Star,
-    title: "Say what matters",
-    cost: "One click",
-    text: "Mark an idea important, worth researching, plausible or doubtful. Counted as attention — never as quality.",
-    link: { to: "/explore", search: {}, label: "Browse ideas" },
+    title: "home.ladder.stance",
+    cost: "home.ladder.stanceCost",
+    text: "home.ladder.stanceDescription",
+    link: { to: "/explore", search: {}, label: "home.ladder.stanceLink" },
   },
   {
     icon: Gauge,
-    title: "Evaluate",
-    cost: "About two minutes",
-    text: "Rate only what you can judge; “I don't know” is always an answer. Three evaluations make a measure visible.",
-    link: { to: "/explore", search: { lens: "needs_review" as LensKey }, label: "Ideas that need review" },
+    title: "idea.action.evaluate",
+    cost: "home.ladder.evaluateCost",
+    text: "home.ladder.evaluateDescription",
+    link: { to: "/explore", search: { lens: "needs_review" as LensKey }, label: "home.ladder.evaluateLink" },
   },
   {
     icon: Paperclip,
-    title: "Add evidence",
-    cost: "Ten minutes",
-    text: "Attach a source to a claim — and say what it does not establish. Evidence added once counts everywhere.",
-    link: { to: "/explore", search: { lens: "developed" as LensKey }, label: "Ideas with claims to examine" },
+    title: "home.ladder.evidence",
+    cost: "home.ladder.evidenceCost",
+    text: "home.ladder.evidenceDescription",
+    link: { to: "/explore", search: { lens: "developed" as LensKey }, label: "home.ladder.evidenceLink" },
   },
   {
     icon: Lightbulb,
-    title: "Propose an idea",
-    cost: "A title and a summary are enough",
-    text: "It does not need to be feasible, proven or popular. Speculation is allowed; others can develop it.",
-    link: { to: "/new", search: {}, label: "Write it down" },
+    title: "nav.propose",
+    cost: "home.ladder.proposeCost",
+    text: "home.ladder.proposeDescription",
+    link: { to: "/new", search: {}, label: "home.ladder.proposeLink" },
   },
 ] as const;
 
 function Ladder() {
+  const t = useMessage();
   return (
     <section className={styles.band} aria-labelledby="help-title">
       <div className="container">
         <SectionHeading
           id="help-title"
-          eyebrow="The unit of value is progression, not engagement"
-          title="Move an idea forward — in a minute or an afternoon"
+          eyebrow={t("home.ladder.eyebrow")}
+          title={t("home.ladder.title")}
           action={
             <Link to="/about" hash="stages" className={styles.more}>
-              How an idea moves <ArrowRight size={14} aria-hidden />
+              {t("home.ladder.stages")} <ArrowRight size={14} aria-hidden />
             </Link>
           }
         />
@@ -349,11 +358,11 @@ function Ladder() {
               <span className={styles.rungIcon} aria-hidden>
                 <Icon />
               </span>
-              <h3>{title}</h3>
-              <span className={styles.cost}>{cost}</span>
-              <p>{text}</p>
+              <h3>{t(title)}</h3>
+              <span className={styles.cost}>{t(cost)}</span>
+              <p>{t(text)}</p>
               <Link to={link.to} search={link.search} className={styles.more}>
-                {link.label} <ArrowRight size={14} aria-hidden />
+                {t(link.label)} <ArrowRight size={14} aria-hidden />
               </Link>
             </li>
           ))}
@@ -366,18 +375,20 @@ function Ladder() {
 // ---------------------------------------------------------------- happening now
 
 function HappeningNow() {
+  const t = useMessage();
+  const topicNames = useTopicNames();
   const newest = useQuery(ideaQueries.top("newest", 3));
   const activity = useInfiniteQuery(catalogQueries.activity(undefined, 20));
   const entries = activity.data?.pages[0]?.items ?? [];
   return (
-    <section className={cx("container", styles.now)} aria-label="Happening now">
+    <section className={cx("container", styles.now)} aria-label={t("home.recent.label")}>
       <div>
         <SectionHeading
-          eyebrow="Just proposed"
-          title="Newest ideas"
+          eyebrow={t("home.recent.newEyebrow")}
+          title={t("home.recent.newTitle")}
           action={
             <Link to="/explore" search={{ lens: "newest" }} className={styles.more}>
-              All new <ArrowRight size={14} aria-hidden />
+              {t("home.recent.allNew")} <ArrowRight size={14} aria-hidden />
             </Link>
           }
         />
@@ -387,37 +398,43 @@ function HappeningNow() {
           <ol className={styles.fresh} role="list">
             {newest.data.items.map((idea) => (
               <li key={idea.id}>
-                <TopicLinks topics={idea.topics} limit={2} />
+                <TopicLinks topics={idea.topics} limit={2} topicNames={topicNames} />
                 <Link to="/ideas/$idea" params={{ idea: idea.slug }} className={styles.freshTitle}>
                   {idea.title}
                 </Link>
                 <p>{idea.summary}</p>
                 <span className={styles.freshMeta}>
-                  Proposed by <PersonLink person={idea.proposedBy} /> · <TimeAgo iso={idea.createdAt} />
+                  <LocalizedText
+                    id="home.recent.proposedBy"
+                    components={{
+                      0: <PersonLink person={idea.proposedBy} />,
+                      1: <TimeAgo iso={idea.createdAt} />,
+                    }}
+                  />
                 </span>
               </li>
             ))}
           </ol>
         ) : (
           <EmptyState
-            title="The archive is empty"
+            title={t("home.recent.emptyTitle")}
             action={
               <ButtonLink to="/new" variant="primary">
-                Propose the first idea
+                {t("home.recent.first")}
               </ButtonLink>
             }
           >
-            Every future starts with someone writing it down.
+            {t("home.recent.empty")}
           </EmptyState>
         )}
       </div>
       <div>
         <SectionHeading
-          eyebrow="The living record"
-          title="Latest progress"
+          eyebrow={t("home.recent.progressEyebrow")}
+          title={t("home.recent.progressTitle")}
           action={
             <Link to="/activity" className={styles.more}>
-              Full record <ArrowRight size={14} aria-hidden />
+              {t("home.recent.fullRecord")} <ArrowRight size={14} aria-hidden />
             </Link>
           }
         />
@@ -428,18 +445,16 @@ function HappeningNow() {
 }
 
 function Closing() {
+  const t = useMessage();
   return (
-    <section className={cx("container", styles.closing)} aria-label="Why this exists">
-      <blockquote>
-        “Humanity should not lose a potentially valuable idea simply because the right person, technology or
-        moment had not yet appeared.”
-      </blockquote>
+    <section className={cx("container", styles.closing)} aria-label={t("home.closing.label")}>
+      <blockquote>{t("home.closing.quote")}</blockquote>
       <div className={styles.closingActions}>
         <ButtonLink to="/new" variant="primary">
-          Propose a possibility
+          {t("home.closing.propose")}
         </ButtonLink>
         <ButtonLink to="/about" variant="secondary">
-          Read the principles
+          {t("home.closing.principles")}
         </ButtonLink>
       </div>
     </section>

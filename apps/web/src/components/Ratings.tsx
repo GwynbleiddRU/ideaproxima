@@ -1,8 +1,9 @@
 import { vocabularyField } from "@/lib/vocabulary";
-import { useLocale } from "@/locales/react";
+import { useMessage } from "@/locales/react";
 import type { RatingSummaryDto } from "@ideaproxima/contracts";
 import { DIMENSIONS, type DimensionKey } from "@ideaproxima/domain";
 import { anchorsOf, MIN_RATINGS_FOR_CONFIDENCE } from "@/lib/vocabulary";
+import { formatDecimal } from "@/lib/format";
 import { Meter } from "@/ui/Meter";
 
 /** The scale anchor nearest the mean, e.g. "Transformative" for 3.8 on the impact scale. */
@@ -36,8 +37,9 @@ export function RatingMeter({
   /** A shorter label than the dimension's own (e.g. "Potential" in a narrow column). */
   label?: string;
 }) {
-  useLocale();
+  const t = useMessage();
   const anchor = summary ? nearestAnchor(dimension, summary.mean) : undefined;
+  const mean = summary ? formatDecimal(summary.mean) : undefined;
   return (
     <Meter
       label={label ?? vocabularyField("dimensions", dimension, "label", DIMENSIONS[dimension].label)}
@@ -48,11 +50,15 @@ export function RatingMeter({
       detail={
         summary && (
           <>
-            {anchor && <b>{anchor}</b>} {summary.mean.toFixed(1)}
+            {anchor && <b>{anchor}</b>} {mean}
           </>
         )
       }
-      valueText={summary ? `${anchor ?? ""} ${summary.mean.toFixed(1)}, ${summary.n} ratings` : undefined}
+      valueText={
+        summary
+          ? t("idea.rating.accessibleValue", { anchor: anchor ?? "", mean, count: summary.n })
+          : undefined
+      }
       accent={accent}
       size={size}
     />

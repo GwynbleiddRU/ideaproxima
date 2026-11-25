@@ -1,5 +1,5 @@
 import { vocabularyField } from "@/lib/vocabulary";
-import { useLocale } from "@/locales/react";
+import { LocalizedText, useMessage } from "@/locales/react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { useMemo, useState, type FormEvent, type ReactNode } from "react";
@@ -13,7 +13,6 @@ import {
   IDEA_SECTIONS,
   STANCE_KIND_INFO,
   STANCE_KINDS,
-  STEWARD_ROLE_INFO,
   type ClaimStatus,
   type StanceKind,
 } from "@ideaproxima/domain";
@@ -27,7 +26,7 @@ import { isConfident, RatingMeter } from "@/components/Ratings";
 import { StageProgress } from "@/components/Stage";
 import { claimStatusColor, ClaimStatusBadge } from "@/components/status";
 import { cx } from "@/lib/cx";
-import { formatDateTime, percent } from "@/lib/format";
+import { formatDateTime, formatNumber, formatPaddedNumber, percent } from "@/lib/format";
 import { formatCount } from "@/locales/runtime";
 import { IDEA_DIMENSIONS, MIN_RATINGS_FOR_CONFIDENCE } from "@/lib/vocabulary";
 import { Badge } from "@/ui/Badge";
@@ -41,7 +40,7 @@ import { useIdea, usePermissions } from "./use-idea";
 import styles from "./OverviewTab.module.scss";
 
 export function OverviewTab() {
-  useLocale();
+  const t = useMessage();
   const idea = useIdea();
   const claims = useQuery(knowledgeQueries.ideaClaims(idea.slug));
   const claimsById = useMemo(() => new Map((claims.data ?? []).map((c) => [c.id, c])), [claims.data]);
@@ -54,32 +53,32 @@ export function OverviewTab() {
         {written.map((key, i) => (
           <section key={key} id={key} className={styles.section} aria-labelledby={`${key}-title`}>
             <h2 id={`${key}-title`} className={styles.sectionTitle}>
-              <span className={styles.sectionNumber}>{String(i + 1).padStart(2, "0")}</span>
+              <span className={styles.sectionNumber}>{formatPaddedNumber(i + 1)}</span>
               {vocabularyField("sections", key, "label", IDEA_SECTION_INFO[key].label)}
             </h2>
             <Markdown source={idea.sections[key]!} claims={claimsById} ideaSlug={idea.slug} />
           </section>
         ))}
         {missing.length > 0 && (
-          <aside className={styles.missing} aria-label="Not yet written">
+          <aside className={styles.missing} aria-label={t("idea.overview.missingLabel")}>
             <p className="eyebrow">
-              Not yet written · {written.length} of {IDEA_SECTIONS.length} sections done
+              {t("idea.overview.writtenProgress", { count: written.length, total: IDEA_SECTIONS.length })}
             </p>
             <ul className={styles.missingList} role="list">
               {missing.map((key) => (
                 <li key={key}>{vocabularyField("sections", key, "label", IDEA_SECTION_INFO[key].label)}</li>
               ))}
             </ul>
-            <p>Speculation is allowed; incomplete ideas are welcome. Anyone can propose the missing parts.</p>
+            <p>{t("idea.overview.missingHelp")}</p>
             <ButtonLink to="/ideas/$idea/edit" params={{ idea: idea.slug }} size="sm">
-              <PenLine /> Help develop this idea
+              <PenLine /> {t("idea.overview.develop")}
             </ButtonLink>
           </aside>
         )}
       </div>
-      <aside className={styles.rail} aria-label="Signals">
+      <aside className={styles.rail} aria-label={t("idea.overview.signals")}>
         <QualityCard idea={idea} />
-        <RailCard title="Lifecycle stage">
+        <RailCard title={t("idea.overview.lifecycle")}>
           <StageProgress idea={idea} />
         </RailCard>
         <KnownCard idea={idea} statuses={claims.data?.map((c) => c.derived.status)} />
@@ -107,7 +106,7 @@ function RailCard({ title, aside, children }: { title: string; aside?: ReactNode
  * are confident, where potential meets feasibility.
  */
 function QualityCard({ idea }: { idea: IdeaDetail }) {
-  useLocale();
+  const t = useMessage();
   const { signals } = idea;
   const actions = useIdeaActions();
   const confident = IDEA_DIMENSIONS.filter((d) => isConfident(signals.ratings[d]));
@@ -115,14 +114,19 @@ function QualityCard({ idea }: { idea: IdeaDetail }) {
   const ratedByMe = (idea.viewer?.ratings.length ?? 0) > 0;
   return (
     <RailCard
-      title="Assessed quality"
+      title={t("lensSignal.quality.label")}
       aside={
-        <InfoTip>
-          Means of independent ratings on separate dimensions — never combined into one score. The whisker
-          shows how much raters disagree. Fewer than {MIN_RATINGS_FOR_CONFIDENCE} ratings is “too early to
-          tell”. Computed by <code>{signals.algorithm}</code>
-          {signals.computedAt ? ` (${formatDateTime(signals.computedAt)})` : ""}; a reputation-weighted method
-          is planned and will be labelled.
+        <InfoTip label={t("idea.rating.methodLabel")}>
+          <LocalizedText
+            id="idea.rating.method"
+            values={{
+              minimum: MIN_RATINGS_FOR_CONFIDENCE,
+              algorithm: signals.algorithm,
+              date: signals.computedAt ? formatDateTime(signals.computedAt) : "",
+              dated: signals.computedAt ? "yes" : "no",
+            }}
+            components={{ 0: <code /> }}
+          />
         </InfoTip>
       }
     >
@@ -135,7 +139,7 @@ function QualityCard({ idea }: { idea: IdeaDetail }) {
       )}
       {early.length > 0 && (
         <div className={styles.early}>
-          <p>{confident.length ? "Too early to tell" : "Too early to tell on every dimension"}</p>
+          <p>{confident.length ? t("idea.rating.earlySome") : t("idea.rating.earlyAll")}</p>
           <ul role="list">
             {early.map((d) => (
               <li key={d}>
@@ -143,38 +147,44 @@ function QualityCard({ idea }: { idea: IdeaDetail }) {
                 <span className={styles.earlyCount}>
                   <Dots n={signals.ratings[d]?.n ?? 0} of={MIN_RATINGS_FOR_CONFIDENCE} />
                   <span className="visually-hidden">
-                    {signals.ratings[d]?.n ?? 0} of {MIN_RATINGS_FOR_CONFIDENCE} evaluations
+                    {t("idea.rating.progress", {
+                      count: signals.ratings[d]?.n ?? 0,
+                      total: MIN_RATINGS_FOR_CONFIDENCE,
+                    })}
                   </span>
                 </span>
               </li>
             ))}
           </ul>
-          <p>{MIN_RATINGS_FOR_CONFIDENCE} evaluations make a measure.</p>
+          <p>{t("idea.rating.minimum", { count: MIN_RATINGS_FOR_CONFIDENCE })}</p>
         </div>
       )}
       {isConfident(signals.ratings.impact) && isConfident(signals.ratings.feasibility) && (
         <Quadrant impact={signals.ratings.impact!} feasibility={signals.ratings.feasibility!} />
       )}
       <Button size="sm" icon={<Gauge />} onClick={actions.evaluate}>
-        {ratedByMe ? "Update your evaluation" : "Add your evaluation"}
+        {ratedByMe ? t("idea.rating.updateYours") : t("idea.rating.addYours")}
       </Button>
       <p className={styles.caption}>
-        {formatCount("count.evaluator", signals.counts.evaluators)} · {percent(signals.completeness)} of
-        sections written
+        {t("idea.rating.summary", {
+          count: signals.counts.evaluators,
+          completeness: percent(signals.completeness),
+        })}
       </p>
     </RailCard>
   );
 }
 
 const QUADRANTS = {
-  visionary: ["Visionary", "High potential, far from feasible today."],
-  near: ["Transformative and near", "High potential, and feasible soon."],
-  incremental: ["Incremental", "Feasible, with modest potential."],
-  longShot: ["Long shot", "Modest potential, far from feasible."],
+  visionary: ["idea.quadrant.visionary", "idea.quadrant.visionaryDescription"],
+  near: ["idea.quadrant.near", "idea.quadrant.nearDescription"],
+  incremental: ["idea.quadrant.incremental", "idea.quadrant.incrementalDescription"],
+  longShot: ["idea.quadrant.longShot", "idea.quadrant.longShotDescription"],
 } as const;
 
 /** Where the idea sits between "visionary" and "ready": potential (up) against feasibility today (right). */
 function Quadrant({ impact, feasibility }: { impact: RatingSummaryDto; feasibility: RatingSummaryDto }) {
+  const t = useMessage();
   const high = impact.value >= 0.5;
   const near = feasibility.value >= 0.5;
   const [name, reading] = QUADRANTS[high ? (near ? "near" : "visionary") : near ? "incremental" : "longShot"];
@@ -193,21 +203,22 @@ function Quadrant({ impact, feasibility }: { impact: RatingSummaryDto; feasibili
         <circle cx={x} cy={y} r={4.5} className={styles.quadPoint} />
       </svg>
       <figcaption>
-        <b>{name}</b>
-        {reading} Potential ↑, feasibility →.
+        <b>{t(name)}</b>
+        {t("idea.quadrant.reading", { reading: t(reading) })}
       </figcaption>
     </figure>
   );
 }
 
 function KnownCard({ idea, statuses }: { idea: IdeaDetail; statuses?: ClaimStatus[] }) {
+  const t = useMessage();
   const counts = new Map<ClaimStatus, number>();
   for (const s of statuses ?? []) counts.set(s, (counts.get(s) ?? 0) + 1);
   const present = CLAIM_STATUSES.filter((s) => counts.has(s));
   const { counts: c } = idea.signals;
   return (
     <RailCard
-      title="What is known"
+      title={t("idea.layout.known")}
       aside={<span className={styles.caption}>{formatCount("count.claim", c.claims)}</span>}
     >
       {present.length ? (
@@ -221,20 +232,24 @@ function KnownCard({ idea, statuses }: { idea: IdeaDetail; statuses?: ClaimStatu
             {present.map((s) => (
               <li key={s}>
                 <ClaimStatusBadge status={s} />
-                <span className="tabular">{counts.get(s)}</span>
+                <span className="tabular">{formatNumber(counts.get(s)!)}</span>
               </li>
             ))}
           </ul>
         </>
       ) : (
-        <p className={styles.caption}>No claims recorded yet. Claims make an idea examinable.</p>
+        <p className={styles.caption}>{t("idea.overview.noClaims")}</p>
       )}
       <p className={styles.caption}>
         {c.evidence
-          ? `${formatCount("count.source", c.evidence)}: ${c.evidenceSupporting} supporting, ${c.evidenceChallenging} challenging.`
-          : "No evidence attached yet."}{" "}
+          ? t("idea.overview.evidenceBalance", {
+              count: c.evidence,
+              supporting: c.evidenceSupporting,
+              challenging: c.evidenceChallenging,
+            })
+          : t("idea.overview.noEvidence")}{" "}
         <Link to="/ideas/$idea/evidence" params={{ idea: idea.slug }} className={styles.cardLink}>
-          Claims & evidence <ArrowRight size={13} aria-hidden />
+          {t("idea.tabs.evidence")} <ArrowRight size={13} aria-hidden />
         </Link>
       </p>
     </RailCard>
@@ -243,22 +258,19 @@ function KnownCard({ idea, statuses }: { idea: IdeaDetail; statuses?: ClaimStatu
 
 /** The quick stances, as boxes the viewer can tick, with how many people share each. */
 function PerspectivesCard({ idea }: { idea: IdeaDetail }) {
-  useLocale();
+  const t = useMessage();
   const stance = useStance(idea);
   const gate = useAuthGate();
   const mine = new Set(idea.viewer?.stances ?? []);
   const toggle = (kind: StanceKind) => gate(() => stance.mutate({ kind, on: !mine.has(kind) }));
   return (
     <RailCard
-      title="Perspectives"
+      title={t("idea.overview.perspectives")}
       aside={
-        <InfoTip label="What are perspectives?">
-          Quick stances anyone can take. They show what people care about and believe — attention, not quality
-          — and never feed the assessed measures above.
-        </InfoTip>
+        <InfoTip label={t("idea.overview.perspectivesLabel")}>{t("idea.overview.perspectivesHelp")}</InfoTip>
       }
     >
-      <div className={styles.perspectives} role="group" aria-label="Your perspective">
+      <div className={styles.perspectives} role="group" aria-label={t("idea.overview.yourPerspective")}>
         {STANCE_KINDS.map((kind) => {
           const p = idea.signals.perspectives[kind] ?? { count: 0, share: 0 };
           const on = mine.has(kind);
@@ -278,19 +290,19 @@ function PerspectivesCard({ idea }: { idea: IdeaDetail }) {
               <span className={styles.bar} aria-hidden>
                 <span style={{ width: percent(p.share) }} />
               </span>
-              <span className={styles.perspectiveCount}>{p.count}</span>
+              <span className={styles.perspectiveCount}>{formatNumber(p.count)}</span>
             </button>
           );
         })}
       </div>
-      <p className={styles.caption}>Community judgments, not objective truth. Tick the ones you share.</p>
+      <p className={styles.caption}>{t("idea.overview.perspectivesCaption")}</p>
     </RailCard>
   );
 }
 
 /** Stewards and the people offering to help or working on it — who to talk to about this idea. */
 function PeopleCard({ idea }: { idea: IdeaDetail }) {
-  useLocale();
+  const t = useMessage();
   const can = usePermissions(idea);
   const actions = useIdeaActions();
   const involvements = useQuery(signalQueries.involvements(idea.slug));
@@ -306,19 +318,18 @@ function PeopleCard({ idea }: { idea: IdeaDetail }) {
 
   return (
     <RailCard
-      title="People"
-      aside={
-        <InfoTip label="What do stewards do?">
-          Stewards curate the narrative: they publish revisions directly and decide on proposed ones. Anyone
-          can propose a revision; everything stays in the history.
-        </InfoTip>
-      }
+      title={t("idea.overview.people")}
+      aside={<InfoTip label={t("idea.overview.stewardsLabel")}>{t("idea.overview.stewardsHelp")}</InfoTip>}
     >
       <ul className={styles.people} role="list">
         {idea.stewards.map((s) => (
           <li key={s.person.id}>
             <PersonLink person={s.person} avatar />
-            <span className={styles.role}>Steward · {STEWARD_ROLE_INFO[s.role].label.toLowerCase()}</span>
+            <span className={styles.role}>
+              {t("idea.overview.stewardRole", {
+                role: t(`idea.overview.stewardRole.${s.role}`),
+              })}
+            </span>
           </li>
         ))}
         {[...helpers.values()].map((invs) => (
@@ -335,7 +346,7 @@ function PeopleCard({ idea }: { idea: IdeaDetail }) {
         ))}
       </ul>
       <Button variant="quiet" size="sm" className={styles.inlineAction} onClick={actions.involve}>
-        I can help too <ArrowRight aria-hidden />
+        {t("idea.overview.helpToo")} <ArrowRight aria-hidden />
       </Button>
       {can.canSteward && (
         <form onSubmit={submit} className={styles.appoint}>
@@ -343,12 +354,12 @@ function PeopleCard({ idea }: { idea: IdeaDetail }) {
             className={control}
             value={handle}
             onChange={(e) => setHandle(e.target.value)}
-            placeholder="Appoint a steward by handle"
-            aria-label="Handle of the person to appoint as steward"
+            placeholder={t("idea.overview.stewardPlaceholder")}
+            aria-label={t("idea.overview.stewardHandle")}
             required
           />
           <Button type="submit" size="sm" loading={appoint.isPending}>
-            Appoint
+            {t("idea.overview.appoint")}
           </Button>
           <FormError error={appoint.error} />
         </form>

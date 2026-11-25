@@ -1,5 +1,5 @@
 import { vocabularyField } from "@/lib/vocabulary";
-import { useLocale } from "@/locales/react";
+import { LocalizedText, useMessage } from "@/locales/react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { useState, type CSSProperties } from "react";
@@ -14,7 +14,6 @@ import { ModerateButton } from "@/components/ModerateButton";
 import { RatingMeter } from "@/components/Ratings";
 import { ClaimStatusBadge } from "@/components/status";
 import { cx } from "@/lib/cx";
-import { formatCount } from "@/locales/runtime";
 import { Badge } from "@/ui/Badge";
 import { Button, ButtonLink } from "@/ui/Button";
 import { EmptyState, Skeleton } from "@/ui/Feedback";
@@ -37,7 +36,7 @@ export function ClaimCard({
   canUnlink: boolean;
   defaultOpen?: boolean;
 }) {
-  useLocale();
+  const t = useMessage();
   const [open, setOpen] = useState(!!defaultOpen);
   const [dialog, setDialog] = useState<"assess" | "evidence" | null>(null);
   const gate = useAuthGate();
@@ -48,9 +47,9 @@ export function ClaimCard({
 
   const balance = (
     [
-      ["supports", "supporting", "var(--status-established)"],
-      ["challenges", "challenging", "var(--status-refuted)"],
-      ["mixed", "mixed", "var(--status-hypothesis)"],
+      ["supports", "idea.claim.supporting", "var(--status-established)"],
+      ["challenges", "idea.claim.challenging", "var(--status-refuted)"],
+      ["mixed", "idea.claim.mixed", "var(--status-hypothesis)"],
     ] as const
   ).filter(([key]) => (counts[key] ?? 0) > 0);
 
@@ -78,10 +77,10 @@ export function ClaimCard({
         </Badge>
         {others > 0 && (
           <Link to="/claims/$claim" params={{ claim: claim.id }} className={styles.shared}>
-            <Link2 aria-hidden /> Also underpins {formatCount("count.otherIdea", others)}
+            <Link2 aria-hidden /> {t("idea.claim.alsoUnderpins", { count: others })}
           </Link>
         )}
-        {claim.hidden && <Badge tone="warning">Hidden</Badge>}
+        {claim.hidden && <Badge tone="warning">{t("common.hidden")}</Badge>}
       </header>
       <p className={styles.claimStatement} dir="auto">
         {claim.statement}
@@ -94,7 +93,7 @@ export function ClaimCard({
         <p className={styles.balance}>
           {balance.map(([key, label, color]) => (
             <span key={key} style={{ "--dot": color } as CSSProperties}>
-              {counts[key]} {label}
+              {t(label, { count: counts[key] })}
             </span>
           ))}
         </p>
@@ -109,7 +108,7 @@ export function ClaimCard({
               aria-expanded={open}
               onClick={() => setOpen(!open)}
             >
-              Evidence ({total})
+              {t("idea.claim.evidenceCount", { count: total })}
             </Button>
           )}
           <Button
@@ -118,13 +117,13 @@ export function ClaimCard({
             icon={<Paperclip />}
             onClick={() => gate(() => setDialog("evidence"))}
           >
-            Attach evidence
+            {t("idea.claim.attach")}
           </Button>
           <Button variant="quiet" size="sm" icon={<Gauge />} onClick={() => gate(() => setDialog("assess"))}>
-            Assess
+            {t("common.assess")}
           </Button>
           <ButtonLink to="/claims/$claim" params={{ claim: claim.id }} variant="quiet" size="sm">
-            <ArrowUpRight aria-hidden /> Claim page
+            <ArrowUpRight aria-hidden /> {t("idea.claim.open")}
           </ButtonLink>
           {canUnlink && (
             <Button
@@ -133,14 +132,17 @@ export function ClaimCard({
               loading={unlink.isPending}
               onClick={() => unlink.mutate(claim.linkId)}
             >
-              Unlink
+              {t("idea.claim.unlink")}
             </Button>
           )}
           <ModerateButton kind="claim" id={claim.id} hidden={claim.hidden} />
         </div>
         <MetaLine className={styles.addedBy}>
           <span>
-            Added by <PersonLink person={claim.addedBy} />
+            <LocalizedText
+              id="idea.claim.addedBy"
+              components={{ 0: <PersonLink person={claim.addedBy} /> }}
+            />
           </span>
           <TimeAgo iso={claim.addedAt} />
         </MetaLine>
@@ -160,7 +162,7 @@ export function ClaimCard({
         open={dialog === "assess"}
         onClose={() => setDialog(null)}
         target={{ kind: "claim", id: claim.id }}
-        subject="this claim"
+        subject={t("idea.claim.subject")}
         invalidate={[
           ["idea", ideaSlug],
           ["claim", claim.id],
@@ -171,6 +173,7 @@ export function ClaimCard({
 }
 
 function ClaimEvidence({ claimId, ideaSlug }: { claimId: string; ideaSlug: string }) {
+  const t = useMessage();
   const { data, isPending } = useQuery(knowledgeQueries.claim(claimId));
   if (isPending) return <Skeleton lines={3} />;
   const evidence = data?.evidence ?? [];
@@ -179,8 +182,8 @@ function ClaimEvidence({ claimId, ideaSlug }: { claimId: string; ideaSlug: strin
       {evidence.length ? (
         evidence.map((e) => <EvidenceItem key={e.id} evidence={e} ideaSlug={ideaSlug} />)
       ) : (
-        <EmptyState compact title="No evidence yet">
-          A claim without evidence is a hypothesis. Attach a study, dataset, or a recorded outcome.
+        <EmptyState compact title={t("idea.claim.noEvidence")}>
+          {t("idea.claim.evidenceInvite")}
         </EmptyState>
       )}
     </div>

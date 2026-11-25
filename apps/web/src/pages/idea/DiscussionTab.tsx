@@ -1,3 +1,6 @@
+import { useMessage } from "@/locales/react";
+import { vocabularyField } from "@/lib/vocabulary";
+import { formatNumber } from "@/lib/format";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { useState, type CSSProperties, type FormEvent } from "react";
 import { MessageSquarePlus, MessagesSquare } from "lucide-react";
@@ -44,21 +47,27 @@ export function DiscussionTab() {
   );
 }
 
-const COLUMNS: { stance: ArgumentStance; title: string; empty: string; invite: string }[] = [
-  { stance: "supports", title: "For it", empty: "No argument for it yet.", invite: "Argue for it" },
+const COLUMNS = [
+  {
+    stance: "supports",
+    title: "idea.discussion.for",
+    empty: "idea.discussion.noFor",
+    invite: "idea.discussion.argueFor",
+  },
   {
     stance: "opposes",
-    title: "Against it",
-    empty: "No argument against it yet.",
-    invite: "Argue against it",
+    title: "idea.discussion.against",
+    empty: "idea.discussion.noAgainst",
+    invite: "idea.discussion.argueAgainst",
   },
-];
+] as const;
 
 /**
  * Arguments for and against side by side, so the balance of the debate is visible at a glance; qualifications
  * (accepting the idea with conditions) follow below both columns.
  */
 function ArgumentsSection({ idea }: { idea: IdeaDetail }) {
+  const t = useMessage();
   const gate = useAuthGate();
   const args = useQuery(knowledgeQueries.ideaArguments(idea.slug));
   const [composing, setComposing] = useState<ArgumentStance | null>(null);
@@ -71,8 +80,8 @@ function ArgumentsSection({ idea }: { idea: IdeaDetail }) {
     <section className={tabs.group} aria-labelledby="arguments-title">
       <SectionHeading
         id="arguments-title"
-        eyebrow="Structured debate"
-        title="Arguments"
+        eyebrow={t("idea.discussion.debate")}
+        title={t("idea.discussion.arguments")}
         action={
           <Button
             variant="primary"
@@ -80,7 +89,7 @@ function ArgumentsSection({ idea }: { idea: IdeaDetail }) {
             icon={<MessageSquarePlus />}
             onClick={() => compose("supports")}
           >
-            Make an argument
+            {t("idea.discussion.makeArgument")}
           </Button>
         }
       />
@@ -109,15 +118,15 @@ function ArgumentsSection({ idea }: { idea: IdeaDetail }) {
                   style={{ "--stance": argumentStanceColor(col.stance) } as CSSProperties}
                 >
                   <h3 className={styles.columnTitle}>
-                    {col.title} <span>{list.length}</span>
+                    {t(col.title)} <span>{formatNumber(list.length)}</span>
                   </h3>
                   {list.length ? (
                     list.map((a) => <ArgumentCard key={a.id} argument={a} invalidate={invalidate} />)
                   ) : (
                     <div className={styles.emptyColumn}>
-                      <p>{col.empty}</p>
+                      <p>{t(col.empty)}</p>
                       <Button variant="quiet" size="sm" onClick={() => compose(col.stance)}>
-                        {col.invite}
+                        {t(col.invite)}
                       </Button>
                     </div>
                   )}
@@ -128,7 +137,13 @@ function ArgumentsSection({ idea }: { idea: IdeaDetail }) {
           {qualifying.length > 0 && (
             <div className={styles.qualifications}>
               <h3 className={styles.columnTitle}>
-                {ARGUMENT_STANCE_INFO.qualifies.label} <span>{qualifying.length}</span>
+                {vocabularyField(
+                  "argumentStances",
+                  "qualifies",
+                  "label",
+                  ARGUMENT_STANCE_INFO.qualifies.label,
+                )}{" "}
+                <span>{formatNumber(qualifying.length)}</span>
               </h3>
               {qualifying.map((a) => (
                 <ArgumentCard key={a.id} argument={a} invalidate={invalidate} />
@@ -142,6 +157,7 @@ function ArgumentsSection({ idea }: { idea: IdeaDetail }) {
 }
 
 function CommentsSection({ idea }: { idea: IdeaDetail }) {
+  const t = useMessage();
   const comments = useInfiniteQuery(discussionQueries.comments(idea.slug));
   const all = comments.data?.pages.flatMap((p) => p.items) ?? [];
   const children = new Map<string | null, CommentDto[]>();
@@ -153,8 +169,13 @@ function CommentsSection({ idea }: { idea: IdeaDetail }) {
   return (
     <section className={tabs.group}>
       <SectionHeading
-        eyebrow="Conversation"
-        title={<>Comments {all.length > 0 && <span className={styles.titleCount}>{all.length}</span>}</>}
+        eyebrow={t("idea.discussion.conversation")}
+        title={
+          <>
+            {t("idea.discussion.comments")}{" "}
+            {all.length > 0 && <span className={styles.titleCount}>{formatNumber(all.length)}</span>}
+          </>
+        }
       />
       <CollapsedComposer idea={idea} />
       {comments.isPending ? (
@@ -166,27 +187,22 @@ function CommentsSection({ idea }: { idea: IdeaDetail }) {
           ))}
         </ol>
       ) : (
-        <EmptyState compact icon={<MessagesSquare />} title="No comments yet">
-          Ask a question, suggest an improvement, or point to related work.
+        <EmptyState compact icon={<MessagesSquare />} title={t("idea.discussion.noComments")}>
+          {t("idea.discussion.commentInvite")}
         </EmptyState>
       )}
       {comments.hasNextPage && (
         <Button onClick={() => void comments.fetchNextPage()} loading={comments.isFetchingNextPage}>
-          Load more comments
+          {t("idea.discussion.moreComments")}
         </Button>
       )}
     </section>
   );
 }
 
-const KIND_LABEL: Record<CommentKind, string> = {
-  comment: "Comment",
-  question: "Question",
-  suggestion: "Suggestion",
-};
-
 /** A one-line invitation that opens the full composer, so an empty thread does not start with a big form. */
 function CollapsedComposer({ idea }: { idea: IdeaDetail }) {
+  const t = useMessage();
   const gate = useAuthGate();
   const { me } = useSession();
   const [open, setOpen] = useState(false);
@@ -194,7 +210,7 @@ function CollapsedComposer({ idea }: { idea: IdeaDetail }) {
   return (
     <button type="button" className={styles.invite} onClick={() => gate(() => setOpen(true))}>
       {me && <Avatar name={me.displayName} seed={me.handle} size={28} />}
-      <span>Add a comment, question or suggestion…</span>
+      <span>{t("idea.discussion.addComment")}</span>
     </button>
   );
 }
@@ -210,6 +226,7 @@ function CommentComposer({
   onDone?: () => void;
   autoFocus?: boolean;
 }) {
+  const t = useMessage();
   const gate = useAuthGate();
   const post = usePostComment(idea.slug);
   const [kind, setKind] = useState<CommentKind>("comment");
@@ -235,19 +252,21 @@ function CommentComposer({
     <form onSubmit={submit} className={styles.composer}>
       {!parentId && (
         <Segmented
-          label="Kind of comment"
+          label={t("idea.discussion.kind")}
           size="sm"
           value={kind}
           onChange={setKind}
-          options={COMMENT_KINDS.map((k) => ({ value: k, label: KIND_LABEL[k] }))}
+          options={COMMENT_KINDS.map((k) => ({ value: k, label: t(`idea.discussion.kind.${k}`) }))}
         />
       )}
       <textarea
         className={control}
         value={body}
         onChange={(e) => setBody(e.target.value)}
-        placeholder={parentId ? "Write a reply…" : "Share a thought, a question or a suggestion…"}
-        aria-label={parentId ? "Reply" : "Comment"}
+        placeholder={
+          parentId ? t("idea.discussion.replyPlaceholder") : t("idea.discussion.commentPlaceholder")
+        }
+        aria-label={t(parentId ? "idea.discussion.reply" : "idea.discussion.kind.comment")}
         aria-invalid={errors.body ? true : undefined}
         minLength={LIMITS.commentBody.min}
         maxLength={LIMITS.commentBody.max}
@@ -259,11 +278,11 @@ function CommentComposer({
       <div className={styles.composerActions}>
         {onDone && (
           <Button size="sm" onClick={onDone}>
-            Cancel
+            {t("common.cancel")}
           </Button>
         )}
         <Button type="submit" size="sm" variant="primary" loading={post.isPending} disabled={!body.trim()}>
-          {parentId ? "Reply" : "Post"}
+          {t(parentId ? "idea.discussion.reply" : "idea.discussion.post")}
         </Button>
       </div>
     </form>
@@ -281,6 +300,7 @@ function CommentItem({
   idea: IdeaDetail;
   depth: number;
 }) {
+  const t = useMessage();
   const gate = useAuthGate();
   const [replying, setReplying] = useState(false);
   const children = replies.get(comment.id) ?? [];
@@ -289,19 +309,21 @@ function CommentItem({
       <div className={styles.commentHead}>
         <PersonLink person={comment.author} avatar size={24} />
         {comment.kind !== "comment" && (
-          <Badge tone={comment.kind === "question" ? "primary" : "neutral"}>{KIND_LABEL[comment.kind]}</Badge>
+          <Badge tone={comment.kind === "question" ? "primary" : "neutral"}>
+            {t(`idea.discussion.kind.${comment.kind}`)}
+          </Badge>
         )}
         <TimeAgo iso={comment.createdAt} />
       </div>
       {comment.hidden ? (
-        <p className={styles.hidden}>Hidden by moderation. The reason is in the public moderation log.</p>
+        <p className={styles.hidden}>{t("idea.discussion.hidden")}</p>
       ) : (
         <p className={styles.body}>{comment.body}</p>
       )}
       <div className={styles.commentActions}>
         {depth < 4 && (
           <Button variant="quiet" size="sm" onClick={() => gate(() => setReplying(true))}>
-            Reply
+            {t("idea.discussion.reply")}
           </Button>
         )}
         <UsefulButton

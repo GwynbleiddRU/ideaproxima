@@ -1,5 +1,5 @@
 import { vocabularyField } from "@/lib/vocabulary";
-import { useLocale } from "@/locales/react";
+import { LocalizedText, useMessage } from "@/locales/react";
 import { useQuery } from "@tanstack/react-query";
 import { useState, type FormEvent } from "react";
 import { ExternalLink, HandHelping, Lightbulb, Rocket } from "lucide-react";
@@ -59,7 +59,7 @@ export function PracticeTab() {
 }
 
 function People({ idea }: { idea: IdeaDetail }) {
-  useLocale();
+  const t = useMessage();
   const gate = useAuthGate();
   const involvements = useQuery(signalQueries.involvements(idea.slug));
   const [open, setOpen] = useState(false);
@@ -67,11 +67,11 @@ function People({ idea }: { idea: IdeaDetail }) {
   return (
     <section className={tabs.group}>
       <SectionHeading
-        eyebrow="Who can carry it forward"
-        title="People involved"
+        eyebrow={t("idea.practice.peopleEyebrow")}
+        title={t("idea.practice.people")}
         action={
           <Button size="sm" icon={<HandHelping />} onClick={() => gate(() => setOpen(true))}>
-            I can help
+            {t("idea.action.help")}
           </Button>
         }
       />
@@ -108,9 +108,8 @@ function People({ idea }: { idea: IdeaDetail }) {
           })}
         </div>
       ) : (
-        <EmptyState compact title="Nobody has stepped forward yet">
-          Researchers, engineers, funders and organisers can say how they could help, so they can find each
-          other.
+        <EmptyState compact title={t("idea.practice.noPeople")}>
+          {t("idea.practice.peopleInvite")}
         </EmptyState>
       )}
       <InvolveDialog open={open} onClose={() => setOpen(false)} idea={idea} />
@@ -119,17 +118,18 @@ function People({ idea }: { idea: IdeaDetail }) {
 }
 
 function Initiatives({ idea }: { idea: IdeaDetail }) {
+  const t = useMessage();
   const gate = useAuthGate();
   const initiatives = useQuery(practiceQueries.initiatives(idea.slug));
   const [creating, setCreating] = useState(false);
   return (
     <section className={tabs.group}>
       <SectionHeading
-        eyebrow="Research, experiments, pilots, deployments"
-        title="Initiatives & outcomes"
+        eyebrow={t("idea.practice.initiativesEyebrow")}
+        title={t("idea.practice.initiatives")}
         action={
           <Button variant="primary" size="sm" icon={<Rocket />} onClick={() => gate(() => setCreating(true))}>
-            Record an initiative
+            {t("idea.practice.create")}
           </Button>
         }
       />
@@ -142,9 +142,8 @@ function Initiatives({ idea }: { idea: IdeaDetail }) {
           ))}
         </div>
       ) : (
-        <EmptyState compact icon={<Rocket />} title="No initiatives recorded">
-          When someone researches, tests or deploys this idea — successfully or not — record it here. An
-          experiment with a recorded outcome is what moves an idea to “Tested”.
+        <EmptyState compact icon={<Rocket />} title={t("idea.practice.noInitiatives")}>
+          {t("idea.practice.initiativeInvite")}
         </EmptyState>
       )}
       <CreateInitiativeDialog open={creating} onClose={() => setCreating(false)} idea={idea} />
@@ -153,7 +152,7 @@ function Initiatives({ idea }: { idea: IdeaDetail }) {
 }
 
 function InitiativeCard({ initiative, idea }: { initiative: InitiativeDto; idea: IdeaDetail }) {
-  useLocale();
+  const t = useMessage();
   const can = usePermissions(idea);
   const [dialog, setDialog] = useState<"status" | "outcome" | null>(null);
   const dates = [
@@ -189,7 +188,7 @@ function InitiativeCard({ initiative, idea }: { initiative: InitiativeDto; idea:
             INITIATIVE_STATUS_INFO[initiative.status].label,
           )}
         </Badge>
-        {initiative.hidden && <Badge tone="warning">Hidden</Badge>}
+        {initiative.hidden && <Badge tone="warning">{t("common.hidden")}</Badge>}
       </header>
       <h3 className={styles.initiativeTitle}>{initiative.title}</h3>
       <MetaLine>
@@ -197,7 +196,7 @@ function InitiativeCard({ initiative, idea }: { initiative: InitiativeDto; idea:
         {dates && <span>{dates}</span>}
         {initiative.url && (
           <a href={initiative.url} target="_blank" rel="noopener noreferrer nofollow ugc" className="link">
-            Website <ExternalLink size={12} aria-hidden />
+            {t("idea.practice.website")} <ExternalLink size={12} aria-hidden />
           </a>
         )}
       </MetaLine>
@@ -209,7 +208,13 @@ function InitiativeCard({ initiative, idea }: { initiative: InitiativeDto; idea:
               <div className={styles.outcomeHead}>
                 <OutcomeBadge result={o.result} />
                 <span className={styles.note}>
-                  recorded by <PersonLink person={o.recordedBy} /> · <TimeAgo iso={o.recordedAt} />
+                  <LocalizedText
+                    id="idea.practice.outcomeBy"
+                    components={{
+                      0: <PersonLink person={o.recordedBy} />,
+                      1: <TimeAgo iso={o.recordedAt} />,
+                    }}
+                  />
                 </span>
               </div>
               <p>{o.summary}</p>
@@ -217,7 +222,7 @@ function InitiativeCard({ initiative, idea }: { initiative: InitiativeDto; idea:
                 <p className={styles.lessons}>
                   <Lightbulb size={16} aria-hidden />
                   <span>
-                    <strong>What was learned:</strong> {o.lessons}
+                    <strong>{t("idea.practice.lessonsLabel")}</strong> {o.lessons}
                   </span>
                 </p>
               )}
@@ -228,7 +233,10 @@ function InitiativeCard({ initiative, idea }: { initiative: InitiativeDto; idea:
       <footer className={styles.initiativeFoot}>
         <MetaLine>
           <span>
-            Recorded by <PersonLink person={initiative.createdBy} />
+            <LocalizedText
+              id="idea.practice.recordedBy"
+              components={{ 0: <PersonLink person={initiative.createdBy} /> }}
+            />
           </span>
           <TimeAgo iso={initiative.createdAt} />
         </MetaLine>
@@ -236,10 +244,10 @@ function InitiativeCard({ initiative, idea }: { initiative: InitiativeDto; idea:
           {can.canCurate(initiative.createdBy.id) && (
             <>
               <Button variant="quiet" size="sm" onClick={() => setDialog("status")}>
-                Update status
+                {t("idea.practice.updateStatus")}
               </Button>
               <Button variant="quiet" size="sm" onClick={() => setDialog("outcome")}>
-                Record outcome
+                {t("idea.practice.recordOutcome")}
               </Button>
             </>
           )}
@@ -271,7 +279,7 @@ function CreateInitiativeDialog({
   onClose: () => void;
   idea: IdeaDetail;
 }) {
-  useLocale();
+  const t = useMessage();
   const create = useCreateInitiative(idea.slug);
   const [kind, setKind] = useState<InitiativeKind>("research");
   const [status, setStatus] = useState<InitiativeStatus>("planned");
@@ -309,11 +317,11 @@ function CreateInitiativeDialog({
       open={open}
       onClose={onClose}
       size="lg"
-      title="Record an initiative"
-      description="Real-world action on this idea. Past initiatives can be recorded as completed."
+      title={t("idea.practice.create")}
+      description={t("idea.practice.createHelp")}
     >
       <form onSubmit={submit} className={forms.form}>
-        <Fieldset legend="Kind">
+        <Fieldset legend={t("idea.practice.kind")}>
           <div className={forms.choices}>
             {INITIATIVE_KINDS.map((k) => (
               <label key={k} className={forms.choice}>
@@ -328,7 +336,7 @@ function CreateInitiativeDialog({
             ))}
           </div>
         </Fieldset>
-        <Field label="Title" error={errors.title}>
+        <Field label={t("common.title")} error={errors.title}>
           {(p) => (
             <input
               {...p}
@@ -341,7 +349,7 @@ function CreateInitiativeDialog({
             />
           )}
         </Field>
-        <Field label="What is being done, and how" error={errors.description}>
+        <Field label={t("idea.practice.description")} error={errors.description}>
           {(p) => (
             <textarea
               {...p}
@@ -356,7 +364,7 @@ function CreateInitiativeDialog({
           )}
         </Field>
         <div className={forms.row}>
-          <Field label="Organisation" optional>
+          <Field label={t("idea.practice.organisation")} optional>
             {(p) => (
               <input
                 {...p}
@@ -367,7 +375,7 @@ function CreateInitiativeDialog({
               />
             )}
           </Field>
-          <Field label="Website" optional error={errors.url}>
+          <Field label={t("idea.practice.website")} optional error={errors.url}>
             {(p) => (
               <input
                 {...p}
@@ -381,7 +389,7 @@ function CreateInitiativeDialog({
           </Field>
         </div>
         <div className={forms.row}>
-          <Field label="Status">
+          <Field label={t("common.status")}>
             {(p) => (
               <select
                 {...p}
@@ -397,7 +405,7 @@ function CreateInitiativeDialog({
               </select>
             )}
           </Field>
-          <Field label="Started" optional>
+          <Field label={t("idea.practice.started")} optional>
             {(p) => (
               <input
                 {...p}
@@ -408,7 +416,7 @@ function CreateInitiativeDialog({
               />
             )}
           </Field>
-          <Field label="Ended" optional>
+          <Field label={t("idea.practice.ended")} optional>
             {(p) => (
               <input {...p} className={control} type="date" value={form.endedOn} onChange={set("endedOn")} />
             )}
@@ -416,9 +424,9 @@ function CreateInitiativeDialog({
         </div>
         <FormError error={create.error} />
         <div className={forms.actions}>
-          <Button onClick={onClose}>Cancel</Button>
+          <Button onClick={onClose}>{t("common.cancel")}</Button>
           <Button type="submit" variant="primary" loading={create.isPending}>
-            Record initiative
+            {t("idea.practice.submitInitiative")}
           </Button>
         </div>
       </form>
@@ -437,7 +445,7 @@ function StatusDialog({
   initiative: InitiativeDto;
   slug: string;
 }) {
-  useLocale();
+  const t = useMessage();
   const update = useUpdateInitiativeStatus(slug);
   const [status, setStatus] = useState<InitiativeStatus>(initiative.status);
   const [note, setNote] = useState("");
@@ -450,9 +458,15 @@ function StatusDialog({
     );
   };
   return (
-    <Dialog open={open} onClose={onClose} size="sm" title="Update status" description={initiative.title}>
+    <Dialog
+      open={open}
+      onClose={onClose}
+      size="sm"
+      title={t("idea.practice.updateStatus")}
+      description={initiative.title}
+    >
       <form onSubmit={submit} className={forms.form}>
-        <Fieldset legend="Status">
+        <Fieldset legend={t("common.status")}>
           <div className={forms.choices}>
             {INITIATIVE_STATUSES.map((s) => (
               <label key={s} className={forms.choice}>
@@ -472,7 +486,7 @@ function StatusDialog({
             ))}
           </div>
         </Fieldset>
-        <Field label="Effective date" optional>
+        <Field label={t("idea.practice.effectiveDate")} optional>
           {(p) => (
             <input
               {...p}
@@ -483,7 +497,7 @@ function StatusDialog({
             />
           )}
         </Field>
-        <Field label="Note" optional>
+        <Field label={t("common.note")} optional>
           {(p) => (
             <textarea
               {...p}
@@ -497,9 +511,9 @@ function StatusDialog({
         </Field>
         <FormError error={update.error} />
         <div className={forms.actions}>
-          <Button onClick={onClose}>Cancel</Button>
+          <Button onClick={onClose}>{t("common.cancel")}</Button>
           <Button type="submit" variant="primary" loading={update.isPending}>
-            Save
+            {t("common.save")}
           </Button>
         </div>
       </form>
@@ -518,7 +532,7 @@ function OutcomeDialog({
   initiative: InitiativeDto;
   slug: string;
 }) {
-  useLocale();
+  const t = useMessage();
   const record = useRecordOutcome(slug);
   const [result, setResult] = useState<OutcomeResult>("succeeded");
   const [summary, setSummary] = useState("");
@@ -532,9 +546,14 @@ function OutcomeDialog({
     );
   };
   return (
-    <Dialog open={open} onClose={onClose} title="Record an outcome" description={initiative.title}>
+    <Dialog
+      open={open}
+      onClose={onClose}
+      title={t("idea.practice.outcomeTitle")}
+      description={initiative.title}
+    >
       <form onSubmit={submit} className={forms.form}>
-        <Fieldset legend="Result">
+        <Fieldset legend={t("idea.practice.result")}>
           <div className={forms.choices}>
             {OUTCOME_RESULTS.map((r) => (
               <label key={r} className={forms.choice}>
@@ -547,7 +566,7 @@ function OutcomeDialog({
             ))}
           </div>
         </Fieldset>
-        <Field label="What happened" error={errors.summary}>
+        <Field label={t("idea.practice.summary")} error={errors.summary}>
           {(p) => (
             <textarea
               {...p}
@@ -561,11 +580,7 @@ function OutcomeDialog({
             />
           )}
         </Field>
-        <Field
-          label="What was learned"
-          optional
-          hint="Required later to move the idea to “Learned from”. The most valuable part of a failure."
-        >
+        <Field label={t("idea.practice.lessons")} optional hint={t("idea.practice.lessonsHint")}>
           {(p) => (
             <textarea
               {...p}
@@ -579,9 +594,9 @@ function OutcomeDialog({
         </Field>
         <FormError error={record.error} />
         <div className={forms.actions}>
-          <Button onClick={onClose}>Cancel</Button>
+          <Button onClick={onClose}>{t("common.cancel")}</Button>
           <Button type="submit" variant="primary" loading={record.isPending}>
-            Record outcome
+            {t("idea.practice.recordOutcome")}
           </Button>
         </div>
       </form>

@@ -1,10 +1,8 @@
-import { createContext, use, useState, type ReactNode } from "react";
+import { Suspense, createContext, lazy, use, useState, type ReactNode } from "react";
 import type { IdeaDetail } from "@ideaproxima/contracts";
 import { useAuthGate } from "@/components/auth";
-import { EvaluateDialog } from "@/components/EvaluateDialog";
-import { InvolveDialog } from "./InvolveDialog";
-import { StageDialog } from "./StageDialog";
-import { ideaInvalidations } from "./use-idea";
+
+const IdeaActionDialogs = lazy(() => import("./IdeaActionDialogs"));
 
 interface IdeaActions {
   /** Open the evaluation dialog (visitors are sent to sign in first). */
@@ -23,7 +21,8 @@ const IdeaActionsContext = createContext<IdeaActions | null>(null);
  */
 export function IdeaActionsProvider({ idea, children }: { idea: IdeaDetail; children: ReactNode }) {
   const gate = useAuthGate();
-  const [dialog, setDialog] = useState<"evaluate" | "involve" | "stage" | null>(null);
+  // Load on first use, then keep the native dialogs mounted so closing restores focus.
+  const [dialog, setDialog] = useState<"evaluate" | "involve" | "stage" | null>();
   const close = () => setDialog(null);
   const actions: IdeaActions = {
     evaluate: () => gate(() => setDialog("evaluate")),
@@ -33,15 +32,11 @@ export function IdeaActionsProvider({ idea, children }: { idea: IdeaDetail; chil
   return (
     <IdeaActionsContext value={actions}>
       {children}
-      <EvaluateDialog
-        open={dialog === "evaluate"}
-        onClose={close}
-        target={{ kind: "idea", id: idea.id }}
-        subject={idea.title}
-        invalidate={ideaInvalidations(idea)}
-      />
-      <InvolveDialog open={dialog === "involve"} onClose={close} idea={idea} />
-      <StageDialog open={dialog === "stage"} onClose={close} idea={idea} />
+      {dialog !== undefined && (
+        <Suspense fallback={null}>
+          <IdeaActionDialogs idea={idea} dialog={dialog} onClose={close} />
+        </Suspense>
+      )}
     </IdeaActionsContext>
   );
 }

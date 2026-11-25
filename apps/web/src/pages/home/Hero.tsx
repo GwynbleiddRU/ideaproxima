@@ -1,3 +1,4 @@
+import { LocalizedText, useMessage } from "@/locales/react";
 import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState, type FormEvent, type MouseEvent } from "react";
 import { ArrowRight, ChevronDown, Plus, Search } from "lucide-react";
@@ -11,6 +12,7 @@ import styles from "./Hero.module.scss";
  * as well as its width, so it fits short laptop screens and phones alike (verified by audit/e2e/hero.spec.ts).
  */
 export function Hero() {
+  const t = useMessage();
   const navigate = useNavigate();
   const input = useRef<HTMLInputElement>(null);
   const [query, setQuery] = useState("");
@@ -46,50 +48,47 @@ export function Hero() {
     <section className={styles.hero} aria-labelledby="hero-title">
       <div className={cx("container", styles.inner)}>
         <div className={styles.text}>
-          <p className={styles.eyebrow}>An open archive of humanity's possible futures</p>
+          <p className={styles.eyebrow}>{t("home.hero.eyebrow")}</p>
           <h1 id="hero-title" className={styles.title}>
-            What could humanity <em>become?</em>
+            <LocalizedText id="home.hero.title" components={{ 0: <em /> }} />
           </h1>
-          <p className={styles.lede}>
-            Ideas that could change what humanity can do, kept with the claims, evidence and connections
-            behind them — so the people able to advance them can find them.
-          </p>
+          <p className={styles.lede}>{t("home.hero.lede")}</p>
           <form role="search" className={styles.search} onSubmit={submit}>
             {/* One label around icon, input and shortcut hint: a click anywhere in the field focuses the input. */}
             <label className={styles.field}>
               <Search aria-hidden className={styles.searchIcon} />
-              <span className="visually-hidden">Search the archive</span>
+              <span className="visually-hidden">{t("nav.searchLabel")}</span>
               <input
                 ref={input}
                 type="search"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search ideas and claims"
+                placeholder={t("home.hero.searchPlaceholder")}
                 enterKeyHint="search"
                 autoComplete="off"
               />
               {/* A keyboard-shortcut hint (press "/" anywhere on the page), not a control. */}
-              <kbd className={styles.kbd} aria-hidden title="Press / anywhere on this page to search">
-                /
+              <kbd className={styles.kbd} aria-hidden title={t("home.hero.searchShortcut")}>
+                {"/"}
               </kbd>
             </label>
             <button type="submit" className={styles.searchButton}>
-              Search
+              {t("nav.search")}
             </button>
           </form>
           <div className={styles.actions}>
             <ButtonLink to="/explore" variant="primary" size="lg">
-              Explore ideas <ArrowRight />
+              {t("explore.title")} <ArrowRight />
             </ButtonLink>
             <ButtonLink to="/new" variant="secondary" size="lg">
-              <Plus /> Propose an idea
+              <Plus /> {t("nav.propose")}
             </ButtonLink>
           </div>
         </div>
         <HeroVisual />
       </div>
       <a href="#discover" className={styles.cue} onClick={scrollOn}>
-        <span>Ways to discover</span>
+        <span>{t("home.showcase.eyebrow")}</span>
         <ChevronDown aria-hidden />
       </a>
     </section>
@@ -124,6 +123,7 @@ const curve = (a: { x: number; y: number }, b: { x: number; y: number }) =>
  * prefers reduced motion.
  */
 function HeroVisual() {
+  const t = useMessage();
   return (
     <div className={styles.visual} aria-hidden>
       <svg viewBox="0 0 560 520" className={styles.svg}>
@@ -172,13 +172,13 @@ function HeroVisual() {
         <circle cx={FOCUS.x} cy={FOCUS.y} r={22} className={styles.focus} />
 
         <text x={FOCUS.x} y={FOCUS.y + 72} className={styles.focusLabel}>
-          an idea
+          {t("home.hero.idea")}
         </text>
         <text x={96} y={484} className={styles.label}>
-          what it needs
+          {t("home.hero.needs")}
         </text>
         <text x={464} y={484} className={styles.label}>
-          what it enables
+          {t("home.hero.enables")}
         </text>
       </svg>
     </div>

@@ -291,7 +291,8 @@ so replaying a callback only repeats work that PostgreSQL rolled back.
 - Add new interface text to the English source in `apps/web/src/locales/messages.ts`. Use an explicit typed ID
   with `useMessage()` or `LocalizedText` for copy with links or emphasis. Note the context and any placeholders
   in the catalogue. Vite compiles ICU messages into lazy locale chunks. The no-literal rule covers the shell,
-  the switcher and auth pages. Extend it as each UI area is extracted.
+  the switcher, auth, home, explore, the idea layout and its six tabs, and their extracted shared reading
+  components. Extend it as each UI area is extracted.
 - Add a domain error reason and English message to [the source catalogue](../../packages/domain/src/errors.en.ts).
   Pass its named arguments as parameters to `DomainError`. Add validation copy to the English validation
   catalogue and map the Zod issue in the HTTP validation layer. Run `npm run i18n:compile` after changing an ICU

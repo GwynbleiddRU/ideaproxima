@@ -64,8 +64,14 @@ test("a newcomer joins, proposes an idea and develops it", async ({ page }) => {
   });
 
   await test.step("evaluate it", async () => {
-    await page.getByRole("button", { name: "Evaluate", exact: true }).click();
+    const evaluate = page.getByRole("button", { name: "Evaluate", exact: true });
+    await evaluate.click();
     const dialog = page.getByRole("dialog");
+    await expect(dialog).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(dialog).toBeHidden();
+    await expect(evaluate).toBeFocused();
+    await evaluate.click();
     await dialog.getByText("Transformative", { exact: true }).click();
     await dialog.getByText("Plausible within decades", { exact: true }).click();
     await expect(dialog.getByText("2 of 6")).toBeVisible();

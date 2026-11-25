@@ -1,5 +1,5 @@
 import { vocabularyField } from "@/lib/vocabulary";
-import { useLocale } from "@/locales/react";
+import { useMessage } from "@/locales/react";
 import { Link } from "@tanstack/react-router";
 import {
   CLAIM_STATUSES,
@@ -10,7 +10,7 @@ import {
 } from "@ideaproxima/domain";
 import { PageHeader, SectionHeading } from "@/components/PageHeader";
 import { ClaimStatusBadge } from "@/components/status";
-import { LENS_GROUPS, MIN_RATINGS_FOR_CONFIDENCE, SIGNAL_INFO } from "@/lib/vocabulary";
+import { LENS_GROUPS, MIN_RATINGS_FOR_CONFIDENCE } from "@/lib/vocabulary";
 import { ButtonLink } from "@/ui/Button";
 import styles from "./AboutPage.module.scss";
 
@@ -42,7 +42,7 @@ const PRINCIPLES = [
 ];
 
 export function AboutPage() {
-  useLocale();
+  const t = useMessage();
   return (
     <div className="container">
       <title>Principles · ideaproxima</title>
@@ -101,8 +101,8 @@ export function AboutPage() {
         <div className={styles.lenses}>
           {LENS_GROUPS.map((group) => (
             <div key={group.signal}>
-              <h3>{SIGNAL_INFO[group.signal].label}</h3>
-              <p className={styles.signal}>{SIGNAL_INFO[group.signal].description}</p>
+              <h3>{t(`lensSignal.${group.signal}.label`)}</h3>
+              <p className={styles.signal}>{t(`lensSignal.${group.signal}.description`)}</p>
               <ul role="list">
                 {group.lenses.map((key) => (
                   <li key={key}>

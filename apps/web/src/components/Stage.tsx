@@ -1,9 +1,11 @@
+import { LocalizedText, useMessage } from "@/locales/react";
 import { CircleCheck, Flag } from "lucide-react";
 import type { IdeaDetail } from "@ideaproxima/contracts";
-import { IDEA_STAGES, stageOrdinal, type IdeaStage } from "@ideaproxima/domain";
+import { IDEA_STAGES, stageOrdinal, stageProofReason, type IdeaStage } from "@ideaproxima/domain";
 import { cx } from "@/lib/cx";
 import { formatList } from "@/lib/format";
 import { useVocabulary } from "@/lib/vocabulary";
+import { vocabularyText } from "@/locales/runtime";
 import { Badge } from "@/ui/Badge";
 import styles from "./Stage.module.scss";
 
@@ -35,18 +37,24 @@ function Pips({ stage }: { stage: IdeaStage }) {
  * Stages are not strictly sequential; the track shows order, not a gate.
  */
 export function StageProgress({ idea }: { idea: Pick<IdeaDetail, "stage" | "stageRequirements"> }) {
+  const t = useMessage();
   const vocabulary = useVocabulary();
   const current = stageOrdinal(idea.stage);
   const ahead = idea.stageRequirements.filter((r) => stageOrdinal(r.stage) > current);
   const ready = ahead.filter((r) => r.met);
   const next = ahead.find((r) => !r.met);
+  const proof = next && stageProofReason(next.stage);
   const label = (stage: IdeaStage) => vocabulary.stage(stage).label;
   return (
     <div className={styles.progress}>
       <div
         className={styles.track}
         role="img"
-        aria-label={`Stage ${current + 1} of ${IDEA_STAGES.length}: ${label(idea.stage)}`}
+        aria-label={t("idea.stageProgress.track", {
+          count: current + 1,
+          total: IDEA_STAGES.length,
+          stage: label(idea.stage),
+        })}
       >
         {IDEA_STAGES.map((s, i) => (
           <span key={s} className={cx(styles.segment, i <= current && styles.segmentOn)} title={label(s)} />
@@ -60,8 +68,11 @@ export function StageProgress({ idea }: { idea: Pick<IdeaDetail, "stage" | "stag
         <p className={cx(styles.next, styles.ready)}>
           <CircleCheck aria-hidden />
           <span>
-            <b>{formatList(ready.map((r) => label(r.stage)))}</b>: requirement{ready.length > 1 ? "s" : ""}{" "}
-            met — a steward can move it on.
+            <LocalizedText
+              id="idea.stageProgress.ready"
+              values={{ stages: formatList(ready.map((r) => label(r.stage))), count: ready.length }}
+              components={{ 0: <b /> }}
+            />
           </span>
         </p>
       )}
@@ -69,11 +80,18 @@ export function StageProgress({ idea }: { idea: Pick<IdeaDetail, "stage" | "stag
         <p className={styles.next}>
           <Flag aria-hidden />
           <span>
-            Next proof, for <b>{label(next.stage)}</b>: {next.requirement.replace(/\.$/, "")}.
+            <LocalizedText
+              id="idea.stageProgress.next"
+              values={{
+                stage: label(next.stage),
+                requirement: proof ? vocabularyText(`errors.${proof}`, next.requirement) : next.requirement,
+              }}
+              components={{ 0: <b /> }}
+            />
           </span>
         </p>
       ) : (
-        ahead.length === 0 && <p className={styles.next}>The last stage: learning recorded from practice.</p>
+        ahead.length === 0 && <p className={styles.next}>{t("idea.stageProgress.last")}</p>
       )}
     </div>
   );

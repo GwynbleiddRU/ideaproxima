@@ -7,6 +7,9 @@ const formatters = (locale: string) => ({
   shortDate: new Intl.DateTimeFormat(locale, { month: "short", day: "numeric" }),
   clock: new Intl.DateTimeFormat(locale, { hour: "2-digit", minute: "2-digit", hourCycle: "h23" }),
   compact: new Intl.NumberFormat(locale, { notation: "compact", maximumFractionDigits: 1 }),
+  number: new Intl.NumberFormat(locale),
+  decimal: new Intl.NumberFormat(locale, { minimumFractionDigits: 1, maximumFractionDigits: 1 }),
+  paddedNumber: new Intl.NumberFormat(locale, { minimumIntegerDigits: 2, useGrouping: false }),
   percent: new Intl.NumberFormat(locale, { style: "percent", maximumFractionDigits: 0 }),
   list: new Intl.ListFormat(locale),
   shortUnits: Object.fromEntries(
@@ -90,6 +93,9 @@ export const isToday = (iso: string, now: number = Date.now()) =>
 export const formatDate = (iso: string) => formats().date.format(new Date(iso));
 export const formatDateTime = (iso: string) => formats().dateTime.format(new Date(iso));
 export const formatCompact = (n: number) => formats().compact.format(n);
+export const formatNumber = (n: number) => formats().number.format(n);
+export const formatDecimal = (n: number) => formats().decimal.format(n);
+export const formatPaddedNumber = (n: number) => formats().paddedNumber.format(n);
 export const formatList = (values: string[]) => formats().list.format(values);
 
 /** 0–1 share as a whole percentage. */

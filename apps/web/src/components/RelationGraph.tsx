@@ -1,3 +1,4 @@
+import { useMessage } from "@/locales/react";
 import { Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import type { GraphDto } from "@ideaproxima/contracts";
@@ -33,19 +34,12 @@ function wrap(title: string): string[] {
   return lines.map((l) => (l.length > LINE_CHARS ? `${l.slice(0, LINE_CHARS - 1)}…` : l));
 }
 
-/** A column's name, relative to the focal idea: what it builds on to the left, what builds on it to the right. */
-function columnLabel(layer: number): string {
-  if (layer === 0) return "This idea";
-  if (layer === -1) return "What it needs";
-  if (layer === 1) return "What it enables";
-  return layer < 0 ? `${-layer} steps back` : `${layer} steps on`;
-}
-
 /**
  * The connection map: columns by dependency, read left to right as "needs → this idea → enables". When nothing
  * builds on the idea yet and the view looks downstream, a dashed placeholder says so — an invitation, not a gap.
  */
 export function RelationGraph({ graph, showEnables = true }: { graph: GraphDto; showEnables?: boolean }) {
+  const t = useMessage();
   const vocabulary = useVocabulary();
   const rtl = isRtl(activeLocale());
   const [hover, setHover] = useState<string | null>(null);
@@ -61,11 +55,17 @@ export function RelationGraph({ graph, showEnables = true }: { graph: GraphDto; 
   const height = PAD * 2 + HEAD + (rows - 1) * ROW + NODE_H;
   const nodeX = (left: number) => (rtl ? width - left - NODE_W : left);
   const mirroredEdges = rtl ? `translate(${width} 0) scale(-1 1)` : undefined;
+  const columnLabel = (layer: number) => {
+    if (layer === 0) return t("idea.graph.focus");
+    if (layer === -1) return t("idea.connections.upstream");
+    if (layer === 1) return t("idea.connections.downstream");
+    return t(layer < 0 ? "idea.graph.stepsBack" : "idea.graph.stepsOn", { count: Math.abs(layer) });
+  };
 
   return (
     <figure
       className={styles.scroller}
-      aria-label={`Connection map: ${nodes.length} ideas, ${graph.edges.length} connections`}
+      aria-label={t("idea.graph.label", { ideas: nodes.length, connections: graph.edges.length })}
     >
       <svg viewBox={`0 0 ${width} ${height}`} width={width} height={height} className={styles.svg}>
         {Array.from({ length: columns }, (_, i) => minLayer + i).map((layer) => (
@@ -96,7 +96,12 @@ export function RelationGraph({ graph, showEnables = true }: { graph: GraphDto; 
                   active && styles.edgeActive,
                 )}
               >
-                <title>{`${vocabulary.text(`relationTypes.${edge.type}.label`, info.label)}: ${vocabulary.text(`relationTypes.${edge.type}.description`, info.description)}`}</title>
+                <title>
+                  {t("idea.graph.edge", {
+                    label: vocabulary.text(`relationTypes.${edge.type}.label`, info.label),
+                    description: vocabulary.text(`relationTypes.${edge.type}.description`, info.description),
+                  })}
+                </title>
               </path>
             );
           })}
@@ -135,23 +140,23 @@ export function RelationGraph({ graph, showEnables = true }: { graph: GraphDto; 
             />
             <rect width={NODE_W} height={NODE_H} rx={10} />
             <text x={14} y={30} className={styles.nodeMeta}>
-              Nothing recorded builds on it yet.
+              {t("idea.graph.empty")}
             </text>
             <text x={14} y={48} className={styles.nodeMeta}>
-              Know an idea it would enable? Connect it.
+              {t("idea.graph.invite")}
             </text>
           </g>
         )}
       </svg>
       <p className={styles.legend}>
         <span>
-          <i className={styles.legendSolid} /> builds on (requires, applies, extends, derived from)
+          <i className={styles.legendSolid} /> {t("idea.graph.buildsOn")}
         </span>
         <span>
-          <i className={styles.legendDashed} /> alternative or complement
+          <i className={styles.legendDashed} /> {t("idea.graph.alternative")}
         </span>
         <span>
-          <i className={styles.legendConflict} /> conflicts with
+          <i className={styles.legendConflict} /> {t("idea.graph.conflicts")}
         </span>
       </p>
     </figure>

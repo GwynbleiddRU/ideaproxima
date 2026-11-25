@@ -1,5 +1,5 @@
 import { vocabularyField } from "@/lib/vocabulary";
-import { useLocale } from "@/locales/react";
+import { useMessage } from "@/locales/react";
 import { Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { ExternalLink } from "lucide-react";
@@ -24,13 +24,14 @@ import styles from "./knowledge.module.scss";
  * others assess its quality and relevance. Withdrawn evidence stays visible, struck through, with its reason.
  */
 export function EvidenceItem({ evidence, ideaSlug }: { evidence: EvidenceDto; ideaSlug?: string }) {
-  useLocale();
+  const t = useMessage();
   const { me, isModerator } = useSession();
   const gate = useAuthGate();
   const withdraw = useWithdrawEvidence(evidence.claimId, ideaSlug);
   const [dialog, setDialog] = useState<"assess" | "withdraw" | null>(null);
   const withdrawn = !!evidence.withdrawnAt;
   const { source } = evidence;
+  const citation = [source?.authors, source?.venue, source?.year].filter(Boolean).join(", ");
 
   return (
     <article className={cx(styles.evidence, withdrawn && styles.withdrawn)} data-stance={evidence.stance}>
@@ -41,14 +42,14 @@ export function EvidenceItem({ evidence, ideaSlug }: { evidence: EvidenceDto; id
             {vocabularyField("sourceKinds", source.kind, "label", SOURCE_KIND_INFO[source.kind].label)}
           </Badge>
         )}
-        {evidence.outcome && <Badge tone="outline">Recorded outcome</Badge>}
-        {withdrawn && <Badge tone="danger">Withdrawn</Badge>}
-        {evidence.hidden && <Badge tone="warning">Hidden</Badge>}
+        {evidence.outcome && <Badge tone="outline">{t("idea.claim.recordedOutcome")}</Badge>}
+        {withdrawn && <Badge tone="danger">{t("common.withdrawn")}</Badge>}
+        {evidence.hidden && <Badge tone="warning">{t("common.hidden")}</Badge>}
       </header>
       <p className={styles.evidenceSummary}>{evidence.summary}</p>
       {evidence.limitations && (
         <p className={styles.limitations}>
-          <strong>Does not establish:</strong> {evidence.limitations}
+          <strong>{t("idea.claim.limitations")}</strong> {evidence.limitations}
         </p>
       )}
       {source && (
@@ -56,10 +57,8 @@ export function EvidenceItem({ evidence, ideaSlug }: { evidence: EvidenceDto; id
           <Link to="/sources/$source" params={{ source: source.id }} className="link">
             {source.title}
           </Link>
-          {[source.authors, source.venue, source.year].filter(Boolean).length > 0 && (
-            <span> · {[source.authors, source.venue, source.year].filter(Boolean).join(", ")}</span>
-          )}
-          {evidence.locator && <span> · {evidence.locator}</span>}
+          {citation && <span>{t("idea.claim.citationDetail", { detail: citation })}</span>}
+          {evidence.locator && <span>{t("idea.claim.citationDetail", { detail: evidence.locator })}</span>}
           {source.doi && (
             <a
               href={`https://doi.org/${source.doi}`}
@@ -67,7 +66,7 @@ export function EvidenceItem({ evidence, ideaSlug }: { evidence: EvidenceDto; id
               rel="noopener noreferrer nofollow"
               className={styles.external}
             >
-              DOI <ExternalLink size={12} aria-hidden />
+              {t("idea.claim.doi")} <ExternalLink size={12} aria-hidden />
             </a>
           )}
           {!source.doi && source.url && (
@@ -77,25 +76,27 @@ export function EvidenceItem({ evidence, ideaSlug }: { evidence: EvidenceDto; id
               rel="noopener noreferrer nofollow ugc"
               className={styles.external}
             >
-              Link <ExternalLink size={12} aria-hidden />
+              {t("idea.claim.link")} <ExternalLink size={12} aria-hidden />
             </a>
           )}
         </p>
       )}
       {evidence.outcome && (
         <p className={styles.source}>
-          From an outcome recorded on the platform:{" "}
-          {vocabularyField(
-            "outcomeResults",
-            evidence.outcome.result,
-            "label",
-            OUTCOME_RESULT_INFO[evidence.outcome.result].label,
-          )}
-          .
+          {t("idea.claim.outcomeSource", {
+            result: vocabularyField(
+              "outcomeResults",
+              evidence.outcome.result,
+              "label",
+              OUTCOME_RESULT_INFO[evidence.outcome.result].label,
+            ),
+          })}
         </p>
       )}
       {withdrawn && evidence.withdrawnReason && (
-        <p className={styles.withdrawnReason}>Withdrawn: {evidence.withdrawnReason}</p>
+        <p className={styles.withdrawnReason}>
+          {t("idea.claim.withdrawnReason", { reason: evidence.withdrawnReason })}
+        </p>
       )}
       <div className={styles.evidenceMeters}>
         <RatingMeter dimension="quality" summary={evidence.derived.quality} size="sm" />
@@ -111,12 +112,12 @@ export function EvidenceItem({ evidence, ideaSlug }: { evidence: EvidenceDto; id
         <div className={styles.footerActions}>
           {!withdrawn && (
             <Button variant="quiet" size="sm" onClick={() => gate(() => setDialog("assess"))}>
-              Assess
+              {t("common.assess")}
             </Button>
           )}
           {!withdrawn && (isModerator || me?.id === evidence.contributedBy.id) && (
             <Button variant="quiet" size="sm" onClick={() => setDialog("withdraw")}>
-              Withdraw
+              {t("common.withdraw")}
             </Button>
           )}
           <ModerateButton kind="evidence" id={evidence.id} hidden={evidence.hidden} />
@@ -126,15 +127,15 @@ export function EvidenceItem({ evidence, ideaSlug }: { evidence: EvidenceDto; id
         open={dialog === "assess"}
         onClose={() => setDialog(null)}
         target={{ kind: "evidence", id: evidence.id }}
-        subject="this evidence"
+        subject={t("idea.claim.evidenceSubject")}
         invalidate={[["claim", evidence.claimId], ...(ideaSlug ? [["idea", ideaSlug]] : [])]}
       />
       <ReasonDialog
         open={dialog === "withdraw"}
         onClose={() => setDialog(null)}
-        title="Withdraw this evidence"
-        description="It stays in the record, marked as withdrawn, and stops counting towards the claim's status."
-        confirmLabel="Withdraw"
+        title={t("idea.claim.withdrawTitle")}
+        description={t("idea.claim.withdrawHelp")}
+        confirmLabel={t("common.withdraw")}
         danger
         onConfirm={(reason) => withdraw.mutateAsync({ evidenceId: evidence.id, reason })}
       />

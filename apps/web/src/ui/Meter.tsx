@@ -1,5 +1,6 @@
 import type { CSSProperties, ReactNode } from "react";
 import { cx } from "@/lib/cx";
+import { useMessage } from "@/locales/react";
 import styles from "./Meter.module.scss";
 
 /**
@@ -45,17 +46,18 @@ export function Meter({
   accent?: boolean;
   size?: "sm" | "md";
 }) {
+  const t = useMessage();
   const unrated = value === null;
   const early = !unrated && n !== undefined && n < minN;
-  const name = typeof label === "string" ? label : "Measure";
+  const name = typeof label === "string" ? label : t("meter.name");
 
   if (unrated || early) {
     const count = unrated ? 0 : n!;
     const text = unrated
-      ? "Not yet rated"
+      ? t("meter.unrated")
       : size === "sm"
-        ? `${count} of ${minN}`
-        : `Too early · ${count} of ${minN}`;
+        ? t("common.progress", { count, total: minN })
+        : t("meter.early", { count, total: minN });
     return (
       <div className={cx(styles.meter, styles[size])}>
         <div className={styles.head}>
@@ -63,15 +65,13 @@ export function Meter({
           <span
             className={styles.early}
             title={
-              unrated
-                ? `${name}: nobody has rated this yet`
-                : `${name}: too early to tell — ${count} of the ${minN} evaluations a measure needs`
+              unrated ? t("meter.unratedHint", { name }) : t("meter.earlyHint", { name, count, total: minN })
             }
           >
             {minN > 0 && <Dots n={count} of={minN} />}
-            {text}
+            <span aria-hidden={early && size === "sm" ? true : undefined}>{text}</span>
             {early && size === "sm" && (
-              <span className="visually-hidden"> evaluations, too early to tell</span>
+              <span className="visually-hidden">{t("meter.earlyAccessible", { count, total: minN })}</span>
             )}
           </span>
         </div>
@@ -90,7 +90,7 @@ export function Meter({
         <span className={styles.label}>{label}</span>
         <span className={styles.meta}>
           {detail}
-          {n !== undefined && <span className={styles.n}> · n={n}</span>}
+          {n !== undefined && <span className={styles.n}>{t("meter.sampleSize", { count: n })}</span>}
         </span>
       </div>
       <div

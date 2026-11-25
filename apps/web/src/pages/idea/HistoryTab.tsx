@@ -1,5 +1,5 @@
 import { vocabularyField } from "@/lib/vocabulary";
-import { useLocale } from "@/locales/react";
+import { LocalizedText, useMessage } from "@/locales/react";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { useState, type FormEvent } from "react";
 import type { IdeaContentDto, IdeaDetail, RevisionSummaryDto } from "@ideaproxima/contracts";
@@ -29,7 +29,7 @@ import tabs from "./tabs.module.scss";
 
 /** Nothing is rewritten: every revision, decision and stage change is preserved and can be inspected. */
 export function HistoryTab() {
-  useLocale();
+  const t = useMessage();
   const idea = useIdea();
   const revisions = useQuery(ideaQueries.revisions(idea.slug));
   const stages = useQuery(ideaQueries.stages(idea.slug));
@@ -42,8 +42,8 @@ export function HistoryTab() {
       {proposed.length > 0 && (
         <section className={tabs.group}>
           <SectionHeading
-            eyebrow="Awaiting a steward's decision"
-            title={`Proposed revisions (${proposed.length})`}
+            eyebrow={t("idea.history.proposedEyebrow")}
+            title={t("idea.history.proposedCount", { count: proposed.length })}
           />
           <ul className={tabs.list} role="list">
             {proposed.map((r) => (
@@ -54,7 +54,7 @@ export function HistoryTab() {
       )}
 
       <section className={tabs.group}>
-        <SectionHeading eyebrow="What has been done" title="Stage history" />
+        <SectionHeading eyebrow={t("idea.history.stageEyebrow")} title={t("idea.history.stages")} />
         {stages.isPending ? (
           <Skeleton lines={3} />
         ) : (
@@ -64,10 +64,16 @@ export function HistoryTab() {
                 <span className={styles.marker} aria-hidden />
                 <div>
                   <p className={styles.transition}>
-                    {t.from
-                      ? `${vocabularyField("stages", t.from, "label", IDEA_STAGE_INFO[t.from].label)} → `
-                      : ""}
-                    <strong>{vocabularyField("stages", t.to, "label", IDEA_STAGE_INFO[t.to].label)}</strong>
+                    <LocalizedText
+                      id={t.from ? "idea.history.transition" : "idea.history.firstStage"}
+                      values={{
+                        from: t.from
+                          ? vocabularyField("stages", t.from, "label", IDEA_STAGE_INFO[t.from].label)
+                          : "",
+                        to: vocabularyField("stages", t.to, "label", IDEA_STAGE_INFO[t.to].label),
+                      }}
+                      components={{ 0: <strong /> }}
+                    />
                   </p>
                   {t.rationale && <p className={tabs.muted}>{t.rationale}</p>}
                   <MetaLine>
@@ -84,7 +90,10 @@ export function HistoryTab() {
       </section>
 
       <section className={tabs.group}>
-        <SectionHeading eyebrow="How the text evolved" title={`Revisions (${all.length})`} />
+        <SectionHeading
+          eyebrow={t("idea.history.revisionsEyebrow")}
+          title={t("idea.history.revisionCount", { count: all.length })}
+        />
         {revisions.isPending ? (
           <Skeleton lines={4} />
         ) : (
@@ -113,16 +122,24 @@ function RevisionRow({
   idea: IdeaDetail;
   onView: () => void;
 }) {
-  useLocale();
+  const t = useMessage();
   const can = usePermissions(idea);
   const withdraw = useWithdrawRevision(idea.slug);
   const [deciding, setDeciding] = useState(false);
   const current = revision.id === idea.revision.id;
   const pending = revision.status === "proposed";
+  const status = vocabularyField(
+    "revisionStatuses",
+    revision.status,
+    "label",
+    REVISION_STATUS_INFO[revision.status].label,
+  );
   return (
     <li className={styles.revision}>
       <div className={styles.revisionHead}>
-        <span className={styles.revisionNumber}>#{revision.number}</span>
+        <span className={styles.revisionNumber}>
+          {t("idea.history.revisionNumber", { number: revision.number })}
+        </span>
         <Badge
           tone={
             pending
@@ -134,16 +151,9 @@ function RevisionRow({
                   : "neutral"
           }
         >
-          {current
-            ? "Current"
-            : vocabularyField(
-                "revisionStatuses",
-                revision.status,
-                "label",
-                REVISION_STATUS_INFO[revision.status].label,
-              )}
+          {current ? t("idea.history.current") : status}
         </Badge>
-        <p className={styles.changeNote}>{revision.changeNote || "Initial version"}</p>
+        <p className={styles.changeNote}>{revision.changeNote || t("idea.history.initial")}</p>
       </div>
       <MetaLine>
         <span>
@@ -152,18 +162,24 @@ function RevisionRow({
         <TimeAgo iso={revision.createdAt} />
         {revision.decidedBy && (
           <span>
-            {revision.status} by <PersonLink person={revision.decidedBy} />
-            {revision.decisionNote ? ` — “${revision.decisionNote}”` : ""}
+            <LocalizedText
+              id={revision.decisionNote ? "idea.history.decidedWithNote" : "idea.history.decidedBy"}
+              values={{ status }}
+              components={{
+                0: <PersonLink person={revision.decidedBy} />,
+                1: <bdi>{revision.decisionNote}</bdi>,
+              }}
+            />
           </span>
         )}
       </MetaLine>
       <div className={styles.revisionActions}>
         <Button variant="quiet" size="sm" onClick={onView}>
-          View changes
+          {t("idea.history.view")}
         </Button>
         {pending && can.canSteward && (
           <Button variant="quiet" size="sm" onClick={() => setDeciding(true)}>
-            Decide
+            {t("idea.history.decide")}
           </Button>
         )}
         {pending && can.isMe(revision.author.id) && (
@@ -173,7 +189,7 @@ function RevisionRow({
             loading={withdraw.isPending}
             onClick={() => withdraw.mutate(revision.id)}
           >
-            Withdraw proposal
+            {t("idea.history.withdraw")}
           </Button>
         )}
       </div>
@@ -198,6 +214,7 @@ function DecisionDialog({
   revision: RevisionSummaryDto;
   slug: string;
 }) {
+  const t = useMessage();
   const decide = useDecideRevision(slug);
   const [note, setNote] = useState("");
   const submit = (decision: "accept" | "reject") => (event?: FormEvent) => {
@@ -212,15 +229,12 @@ function DecisionDialog({
       open={open}
       onClose={onClose}
       size="sm"
-      title={`Revision #${revision.number}`}
+      title={t("idea.history.revisionTitle", { number: revision.number })}
       description={revision.changeNote}
     >
       <form onSubmit={submit("accept")} className={forms.form}>
-        <p className={forms.note}>
-          Accepting publishes it as the current text, crediting its author. Either way, the proposal and your
-          note stay in the history.
-        </p>
-        <Field label="Note to the author" optional>
+        <p className={forms.note}>{t("idea.history.decisionHelp")}</p>
+        <Field label={t("idea.history.note")} optional>
           {(p) => (
             <textarea
               {...p}
@@ -235,10 +249,10 @@ function DecisionDialog({
         <FormError error={decide.error} />
         <div className={forms.actions}>
           <Button variant="danger" onClick={() => submit("reject")()} disabled={decide.isPending}>
-            Decline
+            {t("idea.history.decline")}
           </Button>
           <Button type="submit" variant="primary" loading={decide.isPending}>
-            Accept and publish
+            {t("idea.history.accept")}
           </Button>
         </div>
       </form>
@@ -255,12 +269,13 @@ function RevisionDialog({
   idea: IdeaDetail;
   onClose: () => void;
 }) {
+  const t = useMessage();
   return (
     <Dialog
       open={!!revision}
       onClose={onClose}
       size="lg"
-      title={revision ? `Revision #${revision.number}` : ""}
+      title={revision ? t("idea.history.revisionTitle", { number: revision.number }) : ""}
       description={revision?.changeNote}
     >
       {revision && <RevisionDiff revision={revision} idea={idea} />}
@@ -269,7 +284,7 @@ function RevisionDialog({
 }
 
 function RevisionDiff({ revision, idea }: { revision: RevisionSummaryDto; idea: IdeaDetail }) {
-  useLocale();
+  const t = useMessage();
   const after = useQuery(ideaQueries.revision(idea.slug, revision.id));
   const before = useQuery({
     ...ideaQueries.revision(idea.slug, revision.baseRevisionId ?? ""),
@@ -280,15 +295,15 @@ function RevisionDiff({ revision, idea }: { revision: RevisionSummaryDto; idea: 
   const a = before.data?.content;
   const b = after.data.content;
   const fields: { label: string; before: string; after: string }[] = [
-    { label: "Title", before: a?.title ?? "", after: b.title },
-    { label: "Summary", before: a?.summary ?? "", after: b.summary },
+    { label: t("common.title"), before: a?.title ?? "", after: b.title },
+    { label: t("idea.history.summary"), before: a?.summary ?? "", after: b.summary },
     ...IDEA_SECTIONS.map((key) => ({
       label: vocabularyField("sections", key, "label", IDEA_SECTION_INFO[key].label),
       before: a?.sections[key] ?? "",
       after: b.sections[key] ?? "",
     })),
-    { label: "Topics", before: listOf(a, "topics"), after: listOf(b, "topics") },
-    { label: "Tags", before: listOf(a, "tags"), after: listOf(b, "tags") },
+    { label: t("nav.topics"), before: listOf(a, "topics"), after: listOf(b, "topics") },
+    { label: t("idea.history.tags"), before: listOf(a, "tags"), after: listOf(b, "tags") },
   ];
   const changed = fields
     .map((f) => ({ ...f, lines: diffLines(f.before, f.after) }))
@@ -296,8 +311,9 @@ function RevisionDiff({ revision, idea }: { revision: RevisionSummaryDto; idea: 
   return (
     <div className={styles.diff}>
       <p className={tabs.muted}>
-        {a ? `Compared with revision ${before.data?.number}.` : "The first version: everything is new."} Added
-        lines are marked +, removed lines −.
+        {before.data
+          ? t("idea.history.compared", { number: before.data.number })
+          : t("idea.history.firstDiff")}
       </p>
       {changed.length ? (
         changed.map((f) => (
@@ -315,7 +331,7 @@ function RevisionDiff({ revision, idea }: { revision: RevisionSummaryDto; idea: 
           </section>
         ))
       ) : (
-        <EmptyState compact title="No textual changes" />
+        <EmptyState compact title={t("idea.history.noChanges")} />
       )}
     </div>
   );
@@ -326,18 +342,19 @@ const listOf = (content: IdeaContentDto | undefined, key: "topics" | "tags") =>
 
 /** Kinds of recorded action the timeline can be narrowed to (by action prefix). */
 const TIMELINE_FILTERS = {
-  all: { label: "Everything", prefixes: [] },
-  text: { label: "Text & stage", prefixes: ["idea.", "revision.", "stage.", "steward."] },
+  all: { label: "idea.history.everything", prefixes: [] },
+  text: { label: "idea.history.textAndStage", prefixes: ["idea.", "revision.", "stage.", "steward."] },
   knowledge: {
-    label: "Knowledge & debate",
+    label: "idea.history.knowledgeAndDebate",
     prefixes: ["claim.", "evidence.", "source.", "relation.", "argument.", "comment."],
   },
-  judgement: { label: "Evaluations & perspectives", prefixes: ["evaluation.", "stance."] },
-  practice: { label: "Practice", prefixes: ["involvement.", "initiative.", "outcome."] },
+  judgement: { label: "idea.history.evaluationsAndPerspectives", prefixes: ["evaluation.", "stance."] },
+  practice: { label: "idea.history.practice", prefixes: ["involvement.", "initiative.", "outcome."] },
 } as const;
 type TimelineFilter = keyof typeof TIMELINE_FILTERS;
 
 function Timeline({ idea }: { idea: IdeaDetail }) {
+  const t = useMessage();
   const timeline = useInfiniteQuery(ideaQueries.timeline(idea.slug));
   const [filter, setFilter] = useState<TimelineFilter>("all");
   const prefixes: readonly string[] = TIMELINE_FILTERS[filter].prefixes;
@@ -346,15 +363,15 @@ function Timeline({ idea }: { idea: IdeaDetail }) {
   );
   return (
     <section className={tabs.group}>
-      <SectionHeading eyebrow="Every recorded action" title="Timeline" />
+      <SectionHeading eyebrow={t("idea.history.activityEyebrow")} title={t("idea.history.timeline")} />
       <Segmented<TimelineFilter>
-        label="Show"
+        label={t("idea.history.show")}
         size="sm"
         value={filter}
         onChange={setFilter}
         options={Object.entries(TIMELINE_FILTERS).map(([value, f]) => ({
           value: value as TimelineFilter,
-          label: f.label,
+          label: t(f.label),
         }))}
       />
       {timeline.isPending ? (
@@ -362,11 +379,11 @@ function Timeline({ idea }: { idea: IdeaDetail }) {
       ) : entries.length ? (
         <ActivityFeed entries={entries} showIdea={false} byDay />
       ) : (
-        <p className={tabs.muted}>Nothing of this kind is recorded yet.</p>
+        <p className={tabs.muted}>{t("idea.history.noActivity")}</p>
       )}
       {timeline.hasNextPage && (
         <Button onClick={() => void timeline.fetchNextPage()} loading={timeline.isFetchingNextPage}>
-          Older entries
+          {t("idea.history.older")}
         </Button>
       )}
     </section>
