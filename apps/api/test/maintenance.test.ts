@@ -1,4 +1,4 @@
-import { asc, eq, sql } from "drizzle-orm";
+import { and, asc, eq, sql } from "drizzle-orm";
 import { afterAll, beforeAll, expect, it } from "vitest";
 import { activities, ideaMetrics, jobs, rateLimits, sessions, stances } from "../src/db/schema";
 import { schedules } from "../src/modules/jobs/schedules";
@@ -32,13 +32,22 @@ it("commits or rolls back the stance, its activity and its coalesced refresh tog
     ...h.ctx,
     actor: { id: person.id, role: "member" as const, active: true, trust: "new" as const },
   };
-  const pending = () => h.db.select().from(jobs).where(eq(jobs.state, "pending"));
+  const pending = () =>
+    h.db
+      .select()
+      .from(jobs)
+      .where(and(eq(jobs.state, "pending"), eq(jobs.queue, "default")));
   const ledger = () =>
     h.db.select({ id: activities.id }).from(activities).where(eq(activities.action, "stance.taken"));
   await expect(
     inTransaction(ctx, async (tx) => {
       await takeStance(tx, idea.id, "important");
-      expect(await tx.db.select().from(jobs).where(eq(jobs.state, "pending"))).toHaveLength(1);
+      expect(
+        await tx.db
+          .select()
+          .from(jobs)
+          .where(and(eq(jobs.state, "pending"), eq(jobs.queue, "default"))),
+      ).toHaveLength(1);
       throw new Error("roll back stance");
     }),
   ).rejects.toThrow("roll back stance");

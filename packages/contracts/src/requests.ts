@@ -80,6 +80,17 @@ export const RegisterRequest = z.object({
 });
 export type RegisterRequest = z.infer<typeof RegisterRequest>;
 
+export const AccountTokenRequest = z.object({ token: z.string().regex(/^[A-Za-z0-9_-]{43}$/) });
+export const ResendVerificationRequest = z.object({});
+export const ResetRequest = RegisterRequest.pick({ email: true });
+export const ResetConfirmRequest = AccountTokenRequest.extend({
+  newPassword: RegisterRequest.shape.password,
+});
+export const EmailChangeRequest = z.object({
+  newEmail: RegisterRequest.shape.email,
+  currentPassword: z.string().min(1).max(LIMITS.password.max),
+});
+
 export const LoginRequest = z.object({
   email: z.email().trim().toLowerCase(),
   password: z.string().min(1).max(LIMITS.password.max),
@@ -396,6 +407,11 @@ export type EvaluationsQuery = z.infer<typeof EvaluationsQuery>;
 export const requestRegistry = z.registry<{ id: string }>();
 for (const [id, schema] of Object.entries({
   RegisterRequest,
+  AccountTokenRequest,
+  ResendVerificationRequest,
+  ResetRequest,
+  ResetConfirmRequest,
+  EmailChangeRequest,
   LoginRequest,
   UpdateProfileRequest,
   DeclareExpertiseRequest,

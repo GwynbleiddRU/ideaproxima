@@ -60,8 +60,7 @@ default is fine; record the decision here and in the relevant document.
 20. **Rate limiting across instances.** _Resolved 2026-11-26:_ named GCRA policies use a shared PostgreSQL
     store for multi-instance deployments and tighter budgets for new accounts (ADR-17). Registration proof
     of work adjusts to the network's registration budget and enforces single use in the shared database.
-21. **Authentication breadth.** _Default:_ email + password, server-side sessions. Needed: email verification,
-    password reset, OAuth and ORCID (important for scientists and for verified expertise).
+21. **Authentication breadth.** The owner chose immediate sign-in with later email verification on 2026-11-26. Plan 04 adds recovery and confirmed email changes in phase A. OAuth and ORCID remain assigned to phase C.
 22. **Concurrency on real Postgres.** _Resolved 2026-11-15:_ the suite runs on PostgreSQL 17 (`npm run test:pg`, CI
     job), which exposed real races, now fixed with advisory locks (ADR-16) and covered by
     `apps/api/test/concurrency.test.ts`. Keep running it when touching transactions.

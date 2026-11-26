@@ -1,13 +1,13 @@
 import { vocabularyField } from "@/lib/vocabulary";
 import { useMessage } from "@/locales/react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { useState, type FormEvent } from "react";
 import { X } from "lucide-react";
 import type { PersonDto } from "@ideaproxima/contracts";
 import { CAPACITIES, CAPACITY_INFO, LIMITS, type Capacity } from "@ideaproxima/domain";
 import { useTopicsQueryOptions } from "@/api/catalog";
-import { isApiError } from "@/api/http";
+import { http, isApiError } from "@/api/http";
 import {
   peopleQueries,
   useChangePassword,
@@ -20,7 +20,7 @@ import forms from "@/components/forms.module.scss";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { PageHeader, SectionHeading } from "@/components/PageHeader";
 import { Badge } from "@/ui/Badge";
-import { Button } from "@/ui/Button";
+import { Button, ButtonLink } from "@/ui/Button";
 import { Chip } from "@/ui/Chip";
 import { control, Field } from "@/ui/Field";
 import { FormError } from "@/ui/Feedback";
@@ -56,11 +56,41 @@ export function AccountPage() {
         <section className={styles.panel}>
           <LanguageSwitcher settings />
         </section>
+        <AccountEmail />
         <ProfileForm me={me} />
         <ExpertiseForm handle={me.handle} />
         <PasswordForm />
       </div>
     </div>
+  );
+}
+
+function AccountEmail() {
+  const t = useMessage();
+  const { email, emailVerified } = useSession();
+  const resend = useMutation({
+    mutationFn: () => http.post("/auth/verify-email/resend"),
+    meta: { inlineErrors: true },
+  });
+  return (
+    <section className={styles.panel}>
+      <SectionHeading eyebrow={t("account.security")} title={t("auth.emailAddress")} />
+      <p>
+        <bdi>{email}</bdi>
+      </p>
+      <p className={styles.muted} role="status">
+        {t(emailVerified ? "auth.verified" : resend.isSuccess ? "auth.resendDone" : "auth.unverified")}
+      </p>
+      <FormError error={resend.error} />
+      <div className={forms.actions}>
+        {!emailVerified && (
+          <Button loading={resend.isPending} retryError={resend.error} onClick={() => resend.mutate()}>
+            {t("auth.resend")}
+          </Button>
+        )}
+        <ButtonLink to="/change-email">{t("auth.change")}</ButtonLink>
+      </div>
+    </section>
   );
 }
 

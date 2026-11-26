@@ -5,6 +5,7 @@ import { useLogout, useSession } from "@/api/session";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { LocalizedText, useMessage } from "@/locales/react";
 import { cx } from "@/lib/cx";
+import { initials } from "@/lib/format";
 import { resolvedTheme, setTheme, useTheme, type ThemePreference } from "@/lib/theme";
 import { Avatar } from "@/ui/Avatar";
 import { Button, ButtonLink } from "@/ui/Button";
@@ -74,7 +75,7 @@ function AccountMenu() {
   if (!me) return null;
   return (
     <Dropdown
-      label={t("nav.account")}
+      label={`${initials(me.displayName)} · ${t("nav.account")}`}
       triggerClassName={styles.avatarButton}
       trigger={<Avatar name={me.displayName} seed={me.handle} size={32} />}
     >

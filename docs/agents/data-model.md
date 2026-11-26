@@ -27,6 +27,7 @@ This operational table is logged so an accepted proof remains spent through a re
 - **people** — public identity. `handle` (unique), `display_name`, `bio`, `affiliation`, `capacities text[]`
   (CHECK ⊆ vocabulary), `role` (member/moderator/admin), `deactivated_at`.
 - **accounts** — `person_id` PK, `email` (unique, lowercased), `password_hash` (scrypt), `email_verified_at`, and a nullable product `locale` preference.
+- **account_tokens** — private operational verification (48 hours), recovery (one hour), and email change (24 hours). The worker installs the token hash at dispatch. Verified-first requests hold a pending registration with its scrypt hash until consumption or replacement. Expired rows are purged after 30 days.
 - **sessions** — `token_hash` (unique, SHA-256), `expires_at`, `revoked_at`.
 - **topics** — `slug` (unique), `name`, `description`, `parent_id` (hierarchy), `position`.
 - **topic_translations** — `(topic_id, locale)` PK, translated `name` and `description`. The catalog service

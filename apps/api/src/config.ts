@@ -95,7 +95,7 @@ const envSettings = z.object({
   JOBS_CONCURRENCY: integer(1, 1024).default(4),
   JOBS_QUEUES: z
     .string()
-    .default("default")
+    .default("default,mail")
     .transform((value, ctx) => {
       const seen = new Set<string>();
       const queues = [];
@@ -147,6 +147,18 @@ const envSettings = z.object({
       }
     })
     .default({}),
+  REGISTRATION_MODE: z.enum(["immediate", "verified-first"]).default("immediate"),
+  PASSWORD_BREACH_CHECK: z.enum(["off", "hibp"]).default("off"),
+  PUBLIC_BASE_URL: z
+    .url({ protocol: /^https?$/ })
+    .refine(
+      (value) => URL.parse(value)?.origin === value.replace(/\/$/, ""),
+      "expected a public HTTP(S) origin",
+    )
+    .optional(),
+  MAIL_TRANSPORT: z.enum(["smtp", "log"]).optional(),
+  SMTP_URL: z.url({ protocol: /^smtps?$/ }).optional(),
+  MAIL_FROM: z.email().optional(),
   MAX_BODY_BYTES: integer(1).default(1_048_576),
   PASSWORD_HASH_CONCURRENCY: integer(1).default(3),
   PASSWORD_HASH_QUEUE: integer(0).default(32),
@@ -178,6 +190,23 @@ function validSettings(...keys: (keyof typeof envSettings.shape)[]) {
 }
 
 const envSchema = envSettings
+  .refine((env) => env.NODE_ENV !== "production" || !!env.PUBLIC_BASE_URL, {
+    path: ["PUBLIC_BASE_URL"],
+    error: "required in production",
+  })
+  .refine(
+    (env) =>
+      (env.MAIL_TRANSPORT ?? (env.NODE_ENV === "production" ? "smtp" : "log")) !== "smtp" ||
+      (!!env.SMTP_URL && !!env.MAIL_FROM),
+    { path: ["SMTP_URL"], error: "SMTP_URL and MAIL_FROM are required for SMTP" },
+  )
+  .refine(
+    (env) =>
+      env.NODE_ENV !== "production" ||
+      env.MAIL_TRANSPORT !== "log" ||
+      ["localhost", "127.0.0.1", "[::1]"].includes(URL.parse(env.PUBLIC_BASE_URL ?? "")?.hostname ?? ""),
+    { path: ["MAIL_TRANSPORT"], error: "public production deployments require SMTP" },
+  )
   .refine(
     (env) => env.NODE_ENV !== "production" || env.REGISTRATION_CHALLENGE === "none" || !!env.CHALLENGE_SECRET,
     {
@@ -333,7 +362,14 @@ export function loadConfig(
       queues: values.JOBS_QUEUES,
       statementTimeoutMs: values.JOBS_STATEMENT_TIMEOUT_MS,
     },
-    mail: {},
+    registrationMode: values.REGISTRATION_MODE,
+    passwordBreachCheck: values.PASSWORD_BREACH_CHECK,
+    mail: {
+      transport: values.MAIL_TRANSPORT ?? (production ? ("smtp" as const) : ("log" as const)),
+      from: values.MAIL_FROM ?? "development@localhost.test",
+      smtpUrl: values.SMTP_URL,
+      baseUrl: values.PUBLIC_BASE_URL ?? "http://127.0.0.1:3000",
+    },
     i18n: {},
     moderation: {},
   } as const;

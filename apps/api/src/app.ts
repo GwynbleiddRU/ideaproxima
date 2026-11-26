@@ -114,6 +114,7 @@ export function createApp(deps: AppDeps) {
       actor: session?.actor ?? null,
       weights,
       metricsRefreshMode: config.jobs.metricsRefreshMode,
+      passwordBreachCheck: config.passwordBreachCheck,
     });
     c.set("sessionId", session?.sessionId ?? null);
     setRequestLocale(c, session?.locale);

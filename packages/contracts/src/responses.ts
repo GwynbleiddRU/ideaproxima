@@ -210,7 +210,7 @@ const Preferences = z.object({ locale: LocaleTag.nullable() });
 
 export const MeResponse = named(
   "Me",
-  z.object({ person: PersonDto, email: z.string(), preferences: Preferences }),
+  z.object({ person: PersonDto, email: z.string(), emailVerified: z.boolean(), preferences: Preferences }),
 );
 export type MeResponse = z.infer<typeof MeResponse>;
 
@@ -219,11 +219,15 @@ export const AuthResponse = named(
   z.object({
     person: PersonDto,
     preferences: Preferences,
+    emailVerified: z.boolean(),
     token: z.string().describe("Session token. Also set as the HttpOnly `ip_session` cookie."),
     expiresAt: timestamp,
   }),
 );
 export type AuthResponse = z.infer<typeof AuthResponse>;
+
+export const RegistrationResponse = named("Registration", z.union([AuthResponse, OkResponse]));
+export type RegistrationResponse = z.infer<typeof RegistrationResponse>;
 
 export const ExpertiseDto = named(
   "Expertise",

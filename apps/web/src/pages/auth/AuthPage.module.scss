@@ -3,6 +3,11 @@
 .page {
   display: grid;
   place-items: center;
+  :global(#main):has(> &) {
+    display: grid;
+    padding-bottom: 0;
+  }
+  min-height: calc(100svh - var(--header-h));
   padding: var(--space-8) var(--gutter);
 }
 

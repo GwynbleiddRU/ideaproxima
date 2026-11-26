@@ -17,6 +17,8 @@ const env = {
   DATABASE_URL: `pglite:${dataDir}`,
   PORT: process.env.AUDIT_PORT ?? "3100",
   NODE_ENV: "production",
+  PUBLIC_BASE_URL: "http://127.0.0.1:" + (process.env.AUDIT_PORT ?? "3100"),
+  MAIL_TRANSPORT: "log",
   COOKIE_SECURE: "false",
   ALLOW_INSECURE_COOKIES: "true",
   ALLOW_PGLITE_IN_PRODUCTION: "true",

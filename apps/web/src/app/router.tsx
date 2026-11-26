@@ -265,6 +265,48 @@ const joinRoute = createRoute({
   component: lazyRouteComponent(() => import("@/pages/auth/AuthPage"), "JoinPage"),
 });
 
+const ForgotPasswordPageRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "forgot-password",
+  component: lazyRouteComponent(
+    () => withExtendedEnglish(import("@/pages/auth/AccountAccessPages")),
+    "ForgotPasswordPage",
+  ),
+});
+const ResetPasswordPageRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "reset-password",
+  component: lazyRouteComponent(
+    () => withExtendedEnglish(import("@/pages/auth/AccountAccessPages")),
+    "ResetPasswordPage",
+  ),
+});
+const VerifyEmailPageRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "verify-email",
+  component: lazyRouteComponent(
+    () => withExtendedEnglish(import("@/pages/auth/AccountAccessPages")),
+    "VerifyEmailPage",
+  ),
+});
+const ChangeEmailPageRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "change-email",
+  beforeLoad: requireSession,
+  component: lazyRouteComponent(
+    () => withExtendedEnglish(import("@/pages/auth/AccountAccessPages")),
+    "ChangeEmailPage",
+  ),
+});
+const ConfirmEmailChangePageRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "confirm-email-change",
+  component: lazyRouteComponent(
+    () => withExtendedEnglish(import("@/pages/auth/AccountAccessPages")),
+    "ConfirmEmailChangePage",
+  ),
+});
+
 const routeTree = rootRoute.addChildren([
   homeRoute,
   exploreRoute,
@@ -289,6 +331,11 @@ const routeTree = rootRoute.addChildren([
   aboutRoute,
   signInRoute,
   joinRoute,
+  ForgotPasswordPageRoute,
+  ResetPasswordPageRoute,
+  VerifyEmailPageRoute,
+  ChangeEmailPageRoute,
+  ConfirmEmailChangePageRoute,
 ]);
 
 export function createAppRouter(queryClient: QueryClient) {

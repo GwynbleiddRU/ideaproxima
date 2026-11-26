@@ -2,6 +2,7 @@ import { randomInt } from "node:crypto";
 import { setTimeout as delay } from "node:timers/promises";
 import type { Actor, WeightPolicy } from "@ideaproxima/domain";
 import type { Database } from "../../db/client";
+import type { MailSender } from "../mail/sender";
 import { isRetryableTransactionError, sqlState } from "../../db/errors";
 
 const inTransactionScope = Symbol("inTransactionScope");
@@ -16,6 +17,8 @@ export interface Ctx {
   /** Evaluator weighting used by derived metrics. Baseline: uniform. The scoring system plugs in here. */
   weights: WeightPolicy;
   metricsRefreshMode?: "sync" | "async";
+  passwordBreachCheck?: "off" | "hibp";
+  mail?: { baseUrl: string; key: string; sender: MailSender };
   [inTransactionScope]?: (() => void)[];
 }
 

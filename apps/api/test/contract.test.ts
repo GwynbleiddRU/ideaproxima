@@ -38,6 +38,12 @@ describe("the endpoint catalogue is the API", () => {
       register: ["auth.register"],
       login: ["auth.login", "auth.login.failures"],
       logout: [],
+      verifyEmail: ["auth.recovery"],
+      resendVerification: ["auth.recovery"],
+      requestPasswordReset: ["auth.recovery"],
+      confirmPasswordReset: ["auth.recovery"],
+      requestEmailChange: ["auth.recovery"],
+      confirmEmailChange: ["auth.recovery"],
     };
     for (const [name, spec] of Object.entries(ENDPOINTS)) {
       for (const policy of spec.limits) expect(Object.hasOwn(RATE_LIMIT_POLICIES, policy), name).toBe(true);
@@ -47,7 +53,7 @@ describe("the endpoint catalogue is the API", () => {
           spec.limits.every((policy) => policy.startsWith("read.")),
           name,
         ).toBe(true);
-      } else if (spec.auth === "public") {
+      } else if (spec.auth === "public" || Object.hasOwn(credentials, name)) {
         expect(spec.limits, name).toEqual(credentials[name]);
       } else {
         expect(spec.limits, name).toEqual([

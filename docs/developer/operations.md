@@ -79,7 +79,13 @@ Invalid settings stop startup with one error listing the affected variables. Boo
 | `JOBS_MODE`                    | `inline`                                        | Execute jobs in the API (`inline`), a dedicated process (`worker`), or only through explicit drains (`off`).                                                                     |
 | `METRICS_REFRESH_MODE`         | `sync`                                          | Compute signals during the write, or set `async` to enqueue one pending refresh per affected idea.                                                                               |
 | `JOBS_CONCURRENCY`             | `4`                                             | Maximum active handlers per worker process.                                                                                                                                      |
-| `JOBS_QUEUES`                  | `default`                                       | Comma-separated queue names with optional per-process caps, e.g. `default,moderation=2`.                                                                                         |
+| `JOBS_QUEUES`                  | `default,mail`                                  | Comma-separated queue names with optional per-process caps, e.g. `default,moderation=2`.                                                                                         |
+| `REGISTRATION_MODE`            | `immediate`                                     | Immediate creates a session at registration. Use `verified-first` to create the account after mailbox confirmation.                                                              |
+| `PASSWORD_BREACH_CHECK`        | `off`                                           | `hibp` checks a five-character password hash prefix at creation, change and reset. The request times out after 1.5 seconds and an outage permits the password.                   |
+| `PUBLIC_BASE_URL`              | Local web origin in development                 | Public HTTP(S) origin used for account links. Required in production. Use HTTPS for a public site.                                                                               |
+| `MAIL_TRANSPORT`               | `log` locally, `smtp` in production             | The development adapter prints private test messages and links to the local console. Public production deployments require SMTP.                                                 |
+| `MAIL_FROM`                    | Required for SMTP                               | Verified sender address.                                                                                                                                                         |
+| `SMTP_URL`                     | Required for SMTP                               | Private SMTP connection URL. Use TLS and supply credentials through the deployment secret store.                                                                                 |
 | `JOBS_STATEMENT_TIMEOUT_MS`    | `60000`                                         | Dedicated worker and queue operator statement deadline. Inline handlers share the API database settings.                                                                         |
 
 ## Background jobs
@@ -227,8 +233,7 @@ Rotating the secret invalidates outstanding challenges. The minute maintenance j
 - [ ] The database user has only the privileges the API needs. Keep `DATABASE_URL` in a secret store.
 - [ ] For multiple instances, select `RATE_LIMIT_STORE=postgres` and provision `RATE_LIMIT_KEY_SECRET` from
       the deployment secret store. Keep the edge request ceiling enabled.
-- [ ] Not yet built (see `docs/agents/roadmap.md`): email verification, password reset, OAuth/ORCID. Plan around them
-      before a public launch.
+- [ ] Deliver a verification link and complete password recovery through the selected mail provider. OAuth and ORCID are scheduled for plan 04 phase C.
 
 ## Tuning rate limits
 
@@ -285,6 +290,15 @@ then 1, 2.5, 5 and 10 seconds.
 | Appoint or change roles without an admin                                             | `node apps/api/dist/set-role.js <handle> <member\|moderator\|admin>`          |
 | Deactivate an abusive account                                                        | A moderator or admin calls `POST /v1/people/:handle/deactivate` with a reason |
 
+### Account mail
+
+Configure the same public origin, SMTP connection and private `RATE_LIMIT_KEY_SECRET` on the app and workers.
+Include `mail` in the queues processed by at least one worker. SMTP receives a stable Message-ID for each job.
+Delivery is at least once. Retries reuse the link while its token is live. The development log transport
+prints working links and is intended for a private local console. Keep SMTP credentials and the worker key
+out of logs. Verify sender-domain SPF, DKIM and DMARC with the chosen provider before public deployment.
+Keep `TRUST_REQUIRE_VERIFIED_EMAIL=false` until existing members have been invited to verify.
+
 ### Legally required erasure
 
 The archive is append-only by design: moderation _hides_ content, it never deletes it. When the law requires
@@ -302,7 +316,7 @@ COMMIT;
 ```
 
 Prefer redaction over deletion, so that references from other records stay intact. To erase a person, anonymise
-the `people` row (display name, bio, affiliation) and delete their `accounts` row. Their contributions then remain
+the `people` row (display name, bio, affiliation) and delete their private account tokens, sessions and `accounts` row in the same transaction. Include pending registration tokens for the erased mailbox. Their contributions then remain
 attributed to an anonymous former contributor.
 
 ## Scaling

@@ -139,7 +139,9 @@ export function rateLimitMiddleware(config: AppConfig["rateLimits"], db: Databas
     if (!budgets.length) return next();
     try {
       for (const budget of budgets) {
-        if (budget.policy === "auth.login.failures") {
+        if (budget.policy === "auth.recovery" && budget.rule.scope === "email") {
+          c.set("recoveryBudget", (subject) => check(shared, budget, subject, "consume"));
+        } else if (budget.policy === "auth.login.failures") {
           c.set("loginFailureBudget", (email, operation) => check(shared, budget, email, operation));
         } else {
           const subject = budget.rule.scope === "account" ? actor!.id : clientAddress(c);

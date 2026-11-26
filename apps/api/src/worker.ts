@@ -3,6 +3,7 @@ import { uniformWeights } from "@ideaproxima/domain";
 import { loadConfig } from "./config";
 import { openDatabase } from "./db/client";
 import { startWorker } from "./modules/jobs/runner";
+import { workerMail } from "./modules/mail/sender";
 import { createErrorReporter } from "./observability/errors";
 import { startMetricsServer } from "./observability/internal-server";
 import { createLifecycle } from "./observability/lifecycle";
@@ -25,7 +26,7 @@ if (config.jobs.mode === "worker") {
       statementTimeoutMs: config.jobs.statementTimeoutMs,
     });
     const worker = await startWorker(
-      { db: database.db, actor: null, weights: uniformWeights },
+      { db: database.db, actor: null, weights: uniformWeights, mail: workerMail(config) },
       config.jobs,
       logger,
     );

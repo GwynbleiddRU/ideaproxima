@@ -83,21 +83,21 @@ by most of them.
 ## Where the platform stands
 
 The foundation is unusually strong for its size: append-only facts enforced by database triggers, an executable
-contract (68 endpoints, every response checked against its schema, every endpoint exercised), one permission
+contract (75 endpoints, every response checked against its schema, every endpoint exercised), one permission
 policy, correct concurrency proven on real PostgreSQL, and a stateless process. None of that needs rework.
 
 What is missing is everything around it. The [audit](api-audit.md) records 58 findings (53 from the API audit,
 5 from the 2026-11-18 review of the web delivery), 20 of which block a public launch:
 
-| Area             | State today                                                                                                                                                  |
-| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Abuse protection | Trusted network ceiling before session lookup, shared endpoint budgets by trust tier, and per-email login throttling. Registration proof of work is pending. |
-| Accounts         | E-mail and password only: no verification, no recovery, no second factor                                                                                     |
-| Moderation       | One endpoint that hides six kinds of content; no reports, queue, appeals or automation; hidden text leaks through the activity feed                          |
-| Languages        | Localised API catalogues and errors with beta defaults and English fallback. The interface, search stemming and URL slugs still use English defaults         |
-| Scale            | Metrics refresh synchronously by default, with coalesced async refresh available. Lists and offset pagination await plan 09.                                 |
-| Operations       | Logs, private metrics, probes, drain, DB deadlines and a worker running maintenance schedules. Releases and restore drills are pending.                      |
-| Public web       | Every page is the same shell with status 200; no link previews; no policy pages; browser errors unseen; Chrome-only tests                                    |
+| Area             | State today                                                                                                                                                             |
+| ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Abuse protection | Trusted network ceiling before session lookup, shared endpoint budgets by trust tier, per-email login and recovery throttling, and adaptive registration proof of work. |
+| Accounts         | E-mail verification, password recovery and confirmed address changes. Both registration modes are available. Staff second factors are scheduled for step 27.            |
+| Moderation       | One endpoint that hides six kinds of content; no reports, queue, appeals or automation; hidden text leaks through the activity feed                                     |
+| Languages        | Localised API catalogues and errors with beta defaults and English fallback. The interface, search stemming and URL slugs still use English defaults                    |
+| Scale            | Metrics refresh synchronously by default, with coalesced async refresh available. Lists and offset pagination await plan 09.                                            |
+| Operations       | Logs, private metrics, probes, drain, DB deadlines and a worker running maintenance schedules. Releases and restore drills are pending.                                 |
+| Public web       | Every page is the same shell with status 200; no link previews; no policy pages; browser errors unseen; Chrome-only tests                                               |
 
 ## Target state
 
@@ -182,7 +182,7 @@ Updated by whoever finishes a step: `Not started`, `In progress`, `Waiting for t
 | 10   | 03   | A     | GCRA, memory and PostgreSQL stores, trust tiers, the policy catalogue                                      | —                     | Done 2026-11-25 |
 | 11   | 03   | B     | Limits declared per endpoint and enforced; rate-limit headers; web handling of 429                         | —                     | Done 2026-11-26 |
 | 12   | 03   | C     | Proof of work on registration                                                                              | —                     | Done 2026-11-26 |
-| 13   | 04   | A     | Mail, verification, password reset, e-mail change, registration modes                                      | Decision 7; mock-ups  | Not started     |
+| 13   | 04   | A     | Mail, verification, password reset, e-mail change, registration modes                                      | Decision 7; mock-ups  | Done 2026-11-26 |
 | 14   | 04   | B     | Session list and revocation, security log, trust inputs, terms and minimum-age mechanism                   | Decision 15           | Not started     |
 | 15   | 06   | A     | Content languages, language detection, Unicode slugs                                                       | —                     | Not started     |
 | 16   | 07   | A     | Every text can be hidden; one visibility writer; text-free activity payloads                               | —                     | Not started     |
@@ -333,7 +333,7 @@ default.
 | 4   | The content policy and its reason codes                                     | The draft in plan 07                                                         | Step 19          |
 | 5   | Which reasons may hide content automatically                                | Sexual content, privacy, violent threats, spam from new accounts             | Step 47          |
 | 6   | Hold new accounts' content for the seconds an assessment takes              | Yes, once `enforce` is approved                                              | Step 47          |
-| 7   | Registration: immediate sign-in, or only after verifying the e-mail         | Immediate                                                                    | Step 13          |
+| 7   | Registration: immediate sign-in, or only after verifying the e-mail         | Immediate sign-in, confirmed by the owner on 2026-11-26                      | Step 13          |
 | 8   | Terms, privacy notice, and the licence for contributions (question 12)      | Undecided: the mechanism and skeletons are built, the texts are missing      | Launch; step 44  |
 | 9   | Code licence (question 25)                                                  | Undecided                                                                    | Publication      |
 | 10  | Whether moderators are named in the public moderation log                   | Named, as today                                                              | Step 19          |

@@ -14,7 +14,10 @@ describe("runtime configuration", () => {
         mode: "inline",
         metricsRefreshMode: "sync",
         concurrency: 4,
-        queues: [{ name: "default", cap: undefined }],
+        queues: [
+          { name: "default", cap: undefined },
+          { name: "mail", cap: undefined },
+        ],
         statementTimeoutMs: 60000,
       },
       mail: {},
@@ -51,6 +54,23 @@ describe("runtime configuration", () => {
     expect(config.passwordHash).toEqual({ concurrency: 1, queue: 0 });
     expect(config.rateLimits.enabled).toBe(false);
     expect(config.log).toEqual({ requests: false, level: "debug", format: "json" });
+  });
+
+  it("validates the public origin and SMTP configuration before serving traffic", () => {
+    const local = loadConfig({});
+    expect(local.registrationMode).toBe("immediate");
+    expect(local.mail.transport).toBe("log");
+    expect(() => loadConfig({ PUBLIC_BASE_URL: "broken" })).toThrow(ConfigError);
+    expect(() => loadConfig({ PUBLIC_BASE_URL: "https://user:secret@example.test" })).toThrow(
+      /PUBLIC_BASE_URL/,
+    );
+    expect(() => loadConfig({ MAIL_TRANSPORT: "smtp", SMTP_URL: "https://example.test" })).toThrow(
+      /SMTP_URL/,
+    );
+    expect(() => loadConfig({ MAIL_TRANSPORT: "smtp" })).toThrow(/MAIL_FROM/);
+    expect(() =>
+      loadConfig({ NODE_ENV: "production", PUBLIC_BASE_URL: "https://example.test", MAIL_TRANSPORT: "log" }),
+    ).toThrow(/MAIL_TRANSPORT/);
   });
 
   it("aggregates parse failures and production guards in one error", () => {
@@ -96,11 +116,17 @@ describe("runtime configuration", () => {
     expect(() =>
       loadConfig({ NODE_ENV: "production", DATABASE_URL: "postgres://localhost/db", COOKIE_SECURE: "0" }),
     ).toThrow(/ALLOW_INSECURE_COOKIES/);
+    const mail = {
+      PUBLIC_BASE_URL: "https://example.test",
+      SMTP_URL: "smtps://localhost",
+      MAIL_FROM: "accounts@example.test",
+    };
     const warn = vi.fn();
     const local = loadConfig(
       {
         NODE_ENV: "production",
         RATE_LIMIT_KEY_SECRET: "test",
+        ...mail,
         REGISTRATION_CHALLENGE: "none",
         DATABASE_URL: "pglite:memory",
         ALLOW_PGLITE_IN_PRODUCTION: "true",
@@ -118,6 +144,7 @@ describe("runtime configuration", () => {
       {
         NODE_ENV: "production",
         RATE_LIMIT_KEY_SECRET: "test",
+        ...mail,
         CHALLENGE_SECRET: "x".repeat(32),
         DATABASE_URL: "postgresql://localhost/db",
         TRUST_PROXY_HOPS: "1",
@@ -130,6 +157,7 @@ describe("runtime configuration", () => {
     loadConfig(
       {
         NODE_ENV: "production",
+        ...mail,
         DATABASE_URL: "postgres://localhost/db",
         CLIENT_IP_HEADER: "x-real-ip",
         REGISTRATION_CHALLENGE: "none",

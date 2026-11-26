@@ -16,6 +16,10 @@ import { isLocale, type Locale } from "@ideaproxima/i18n";
 import { DomainError, authorize, isValidHandle, notFound, trustTier, type Actor } from "@ideaproxima/domain";
 import { queryRows, type Database } from "../../db/client";
 import { accounts, ideas, involvements, people, personExpertise, sessions, topics } from "../../db/schema";
+import { createAccount } from "./registration";
+import { revokeAllSessions } from "./sessions";
+import { issueToken, invalidateAccountTokens } from "./tokens";
+import { lockKeys, lockKey } from "../shared/locks";
 import { recordActivity } from "../shared/activity";
 import { inTransaction, type Ctx } from "../shared/context";
 import { requireLocale } from "../shared/locales";
@@ -90,24 +94,6 @@ export async function resolveSession(
   };
 }
 
-/** Revokes every session of a person, optionally keeping one (the caller's own). */
-async function revokeAllSessions(
-  db: Database,
-  personId: string,
-  keepSessionId?: string | null,
-): Promise<void> {
-  await db
-    .update(sessions)
-    .set({ revokedAt: sql`now()` })
-    .where(
-      and(
-        eq(sessions.personId, personId),
-        isNull(sessions.revokedAt),
-        keepSessionId ? sql`${sessions.id} <> ${keepSessionId}` : undefined,
-      ),
-    );
-}
-
 /**
  * Changes the caller's password after verifying the current one, and signs out every other session (a password
  * change is usually a response to suspected compromise). Not written to the public ledger: it is a security
@@ -124,9 +110,16 @@ export async function changePassword(
   if (!account || !(await verifyPassword(input.currentPassword, account.passwordHash))) {
     throw new DomainError("forbidden", "incorrect_current_password");
   }
-  const passwordHash = await hashPassword(input.newPassword);
+  const passwordHash = await hashPassword(input.newPassword, ctx.passwordBreachCheck);
   await inTransaction(ctx, async (tx) => {
-    await tx.db.update(accounts).set({ passwordHash }).where(eq(accounts.personId, actorId));
+    await lockKey(tx, "account", actorId);
+    const changed = await tx.db
+      .update(accounts)
+      .set({ passwordHash })
+      .where(and(eq(accounts.personId, actorId), eq(accounts.passwordHash, account.passwordHash)))
+      .returning({ id: accounts.personId });
+    if (!changed.length) throw new DomainError("forbidden", "incorrect_current_password");
+    await invalidateAccountTokens(tx, actorId, ["reset_password", "change_email"]);
     await revokeAllSessions(tx.db, actorId, currentSessionId);
   });
 }
@@ -215,38 +208,28 @@ const savedLocale = (tag: string | null): Locale | null => (tag && isLocale(tag)
 
 // ---------------------------------------------------------------- registration & login
 
-export async function register(ctx: Ctx, input: RegisterRequest, ttlDays: number): Promise<AuthResponse> {
+export async function register(
+  ctx: Ctx,
+  input: RegisterRequest,
+  ttlDays: number,
+  requestLocale?: Locale,
+): Promise<AuthResponse> {
   if (!isValidHandle(input.handle)) throw new DomainError("validation_failed", "invalid_handle");
   const locale = input.locale === undefined ? null : requireLocale(input.locale);
-  const passwordHash = await hashPassword(input.password);
+  const passwordHash = await hashPassword(input.password, ctx.passwordBreachCheck);
   return inTransaction(ctx, async (tx) => {
-    const [emailTaken] = await tx.db
-      .select({ id: accounts.personId })
-      .from(accounts)
-      .where(eq(accounts.email, input.email));
-    if (emailTaken) throw new DomainError("conflict", "email_taken");
-    const [handleTaken] = await tx.db
-      .select({ id: people.id })
-      .from(people)
-      .where(eq(people.handle, input.handle));
-    if (handleTaken) throw new DomainError("conflict", "handle_taken");
-
-    const [person] = await tx.db
-      .insert(people)
-      .values({ handle: input.handle, displayName: input.displayName })
-      .returning();
-    await tx.db.insert(accounts).values({ personId: person!.id, email: input.email, passwordHash, locale });
-    const actorCtx: Ctx = {
-      ...tx,
-      actor: { id: person!.id, role: person!.role, active: true, trust: "new" },
-    };
-    await recordActivity(actorCtx, {
-      action: "person.registered",
-      subject: { kind: "person", id: person!.id },
-    });
-    const session = await createSession(tx.db, person!.id, ttlDays);
+    await lockKeys(tx, ["email:" + input.email, "handle:" + input.handle]);
+    const person = await createAccount(tx, input, passwordHash, locale, false);
+    if (requestLocale)
+      await issueToken(
+        tx,
+        { personId: person.id, email: input.email, purpose: "verify_email" },
+        requestLocale,
+      );
+    const session = await createSession(tx.db, person.id, ttlDays);
     return {
-      person: personDto(person!),
+      person: personDto(person),
+      emailVerified: false,
       token: session.token,
       expiresAt: iso(session.expiresAt),
       preferences: { locale },
@@ -264,7 +247,12 @@ export async function login(
 ): Promise<AuthResponse> {
   await failureBudget?.(input.email, "peek");
   const [row] = await ctx.db
-    .select({ person: people, passwordHash: accounts.passwordHash, locale: accounts.locale })
+    .select({
+      person: people,
+      passwordHash: accounts.passwordHash,
+      locale: accounts.locale,
+      verified: accounts.emailVerifiedAt,
+    })
     .from(accounts)
     .innerJoin(people, eq(people.id, accounts.personId))
     .where(eq(accounts.email, input.email))
@@ -276,9 +264,18 @@ export async function login(
     throw new DomainError("unauthenticated", "wrong_credentials");
   }
   await failureBudget?.(input.email, "reset");
-  const session = await createSession(ctx.db, row.person.id, ttlDays);
+  const session = await inTransaction(ctx, async (tx) => {
+    await lockKey(tx, "account", row.person.id);
+    const [current] = await tx.db
+      .select({ hash: accounts.passwordHash })
+      .from(accounts)
+      .where(and(eq(accounts.personId, row.person.id), eq(accounts.email, input.email)));
+    if (current?.hash !== row.passwordHash) throw new DomainError("unauthenticated", "wrong_credentials");
+    return createSession(tx.db, row.person.id, ttlDays);
+  });
   return {
     person: personDto(row.person),
+    emailVerified: !!row.verified,
     token: session.token,
     expiresAt: iso(session.expiresAt),
     preferences: { locale: savedLocale(row.locale) },
@@ -290,7 +287,12 @@ export async function login(
 export async function getMe(ctx: Ctx): Promise<MeResponse> {
   if (!ctx.actor) throw new DomainError("unauthenticated", "sign_in_required");
   const [row] = await ctx.db
-    .select({ person: people, email: accounts.email, locale: accounts.locale })
+    .select({
+      person: people,
+      email: accounts.email,
+      locale: accounts.locale,
+      verified: accounts.emailVerifiedAt,
+    })
     .from(people)
     .innerJoin(accounts, eq(accounts.personId, people.id))
     .where(eq(people.id, ctx.actor.id));
@@ -298,6 +300,7 @@ export async function getMe(ctx: Ctx): Promise<MeResponse> {
   return {
     person: personDto(row.person),
     email: row.email,
+    emailVerified: !!row.verified,
     preferences: { locale: savedLocale(row.locale) },
   };
 }

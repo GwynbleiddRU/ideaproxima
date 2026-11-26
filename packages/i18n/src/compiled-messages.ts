@@ -44,6 +44,14 @@ export const COMPILED_MESSAGES = {
     "errors.self_role_change": ["You cannot change your own role (ask another admin)."],
     "errors.invalid_handle": ["Invalid handle."],
     "errors.email_taken": ["That email is already registered."],
+    "errors.password_breached": [
+      "This password appeared in a known data breach. Choose a different password.",
+    ],
+    "errors.token_invalid": ["This link is invalid. Request a new link."],
+    "errors.token_expired": ["This link has expired. Request a new link."],
+    "errors.token_used": [
+      "This link has already been used. Use the most recent email or request another link.",
+    ],
     "errors.handle_taken": ["That handle is taken."],
     "errors.wrong_credentials": ["Wrong email or password."],
     "errors.account_already_active": ["The account is already active."],
@@ -171,6 +179,29 @@ export const COMPILED_MESSAGES = {
     "validation.custom.claim_reference": ["Provide exactly one of claimId or statement."],
     "validation.custom.evidence_basis": ["Provide exactly one of sourceId, source or outcomeId."],
     "validation.custom": ["Check this value."],
+    "emails.greeting": ["Hello ", ["name"], ","],
+    "emails.verify_email": ["Verify your email address"],
+    "emails.verify_emailBody": [
+      "Confirm your email address for ideaproxima. This link is valid for 48 hours. If you did not request this, ignore this message.",
+    ],
+    "emails.reset_password": ["Reset your password"],
+    "emails.reset_passwordBody": [
+      "Choose a new password for ideaproxima within one hour. If you did not request a reset, ignore this message.",
+    ],
+    "emails.change_email": ["Confirm your new email address"],
+    "emails.change_emailBody": ["Confirm this address for your ideaproxima account within 24 hours."],
+    "emails.password_changed": ["Your password was reset"],
+    "emails.password_changedBody": [
+      "Your ideaproxima password was reset and all sessions were signed out. If this was unexpected, request a new reset.",
+    ],
+    "emails.email_change_notice": ["A change of email address was requested"],
+    "emails.email_change_noticeBody": [
+      "Someone entered the current password to change your ideaproxima email address. If this was unexpected, reset your password.",
+    ],
+    "emails.existing_account": ["You already have an account"],
+    "emails.existing_accountBody": [
+      "Someone tried to sign up for ideaproxima using this address. You can sign in or request a password reset.",
+    ],
   },
   ru: {
     "errors.sign_in_required": ["Войдите, чтобы выполнить это действие."],

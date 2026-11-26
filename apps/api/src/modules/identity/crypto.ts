@@ -44,7 +44,31 @@ async function derive(password: string, salt: Buffer, n: number, r: number, p: n
   }
 }
 
-export async function hashPassword(password: string): Promise<string> {
+async function previouslyBreached(password: string): Promise<boolean> {
+  const digest = createHash("sha1").update(password.normalize("NFKC")).digest("hex").toUpperCase();
+  try {
+    const result = await fetch("https://api.pwnedpasswords.com/range/" + digest.slice(0, 5), {
+      signal: AbortSignal.timeout(1500),
+      redirect: "error",
+      headers: { "Add-Padding": "true", "User-Agent": "Ideaproxima" },
+    });
+    if (!result.ok) {
+      await result.body?.cancel();
+      return false;
+    }
+    const suffix = digest.slice(5);
+    return (await result.text()).split(/\r?\n/).some((line) => {
+      const [candidate, count] = line.split(":");
+      return candidate === suffix && Number(count) > 0;
+    });
+  } catch {
+    return false;
+  }
+}
+
+export async function hashPassword(password: string, check: "off" | "hibp" = "off"): Promise<string> {
+  if (check === "hibp" && (await previouslyBreached(password)))
+    throw new DomainError("validation_failed", "password_breached");
   const salt = randomBytes(16);
   const key = await derive(password, salt, N, R, P);
   return ["scrypt", N, R, P, salt.toString("base64url"), key.toString("base64url")].join("$");

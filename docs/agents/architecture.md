@@ -143,6 +143,14 @@ Passwords use Node's built-in scrypt with parameters stored in the hash. No nati
 use an HttpOnly SameSite=Lax cookie; other clients send `Authorization: Bearer`. JSON-only request bodies plus
 SameSite cookies are the CSRF defence.
 
+The owner selected immediate sign-in on 2026-11-26. Registration can therefore reveal that an email is already
+in use (409). Deployments can select verified-first registration for a uniform 202 and delay creation of
+the public identity until confirmation. Mailbox recovery always gives the same acknowledgement. Account
+links carry a one-use credential in the URL fragment. The browser submits it as JSON only after a user action.
+Dispatch runs on the mail queue. The worker derives the credential from a private key and the token row ID,
+and stores only its SHA-256 digest. Changing credentials and consuming the link commit together. Password
+reset revokes every session. Mailbox and credential operations stay outside the public activity ledger.
+
 ### ADR-13 UUIDv7 identifiers
 
 Time-ordered (compact B-tree indexes, natural ledger ordering), globally unique across tables (polymorphic
@@ -361,8 +369,7 @@ In place:
   nobody on themselves);
 - moderation: hidden content excluded from public reads and the public feed, account deactivation.
 
-Missing before public launch (see roadmap): email verification, password reset, OAuth/ORCID, a distributed rate
-limiter for multi-instance deployments, and abuse heuristics. (Markdown is rendered safely in the web app: raw HTML is
+Account verification and recovery use the transactional mail queue. Distributed rate limiting is available for multi-instance deployments. OAuth/ORCID and further abuse controls are scheduled in the roadmap. (Markdown is rendered safely in the web app: raw HTML is
 escaped, dangerous protocols dropped; the HTML shell carries a strict CSP.)
 
 ## Verification

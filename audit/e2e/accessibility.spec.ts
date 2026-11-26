@@ -1,6 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test } from "@playwright/test";
-import { IDEA, settle } from "./helpers";
+import { IDEA, settle, signIn } from "./helpers";
 
 /**
  * Automated WCAG 2.1 AA checks (axe-core) on the main pages, in both colour schemes: contrast is tuned per theme,
@@ -20,6 +20,11 @@ const PAGES: [string, string][] = [
   ["activity", "/activity"],
   ["principles", "/about"],
   ["sign in", "/sign-in"],
+  ["forgot password", "/forgot-password"],
+  ["reset password", "/reset-password#preview"],
+  ["verify email", "/verify-email#preview"],
+  ["confirm email change", "/confirm-email-change#preview"],
+  ["change email", "/change-email"],
   ["profile", "/people/demo-mira"],
 ];
 
@@ -39,6 +44,7 @@ for (const colorScheme of ["light", "dark"] as const) {
     test.use({ colorScheme });
     for (const [name, path] of PAGES) {
       test(name, async ({ page }) => {
+        if (path === "/change-email") await signIn(page);
         await page.goto(path);
         await settle(page);
         const results = await new AxeBuilder({ page })

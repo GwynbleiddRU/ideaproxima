@@ -2,6 +2,11 @@ import { Hono, type Context } from "hono";
 import { deleteCookie, setCookie } from "hono/cookie";
 import {
   ChangePasswordRequest,
+  ResendVerificationRequest,
+  ResetRequest,
+  ResetConfirmRequest,
+  AccountTokenRequest,
+  EmailChangeRequest,
   DeclareExpertiseRequest,
   LoginRequest,
   PageQuery,
@@ -16,6 +21,24 @@ import * as identity from "../../modules/identity/service";
 import { SESSION_COOKIE, type AppEnv } from "../env";
 import { jsonBody, queryOf } from "../input";
 import { clientAddress } from "../client-address";
+import { requestLocale } from "../locale";
+import { setTimeout as delay } from "node:timers/promises";
+import {
+  consumeToken,
+  registerAfterVerification,
+  requestReset,
+  resendVerification,
+  requestEmailChange,
+} from "../../modules/identity/tokens";
+
+const limitRecovery = (c: Context<AppEnv>) => async (subject: string) => {
+  await c.get("recoveryBudget")?.(subject);
+};
+
+// Keep mailbox lookup and queue insertion below the same response-time floor for either result.
+async function acceptPrivately(work: () => Promise<void>) {
+  await Promise.all([work(), delay(120)]);
+}
 
 const setSessionCookie = (c: Context<AppEnv>, auth: AuthResponse) =>
   setCookie(c, SESSION_COOKIE, auth.token, {
@@ -36,9 +59,59 @@ export const identityRoutes = new Hono<AppEnv>()
     await c
       .get("challengeProvider")
       ?.verify(clientAddress(c), input.challenge, c.get("priorRegistrations") ?? 0);
-    const auth = await identity.register(c.get("ctx"), input, c.get("config").http.sessionTtlDays);
+    if (c.get("config").registrationMode === "verified-first") {
+      await registerAfterVerification(c.get("ctx"), input, requestLocale(c));
+      return c.json({ ok: true }, 202);
+    }
+    const auth = await identity.register(
+      c.get("ctx"),
+      input,
+      c.get("config").http.sessionTtlDays,
+      requestLocale(c),
+    );
     setSessionCookie(c, auth);
     return c.json(auth, 201);
+  })
+  .post("/auth/verify-email", async (c) => {
+    const { token } = await jsonBody(c, AccountTokenRequest);
+    await consumeToken(c.get("ctx"), token, "verify_email", requestLocale(c), limitRecovery(c));
+    return c.json({ ok: true });
+  })
+  .post("/auth/verify-email/resend", async (c) => {
+    await jsonBody(c, ResendVerificationRequest);
+    await acceptPrivately(() => resendVerification(c.get("ctx"), requestLocale(c), limitRecovery(c)));
+    return c.json({ ok: true }, 202);
+  })
+  .post("/auth/password-reset/request", async (c) => {
+    const { email } = await jsonBody(c, ResetRequest);
+    await limitRecovery(c)(email);
+    await acceptPrivately(() => requestReset(c.get("ctx"), email, requestLocale(c)));
+    return c.json({ ok: true }, 202);
+  })
+  .post("/auth/password-reset/confirm", async (c) => {
+    const { token, newPassword } = await jsonBody(c, ResetConfirmRequest);
+    await consumeToken(
+      c.get("ctx"),
+      token,
+      "reset_password",
+      requestLocale(c),
+      limitRecovery(c),
+      newPassword,
+    );
+    return c.json({ ok: true });
+  })
+  .post("/me/email", async (c) => {
+    const { newEmail, currentPassword } = await jsonBody(c, EmailChangeRequest);
+    await limitRecovery(c)(newEmail);
+    await acceptPrivately(() =>
+      requestEmailChange(c.get("ctx"), newEmail, currentPassword, requestLocale(c)),
+    );
+    return c.json({ ok: true }, 202);
+  })
+  .post("/auth/email-change/confirm", async (c) => {
+    const { token } = await jsonBody(c, AccountTokenRequest);
+    await consumeToken(c.get("ctx"), token, "change_email", requestLocale(c), limitRecovery(c));
+    return c.json({ ok: true });
   })
   .post("/auth/login", async (c) => {
     const auth = await identity.login(

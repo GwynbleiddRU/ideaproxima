@@ -88,7 +88,11 @@ function operation(name: string, spec: EndpointSpec): Json {
         ? { description: "Error", content: { "application/json": { schema: ref("Error") } } }
         : {
             description: "Success",
-            content: { "application/json": { schema: schemaFor(spec.response, "output") } },
+            content: {
+              "application/json": {
+                schema: schemaFor(spec.responseByStatus?.[status] ?? spec.response, "output"),
+              },
+            },
           };
   }
   responses["429"] = { $ref: "#/components/responses/RateLimited" };

@@ -97,6 +97,9 @@ The theme follows your system by default; the footer switches between light, dar
 | Bio / affiliation | Up to 2,000 / 200 characters.                                                                                                                   |
 | Capacities        | Ways you can advance ideas: research, engineering, funding, entrepreneurship, policy, organizing, communication.                                |
 
+- **Verify your email.** By default you can sign in immediately. Open the verification message and choose **Verify email address** within 48 hours. Account settings can send a replacement link. On a site that requires verification first, follow the email before signing in.
+- **Forgot your password?** Choose this link on the sign-in page and enter your email. If there is an account, the message contains a one-hour reset link. Setting the new password signs out every device.
+- **Change email address** in account settings asks for the new address and your current password. Confirm the new address within 24 hours. You will also receive a notice at your old address. Use the newest link when you request a replacement.
 - **Sessions** last 30 days by default. Signing out revokes the session. Changing your password signs out every
   other session.
 - **Expertise**: you may declare expertise in a topic. It is recorded as _self-declared_ with a date. Verified

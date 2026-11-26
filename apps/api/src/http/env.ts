@@ -12,6 +12,7 @@ export type AppEnv = {
     locale?: Locale;
     config: AppConfig;
     loginFailureBudget?: LoginFailureBudget;
+    recoveryBudget?: (subject: string) => Promise<void>;
     challengeProvider?: ChallengeProvider;
     priorRegistrations?: number;
     errorReporter: ErrorReporter;

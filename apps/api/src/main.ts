@@ -2,6 +2,7 @@ import "./load-env";
 import { serve } from "@hono/node-server";
 import { uniformWeights } from "@ideaproxima/domain";
 import { startWorker } from "./modules/jobs/runner";
+import { workerMail } from "./modules/mail/sender";
 import { version } from "../package.json";
 import { createApp } from "./app";
 import { loadConfig } from "./config";
@@ -70,7 +71,11 @@ try {
     servers.push(startMetricsServer(config.http.internalPort, database.db));
   const worker =
     config.jobs.mode === "inline"
-      ? await startWorker({ db: database.db, actor: null, weights: uniformWeights }, config.jobs, logger)
+      ? await startWorker(
+          { db: database.db, actor: null, weights: uniformWeights, mail: workerMail(config) },
+          config.jobs,
+          logger,
+        )
       : undefined;
   lifecycle.watch(servers, database, worker);
 } catch (error) {

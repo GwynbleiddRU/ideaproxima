@@ -775,7 +775,7 @@
           "auth.register"
         ],
         "x-mutates": true,
-        "description": "Returns a session token and sets the `ip_session` cookie. Rate-limited per client address.\n\n**Notable errors:**\n- `validation_failed`: registration proof missing, invalid, expired or already used\n- `conflict`: email or handle already taken\n- `rate_limited`: too many attempts\n- `unavailable`: password service busy",
+        "description": "Immediate mode creates a session (201). Verified-first mode always accepts the request (202, {ok:true}) and emails instructions.\n\n**Notable errors:**\n- `validation_failed`: registration proof missing, invalid, expired or already used\n- `conflict`: email or handle already taken\n- `rate_limited`: too many attempts\n- `unavailable`: password service busy",
         "security": [],
         "parameters": [],
         "requestBody": {
@@ -795,6 +795,342 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Auth"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ok"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "default": {
+            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/auth/verify-email": {
+      "post": {
+        "operationId": "verifyEmail",
+        "tags": [
+          "Identity"
+        ],
+        "summary": "Verify an email address",
+        "x-rate-limits": [
+          "net.requests",
+          "auth.recovery"
+        ],
+        "x-mutates": true,
+        "description": "**Notable errors:**\n- `validation_failed`: invalid, expired or used link\n- `rate_limited`: too many attempts",
+        "security": [],
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AccountTokenRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ok"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "default": {
+            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/auth/verify-email/resend": {
+      "post": {
+        "operationId": "resendVerification",
+        "tags": [
+          "Identity"
+        ],
+        "summary": "Resend a verification link",
+        "x-rate-limits": [
+          "net.requests",
+          "auth.recovery"
+        ],
+        "x-mutates": true,
+        "description": "**Notable errors:**\n- `unauthenticated`: sign in required\n- `rate_limited`: too many attempts",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResendVerificationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ok"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "default": {
+            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/auth/password-reset/request": {
+      "post": {
+        "operationId": "requestPasswordReset",
+        "tags": [
+          "Identity"
+        ],
+        "summary": "Request password recovery",
+        "x-rate-limits": [
+          "net.requests",
+          "auth.recovery"
+        ],
+        "x-mutates": true,
+        "description": "**Notable errors:**\n- `rate_limited`: too many attempts",
+        "security": [],
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResetRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ok"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "default": {
+            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/auth/password-reset/confirm": {
+      "post": {
+        "operationId": "confirmPasswordReset",
+        "tags": [
+          "Identity"
+        ],
+        "summary": "Set a password and revoke all sessions",
+        "x-rate-limits": [
+          "net.requests",
+          "auth.recovery"
+        ],
+        "x-mutates": true,
+        "description": "**Notable errors:**\n- `validation_failed`: invalid, expired or used link\n- `rate_limited`: too many attempts",
+        "security": [],
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResetConfirmRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ok"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "default": {
+            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/me/email": {
+      "post": {
+        "operationId": "requestEmailChange",
+        "tags": [
+          "Identity"
+        ],
+        "summary": "Confirm a change of address by email",
+        "x-rate-limits": [
+          "net.requests",
+          "auth.recovery"
+        ],
+        "x-mutates": true,
+        "description": "**Notable errors:**\n- `unauthenticated`: sign in required\n- `forbidden`: incorrect current password\n- `rate_limited`: too many attempts",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmailChangeRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ok"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "default": {
+            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/auth/email-change/confirm": {
+      "post": {
+        "operationId": "confirmEmailChange",
+        "tags": [
+          "Identity"
+        ],
+        "summary": "Apply a confirmed change of email address",
+        "x-rate-limits": [
+          "net.requests",
+          "auth.recovery"
+        ],
+        "x-mutates": true,
+        "description": "**Notable errors:**\n- `validation_failed`: invalid, expired or used link\n- `rate_limited`: too many attempts",
+        "security": [],
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AccountTokenRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ok"
                 }
               }
             }
@@ -4454,6 +4790,18 @@
       }
     },
     "schemas": {
+      "AccountTokenRequest": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{43}$"
+          }
+        },
+        "required": [
+          "token"
+        ]
+      },
       "Activity": {
         "type": "object",
         "properties": {
@@ -4992,6 +5340,9 @@
             ],
             "additionalProperties": false
           },
+          "emailVerified": {
+            "type": "boolean"
+          },
           "token": {
             "type": "string",
             "description": "Session token. Also set as the HttpOnly `ip_session` cookie."
@@ -5004,6 +5355,7 @@
         "required": [
           "person",
           "preferences",
+          "emailVerified",
           "token",
           "expiresAt"
         ],
@@ -5614,6 +5966,24 @@
         },
         "required": [
           "status"
+        ]
+      },
+      "EmailChangeRequest": {
+        "type": "object",
+        "properties": {
+          "newEmail": {
+            "type": "string",
+            "format": "email"
+          },
+          "currentPassword": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          }
+        },
+        "required": [
+          "newEmail",
+          "currentPassword"
         ]
       },
       "Error": {
@@ -7068,6 +7438,9 @@
           "email": {
             "type": "string"
           },
+          "emailVerified": {
+            "type": "boolean"
+          },
           "preferences": {
             "type": "object",
             "properties": {
@@ -7093,6 +7466,7 @@
         "required": [
           "person",
           "email",
+          "emailVerified",
           "preferences"
         ],
         "additionalProperties": false
@@ -7809,6 +8183,16 @@
           "password"
         ]
       },
+      "Registration": {
+        "anyOf": [
+          {
+            "$ref": "#/components/schemas/Auth"
+          },
+          {
+            "$ref": "#/components/schemas/Ok"
+          }
+        ]
+      },
       "Relation": {
         "type": "object",
         "properties": {
@@ -7879,6 +8263,40 @@
           "derived"
         ],
         "additionalProperties": false
+      },
+      "ResendVerificationRequest": {
+        "type": "object",
+        "properties": {}
+      },
+      "ResetConfirmRequest": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{43}$"
+          },
+          "newPassword": {
+            "type": "string",
+            "minLength": 10,
+            "maxLength": 200
+          }
+        },
+        "required": [
+          "token",
+          "newPassword"
+        ]
+      },
+      "ResetRequest": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email"
+          }
+        },
+        "required": [
+          "email"
+        ]
       },
       "Revision": {
         "type": "object",

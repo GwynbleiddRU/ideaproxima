@@ -1,6 +1,7 @@
 import { queryOptions, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type {
   AuthResponse,
+  RegistrationResponse,
   LoginRequest,
   MeResponse,
   PersonDto,
@@ -30,6 +31,7 @@ export function useSession() {
   return {
     me,
     email: data?.email ?? null,
+    emailVerified: data?.emailVerified ?? false,
     locale: data?.preferences.locale ?? null,
     loading: isPending,
     isModerator: me?.role === "moderator" || me?.role === "admin",
@@ -69,7 +71,12 @@ export function useLogin() {
     mutationFn: (input: LoginRequest) => http.post<AuthResponse>("/auth/login", input),
     meta: { inlineErrors: true },
     onSuccess: (auth, input) =>
-      change({ person: auth.person, email: input.email.trim().toLowerCase(), preferences: auth.preferences }),
+      change({
+        person: auth.person,
+        emailVerified: auth.emailVerified,
+        email: input.email.trim().toLowerCase(),
+        preferences: auth.preferences,
+      }),
   });
 }
 
@@ -77,10 +84,17 @@ export function useRegister(takeProof: () => Promise<RegisterRequest["challenge"
   const change = useSessionChange();
   return useMutation({
     mutationFn: async (input: RegisterRequest) =>
-      http.post<AuthResponse>("/auth/register", { ...input, challenge: await takeProof() }),
+      http.post<RegistrationResponse>("/auth/register", { ...input, challenge: await takeProof() }),
     meta: { inlineErrors: true },
     onSuccess: (auth, input) =>
-      change({ person: auth.person, email: input.email.trim().toLowerCase(), preferences: auth.preferences }),
+      "person" in auth
+        ? change({
+            person: auth.person,
+            emailVerified: auth.emailVerified,
+            email: input.email.trim().toLowerCase(),
+            preferences: auth.preferences,
+          })
+        : undefined,
   });
 }
 

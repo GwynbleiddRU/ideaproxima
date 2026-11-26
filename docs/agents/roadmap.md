@@ -76,8 +76,7 @@ below.
 
 ## P0 — before anyone outside the team uses it
 
-1. **Auth completion.** Email verification and password reset (an expiring token table plus an email sender
-   abstraction), session listing and revocation. Then OAuth + ORCID (ORCID also feeds verified expertise).
+1. **Auth completion.** Phase A delivered email verification, password recovery and confirmed email changes. Session listing and revocation follow in phase B, then OAuth and ORCID in phase C.
 2. **Content policy + reporting.** A report endpoint (`reports` table, a fact), a moderator queue, and a written
    policy (what is not preserved: harm instructions, harassment).
 3. **Production deployment.** Managed Postgres, release steps as documented in `docs/developer/operations.md`, error
@@ -119,27 +118,27 @@ below.
 
 The original `FOLLOWUP.md` was removed from the repository with the seedbank prototype. Its items map as follows.
 
-| FOLLOWUP item                                                                    | Status                                                                                        |
-| -------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| 0.1 run against a real DB                                                        | Done for PGlite (real Postgres engine). Real-server CI is P0-1                                |
-| 0.2 automated tests                                                              | Done: domain unit tests + API integration tests                                               |
-| 0.3 CI                                                                           | Done (CI workflow, PGlite + PostgreSQL jobs)                                                  |
-| 1.1 auth hardening, 1.2 abuse protection                                         | Rate limits, password change, deactivation done. Email verification, reset, OAuth: P0-1       |
-| 1.3 moderation                                                                   | Roles, hide/restore, account deactivation, public log done. Reports and queue: P0-2           |
-| 1.4 Markdown + sanitisation                                                      | Done in the web app: micromark (raw HTML escaped, unsafe protocols dropped) + CSP             |
-| 1.5 error and empty states                                                       | Done in the web app: skeletons, empty states, field-level errors, retry, not-found page       |
-| 1.6 deploy                                                                       | Dockerfile, release commands, health check, operations guide done. Production rollout: P0-3   |
-| 2.1 idea versioning                                                              | Done: immutable revision snapshots                                                            |
-| 2.2 co-development                                                               | Done: proposals, stewards decide, co-stewards                                                 |
-| 2.3 structured evidence                                                          | Done: sources, evidence on claims, stance, limitations                                        |
-| 2.4 idea graph                                                                   | Done: typed relations + traversal                                                             |
-| 2.5 threaded discussion                                                          | Done: comments + argument rebuttal chains                                                     |
-| 2.6 stage transitions by community                                               | Open question 6                                                                               |
-| 2.7 notifications                                                                | P1-8                                                                                          |
-| 3.1–3.5 reputation, weighting, calibration, verified expertise, sybil resistance | P2 (seams in place)                                                                           |
-| 4.1 roles and intents                                                            | Done: capacities on profiles + involvements                                                   |
-| 4.2 matching                                                                     | P1-11 / P2                                                                                    |
-| 4.3 implementation tracking                                                      | Done: initiatives + outcomes + lessons                                                        |
-| 4.4 organisation accounts                                                        | P3-19                                                                                         |
-| 5.x search, duplicates, AI, lenses, public API                                   | Lenses and OpenAPI done. Search upgrades, duplicates, AI: P1/P3                               |
-| 6.x i18n, accessibility, durability, governance transparency                     | i18n: P1-10. Accessibility: WCAG 2.1 AA audited in CI. Durability: P3-18. Moderation log done |
+| FOLLOWUP item                                                                    | Status                                                                                            |
+| -------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| 0.1 run against a real DB                                                        | Done for PGlite (real Postgres engine). Real-server CI is P0-1                                    |
+| 0.2 automated tests                                                              | Done: domain unit tests + API integration tests                                                   |
+| 0.3 CI                                                                           | Done (CI workflow, PGlite + PostgreSQL jobs)                                                      |
+| 1.1 auth hardening, 1.2 abuse protection                                         | Rate limits, verification, reset, email change and deactivation done. Federation remains in P0-1. |
+| 1.3 moderation                                                                   | Roles, hide/restore, account deactivation, public log done. Reports and queue: P0-2               |
+| 1.4 Markdown + sanitisation                                                      | Done in the web app: micromark (raw HTML escaped, unsafe protocols dropped) + CSP                 |
+| 1.5 error and empty states                                                       | Done in the web app: skeletons, empty states, field-level errors, retry, not-found page           |
+| 1.6 deploy                                                                       | Dockerfile, release commands, health check, operations guide done. Production rollout: P0-3       |
+| 2.1 idea versioning                                                              | Done: immutable revision snapshots                                                                |
+| 2.2 co-development                                                               | Done: proposals, stewards decide, co-stewards                                                     |
+| 2.3 structured evidence                                                          | Done: sources, evidence on claims, stance, limitations                                            |
+| 2.4 idea graph                                                                   | Done: typed relations + traversal                                                                 |
+| 2.5 threaded discussion                                                          | Done: comments + argument rebuttal chains                                                         |
+| 2.6 stage transitions by community                                               | Open question 6                                                                                   |
+| 2.7 notifications                                                                | P1-8                                                                                              |
+| 3.1–3.5 reputation, weighting, calibration, verified expertise, sybil resistance | P2 (seams in place)                                                                               |
+| 4.1 roles and intents                                                            | Done: capacities on profiles + involvements                                                       |
+| 4.2 matching                                                                     | P1-11 / P2                                                                                        |
+| 4.3 implementation tracking                                                      | Done: initiatives + outcomes + lessons                                                            |
+| 4.4 organisation accounts                                                        | P3-19                                                                                             |
+| 5.x search, duplicates, AI, lenses, public API                                   | Lenses and OpenAPI done. Search upgrades, duplicates, AI: P1/P3                                   |
+| 6.x i18n, accessibility, durability, governance transparency                     | i18n: P1-10. Accessibility: WCAG 2.1 AA audited in CI. Durability: P3-18. Moderation log done     |

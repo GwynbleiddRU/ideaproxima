@@ -3,7 +3,7 @@
 Part of the [production-readiness program](README.md). Prompt for the implementing agent:
 `prompts/api/04-accounts-and-trust-prompt.md`.
 
-| Status     | Not started                                                                                                                                                                                                                                              |
+| Status     | Phase A done 2026-11-26. Phase B is next at step 14. Phases C and D are scheduled for steps 26 and 27.                                                                                                                                                   |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Depends on | [02](02-background-jobs.md) (e-mail is sent by jobs), [03](03-rate-limiting.md) (`auth.recovery`, trust tiers), [05](05-localization.md) A (translator, error reasons); phase D also [07](07-moderation-core.md) (the actions that need a second factor) |
 | Unblocks   | `TRUST_REQUIRE_VERIFIED_EMAIL`; notices in [07](07-moderation-core.md); the launch                                                                                                                                                                       |
@@ -230,8 +230,31 @@ implemented. Phase B adds `MINIMUM_AGE` beside the terms mechanism.
 
 ## Decisions for the owner
 
-1. `REGISTRATION_MODE`: `immediate` (default) or `verified-first`.
+1. The owner confirmed `REGISTRATION_MODE=immediate` on 2026-11-26, including the duplicate-address disclosure. `verified-first` is also supported.
 2. The terms, the privacy notice and the contribution licence (and with it `LEGAL_TERMS_VERSION`).
 3. Which providers beyond ORCID to enable at launch.
 4. The mail provider (it must deliver to every target region).
 5. The minimum age for an account (default 16).
+
+## Implementation notes
+
+### Step 13 · Phase A · 2026-11-26
+
+Started on clean local `main` at `4d7b442`. Steps 1–12 were marked done. The checkout contained transactional enqueue, scheduled purges, the `auth.recovery` policy, registration proof of work and locale negotiation. The unchanged baseline passed `npm run check`. The owner confirmed immediate sign-in, including the 409 duplicate-address trade-off. The owner reviewed the 16-state preview at `designs/account-access.html`, requested vertically centered forms and approved the revision before the web pages were implemented. The preview was checked at 1100×800, 375×800 and 375×420 and remains local.
+
+- The six new POST endpoints cover email verification and resend, password-reset request and confirmation, and email-change request and confirmation. Registration returns the existing 201 session in immediate mode or a uniform 202 acknowledgement in verified-first mode. Private identity responses expose verification status.
+- Migration `0007_slim_red_ghost.sql` adds the operational `account_tokens` table and indexes. Pending verified-first registrations have a nullable person reference and a scrypt hash. Public identity and registration activity are created only on confirmation. The daily purge removes expired token rows after 30 days.
+- The API enqueues `mail.send` in the transaction that issues the token. The worker installs the credential digest when it sends the message. Deriving the link from the token ID and a domain-separated HMAC under the private worker key keeps bearer credentials out of durable queue payloads. Mail links use fragments and an explicit confirmation so opening a message or fetching its link cannot consume it.
+- The SMTP adapter uses Nodemailer 10.6.1 (Node ≥20, within the repository floor of 22.19) for MIME, TLS and SMTP. The English email catalogue feeds the recipient locale through the existing translator. Production delivery and sender-domain configuration await the owner's mail provider. The optional breached-password check defaults to off. The origin, credentials and queue requirements are in the operations guide.
+- Contracts, migration, API identity/mail/worker modules, web auth and account screens, locale catalogues, the browser audit and the account/operations guides changed together. The account trigger includes its visible initials in its accessible name.
+
+| Check      | Evidence                                                                                                                                                                                                                                                                                                            |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Generation | `npm run db:generate`, `npm run i18n:compile` and `npm run docs:api` regenerated the migration, catalogues and reference.                                                                                                                                                                                           |
+| PostgreSQL | `npm run test:pg` passed 251 tests and covered all 75 endpoints. Two simultaneous confirmations produced exactly one success. Recovery revoked both active sessions.                                                                                                                                                |
+| Timing     | Five alternating known/unknown recovery requests per address and mode against local PostgreSQL returned identical 202 bodies. Median times in ms were 124/124 (immediate) and 124/125 (verified-first).                                                                                                             |
+| Delivery   | Both modes followed links from captured mail. Tests covered replacement, expiry, wrong purpose, replay, email ownership, recovery throttling and token purge. Each template escaped hostile text in English and Arabic locale contexts. A loopback SMTP receiver verified multipart delivery and stable Message-ID. |
+| Repository | `npm run check` passed typecheck, lint, formatting, link checks, the PGlite suite (248 passed, three PostgreSQL-only checks skipped), endpoint coverage and both builds.                                                                                                                                            |
+| Browser    | `npm run test:e2e` passed all 75 checks. Both registration modes followed real inline-worker mail links through sign-up, confirmation, email change and recovery. All five new routes passed the accessibility audit in both themes.                                                                                |
+
+**Next eligible row:** step 14 (plan 04 phase B), after the owner confirms decision 15 on minimum age (documented default 16). The phase-B session should carry the verification status and recovery machinery forward. Terms and privacy texts, provider selection and later federation/MFA work retain their own gates.

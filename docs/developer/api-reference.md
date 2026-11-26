@@ -7,7 +7,7 @@ validates against and the test suite checks every response with. The machine-rea
 [`api/openapi.json`](api/openapi.json) (also served live at `GET /v1/openapi.json`). Conventions —
 authentication, errors, pagination, idempotency — are explained in the [developer guide](developer-guide.md#api-conventions).
 
-**69 endpoints.** Access “signed in” means a session (Bearer token or `ip_session` cookie) is required; further restrictions are listed per endpoint.
+**75 endpoints.** Access “signed in” means a session (Bearer token or `ip_session` cookie) is required; further restrictions are listed per endpoint.
 
 Every endpoint can answer 429 with [`RateLimited`](#schema-ratelimited) and a `Retry-After` delay in seconds.
 
@@ -28,6 +28,12 @@ Every endpoint can answer 429 with [`RateLimited`](#schema-ratelimited) and a `R
 - [Identity](#identity) — Accounts, sessions, profiles, expertise and account moderation.
   - `GET /v1/auth/challenge` — Get a registration challenge (`registrationChallenge`)
   - `POST /v1/auth/register` — Create an account (`register`)
+  - `POST /v1/auth/verify-email` — Verify an email address (`verifyEmail`)
+  - `POST /v1/auth/verify-email/resend` — Resend a verification link (`resendVerification`)
+  - `POST /v1/auth/password-reset/request` — Request password recovery (`requestPasswordReset`)
+  - `POST /v1/auth/password-reset/confirm` — Set a password and revoke all sessions (`confirmPasswordReset`)
+  - `POST /v1/me/email` — Confirm a change of address by email (`requestEmailChange`)
+  - `POST /v1/auth/email-change/confirm` — Apply a confirmed change of email address (`confirmEmailChange`)
   - `POST /v1/auth/login` — Sign in (`login`)
   - `POST /v1/auth/logout` — Sign out (revokes the current session) (`logout`)
   - `GET /v1/me` — The signed-in account (`me`)
@@ -297,11 +303,13 @@ Response `200`: object \| null
 
 **Rate limits:** `net.requests`, `auth.register`
 
-Returns a session token and sets the `ip_session` cookie. Rate-limited per client address.
+Immediate mode creates a session (201). Verified-first mode always accepts the request (202, {ok:true}) and emails instructions.
 
 Request body: [`RegisterRequest`](#schema-registerrequest)
 
 Response `201`: [`Auth`](#schema-auth)
+
+Response `202`: [`Ok`](#schema-ok)
 
 Notable errors:
 
@@ -309,6 +317,108 @@ Notable errors:
 - `conflict` — email or handle already taken
 - `rate_limited` — too many attempts
 - `unavailable` — password service busy
+
+### `POST /v1/auth/verify-email`
+
+**Verify an email address** · `verifyEmail`
+
+**Access:** public
+
+**Rate limits:** `net.requests`, `auth.recovery`
+
+Request body: [`AccountTokenRequest`](#schema-accounttokenrequest)
+
+Response `200`: [`Ok`](#schema-ok)
+
+Notable errors:
+
+- `validation_failed` — invalid, expired or used link
+- `rate_limited` — too many attempts
+
+### `POST /v1/auth/verify-email/resend`
+
+**Resend a verification link** · `resendVerification`
+
+**Access:** signed in
+
+**Rate limits:** `net.requests`, `auth.recovery`
+
+Request body: [`ResendVerificationRequest`](#schema-resendverificationrequest)
+
+Response `202`: [`Ok`](#schema-ok)
+
+Notable errors:
+
+- `unauthenticated` — sign in required
+- `rate_limited` — too many attempts
+
+### `POST /v1/auth/password-reset/request`
+
+**Request password recovery** · `requestPasswordReset`
+
+**Access:** public
+
+**Rate limits:** `net.requests`, `auth.recovery`
+
+Request body: [`ResetRequest`](#schema-resetrequest)
+
+Response `202`: [`Ok`](#schema-ok)
+
+Notable errors:
+
+- `rate_limited` — too many attempts
+
+### `POST /v1/auth/password-reset/confirm`
+
+**Set a password and revoke all sessions** · `confirmPasswordReset`
+
+**Access:** public
+
+**Rate limits:** `net.requests`, `auth.recovery`
+
+Request body: [`ResetConfirmRequest`](#schema-resetconfirmrequest)
+
+Response `200`: [`Ok`](#schema-ok)
+
+Notable errors:
+
+- `validation_failed` — invalid, expired or used link
+- `rate_limited` — too many attempts
+
+### `POST /v1/me/email`
+
+**Confirm a change of address by email** · `requestEmailChange`
+
+**Access:** signed in
+
+**Rate limits:** `net.requests`, `auth.recovery`
+
+Request body: [`EmailChangeRequest`](#schema-emailchangerequest)
+
+Response `202`: [`Ok`](#schema-ok)
+
+Notable errors:
+
+- `unauthenticated` — sign in required
+- `forbidden` — incorrect current password
+- `rate_limited` — too many attempts
+
+### `POST /v1/auth/email-change/confirm`
+
+**Apply a confirmed change of email address** · `confirmEmailChange`
+
+**Access:** public
+
+**Rate limits:** `net.requests`, `auth.recovery`
+
+Request body: [`AccountTokenRequest`](#schema-accounttokenrequest)
+
+Response `200`: [`Ok`](#schema-ok)
+
+Notable errors:
+
+- `validation_failed` — invalid, expired or used link
+- `rate_limited` — too many attempts
 
 ### `POST /v1/auth/login`
 
@@ -1355,6 +1465,12 @@ Notable errors:
 
 Named request and response shapes. Nested inline objects are listed with dotted paths.
 
+### <a id="schema-accounttokenrequest"></a>AccountTokenRequest
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `token` | string | yes |  |
+
 ### <a id="schema-activity"></a>Activity
 
 | Field | Type | Required | Notes |
@@ -1484,6 +1600,7 @@ Provide exactly one basis: `sourceId`, `source` (registered or matched by DOI/UR
 | `person` | [`Person`](#schema-person) | yes |  |
 | `preferences` | object | yes |  |
 | `preferences.locale` | string \| null | yes (nullable) | length 0–35 |
+| `emailVerified` | boolean | yes |  |
 | `token` | string | yes | Session token. Also set as the HttpOnly `ip_session` cookie. |
 | `expiresAt` | string (date-time) | yes |  |
 
@@ -1620,6 +1737,13 @@ Provide exactly one basis: `sourceId`, `source` (registered or matched by DOI/UR
 | --- | --- | --- | --- |
 | `status` | `offering` \| `active` \| `concluded` | yes |  |
 | `note` | string | no | length 0–1000 |
+
+### <a id="schema-emailchangerequest"></a>EmailChangeRequest
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `newEmail` | string (email) | yes |  |
+| `currentPassword` | string | yes | length 1–200 |
 
 ### <a id="schema-error"></a>Error
 
@@ -1914,6 +2038,7 @@ Provide exactly one basis: `sourceId`, `source` (registered or matched by DOI/UR
 | --- | --- | --- | --- |
 | `person` | [`Person`](#schema-person) | yes |  |
 | `email` | string | yes |  |
+| `emailVerified` | boolean | yes |  |
 | `preferences` | object | yes |  |
 | `preferences.locale` | string \| null | yes (nullable) | length 0–35 |
 
@@ -2085,6 +2210,10 @@ Provide exactly one basis: `sourceId`, `source` (registered or matched by DOI/UR
 | `password` | string | yes | length 10–200 |
 | `locale` | string | no | A supported locale tag from GET /v1/locales. — length 0–35 |
 
+### <a id="schema-registration"></a>Registration
+
+Type: [`Auth`](#schema-auth) \| [`Ok`](#schema-ok)
+
 ### <a id="schema-relation"></a>Relation
 
 | Field | Type | Required | Notes |
@@ -2099,6 +2228,23 @@ Provide exactly one basis: `sourceId`, `source` (registered or matched by DOI/UR
 | `derived` | object | yes |  |
 | `derived.algorithm` | string | yes |  |
 | `derived.validity` | [`RatingSummary`](#schema-ratingsummary) \| null | yes (nullable) |  |
+
+### <a id="schema-resendverificationrequest"></a>ResendVerificationRequest
+
+Type: object
+
+### <a id="schema-resetconfirmrequest"></a>ResetConfirmRequest
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `token` | string | yes |  |
+| `newPassword` | string | yes | length 10–200 |
+
+### <a id="schema-resetrequest"></a>ResetRequest
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `email` | string (email) | yes |  |
 
 ### <a id="schema-revision"></a>Revision
 

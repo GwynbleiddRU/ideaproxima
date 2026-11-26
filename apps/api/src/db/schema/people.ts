@@ -3,6 +3,7 @@ import {
   check,
   index,
   integer,
+  jsonb,
   pgTable,
   primaryKey,
   text,
@@ -67,6 +68,36 @@ export const accounts = pgTable(
     createdAt: createdAt(),
   },
   (t) => [uniqueIndex("accounts_email_key").on(t.email)],
+);
+
+export const tokenPurposes = ["verify_email", "reset_password", "change_email"] as const;
+export type TokenPurpose = (typeof tokenPurposes)[number];
+export const accountTokens = pgTable(
+  "account_tokens",
+  {
+    id: pk(),
+    personId: uuid("person_id").references(() => people.id),
+    purpose: text("purpose").$type<TokenPurpose>().notNull(),
+    email: text("email").notNull(),
+    previousEmail: text("previous_email"),
+    pendingRegistration: jsonb("pending_registration").$type<{
+      handle: string;
+      displayName: string;
+      passwordHash: string;
+      locale: string | null;
+    }>(),
+    tokenHash: text("token_hash"),
+    createdAt: createdAt(),
+    expiresAt: tstz("expires_at").notNull(),
+    usedAt: tstz("used_at"),
+  },
+  (t) => [
+    uniqueIndex("account_tokens_hash_key").on(t.tokenHash),
+    index("account_tokens_person_purpose").on(t.personId, t.purpose),
+    index("account_tokens_email_purpose").on(t.email, t.purpose),
+    index("account_tokens_expiry").on(t.expiresAt),
+    check("account_tokens_purpose_check", inList("purpose", tokenPurposes)),
+  ],
 );
 
 /** Server-side sessions: revocable (moderation, logout everywhere) unlike stateless JWTs. Only token hashes are stored. */

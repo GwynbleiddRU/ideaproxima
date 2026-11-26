@@ -70,6 +70,9 @@ export function SignInPage() {
             />
           )}
         </Field>
+        <Link to="/forgot-password" className="link">
+          {t("auth.forgot")}
+        </Link>
         <AuthError error={login.error} />
         <Button
           type="submit"
@@ -117,6 +120,14 @@ export function JoinPage() {
   };
 
   if (me) return <BackToApp redirect={redirect} />;
+  if (register.data && "ok" in register.data)
+    return (
+      <AuthLayout title={t("auth.checkMail")} lede={t("auth.strictSent")}>
+        <Link to="/sign-in" className="link">
+          {t("auth.signIn")}
+        </Link>
+      </AuthLayout>
+    );
   return (
     <AuthLayout title={t("auth.join")} lede={t("auth.joinLede")}>
       <form onSubmit={submit} className={forms.form}>
@@ -217,7 +228,7 @@ function AuthError({ error }: { error: unknown }) {
   );
 }
 
-function AuthLayout({ title, lede, children }: { title: string; lede: string; children: ReactNode }) {
+export function AuthLayout({ title, lede, children }: { title: string; lede: string; children: ReactNode }) {
   const t = useMessage();
   return (
     <div className={styles.page}>

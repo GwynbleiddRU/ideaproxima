@@ -74,7 +74,7 @@ export function assertContract(method: string, fullPath: string, status: number,
   if (!statuses.includes(status)) {
     throw new Error(`${name}: status ${status} is not documented (expected ${statuses.join(" or ")}).`);
   }
-  const parsed = spec.response.safeParse(body);
+  const parsed = (spec.responseByStatus?.[status] ?? spec.response).safeParse(body);
   if (!parsed.success) {
     throw new Error(`${name}: response does not match its contract:\n${parsed.error.message}`);
   }
