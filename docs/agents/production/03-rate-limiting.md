@@ -3,7 +3,7 @@
 Part of the [production-readiness program](README.md). Prompt for the implementing agent:
 `prompts/api/03-rate-limiting-prompt.md`.
 
-| Status     | Phases A and B complete (steps 10–11). Step 12, phase C, is next.                                                                                                                 |
+| Status     | Phases A–C complete (steps 10–12). Phase D awaits a measured post-launch trigger.                                                                                                 |
 | ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Depends on | [00](00-immediate-hardening.md) (network keys), [01](01-operational-foundations.md) (metrics, configuration), [02](02-background-jobs.md) (the PostgreSQL store's purge schedule) |
 | Unblocks   | Open registration; [07](07-moderation-core.md) (report limits); [12](12-public-api.md) (key quotas)                                                                               |
@@ -412,3 +412,50 @@ RateLimit: "auth.register.1";a=0;w=3
 
 **Next eligible row:** step 12 (plan 03, phase C), `prompts/api/03-rate-limiting-prompt.md`.
 No owner decision is pending for the handoff.
+
+### Step 12 · Phase C · 2026-11-26
+
+Steps 1–11 were Done on clean `main` at `09a8675`. The trusted network key, bounded password hashing,
+localised errors, endpoint policies, GCRA stores and minute purge job were present. Baseline
+`npm run check` passed with 68 endpoints. The older endpoint counts and fixed-window limiter in the
+brief predate phases A and B.
+
+- The contract adds `GET /v1/auth/challenge` and an optional solved proof to `RegisterRequest`. In
+  `none` mode the GET returns JSON null. With `pow`, Node's crypto module signs the puzzle fields and
+  trusted network together for five minutes. The GET has the existing network ceiling and sends
+  `Cache-Control: no-store`.
+- The provider reads the remaining daily `auth.register` budget from the configured limiter. Each spent
+  unit doubles the next search bound from 50,000 up to 800,000. Verification uses the balance before
+  the current charge, so fetching several easy puzzles in advance cannot preserve the lower difficulty.
+  With limits disabled, proof of work can still be tested at base difficulty.
+- Migration 0006 adds a logged receipt table keyed by salt. The verification insert commits before
+  password hashing, even if account creation later fails. The existing minute job removes expired receipts.
+  A receipt-store failure returns 503. Production requires a shared `CHALLENGE_SECRET` when proof is on.
+  Development, tests and the local Compose stack default to `none`.
+- The registration page in `apps/web/src/pages/auth/` starts a same-origin module worker when the form
+  opens. Submission awaits the result and gets fresh work after expiry or a previous submission.
+  The form layout and copy are unchanged, so this silent computation used the brief's preview exemption.
+
+| Verification            | Observed result                                                                                                                                                                                                                                                 |
+| ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `npm run check`         | Typecheck, lint, formatting, docs, 241 PGlite tests and the production build passed. Three PostgreSQL-only tests ran on the real server. All 69 endpoints exercised.                                                                                            |
+| `npm run test:pg`       | 244 tests passed on PostgreSQL 17.12. Two instances submitted the same solved proof concurrently for different accounts, yielding one 201 and one 400. Reuse after an account conflict returned 400. GCRA still admitted exactly 10 of 50 concurrent consumes.  |
+| Registration validation | Rejected expired, missing, altered, incorrect and wrong-network proofs. Database failure returned 503. Purging removed an expired receipt and preserved a live one.                                                                                             |
+| `npm run test:e2e`      | All 63 Chromium checks passed. The registration test observed a same-origin worker, a real 429 with `Retry-After: 3`, the preserved form and a 201 with a fresh solved payload. `RateLimit-Policy` and `RateLimit` matched the three-second example in step 11. |
+| Generation              | `npm run docs:api` and `npm run i18n:compile` regenerated the reference, OpenAPI and English error catalogue. Repeating `npm run db:generate` found no drift.                                                                                                   |
+
+On this desktop, a local headless Chromium run of the built worker with the solution deliberately at the
+last candidate took 175 ms at 50,000 and 2,231 ms at 800,000, including worker startup. Phone timings
+remain unmeasured. Keep the [shipped policy defaults](#policies) pending real traffic.
+
+The phase A store benchmark used the same sequential workload on PostgreSQL 17.12, with 100 warm-up
+and 2,000 measured calls per outcome.
+
+| Outcome | SQL statements per decision | Statements/s | Mean ms | p50 ms | p95 ms |
+| ------- | --------------------------: | -----------: | ------: | -----: | -----: |
+| Allowed |                           1 |          883 |   1.133 |  1.102 |  1.326 |
+| Denied  |                           2 |          943 |   2.122 |  2.087 |  2.409 |
+
+**Next numbered step** is 13 (plan 04, phase A), `prompts/api/04-accounts-and-trust-prompt.md`.
+Decision 7 belongs to the owner: immediate sign-in is the documented default. The new account pages
+require mock-up approval before implementation. T1 remains conditional on a documented post-launch trigger.

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { purgeSessions } from "../identity/purge";
+import { purgeUsedChallenges } from "../identity/challenge";
 import { purgeRateLimits } from "../rate-limits/postgres";
 import { reconcileMetrics, refreshMetricsJob } from "../metrics/jobs";
 import { purgeJobs } from "./operator";
@@ -30,7 +31,10 @@ export class JobRegistry {
 export const jobRegistry = new JobRegistry();
 const emptyPayload = z.strictObject({});
 jobRegistry.register("sessions.purge", emptyPayload, purgeSessions);
-jobRegistry.register("rate_limits.purge", emptyPayload, (ctx) => purgeRateLimits(ctx.db));
+jobRegistry.register("rate_limits.purge", emptyPayload, async (ctx) => {
+  await purgeRateLimits(ctx.db);
+  await purgeUsedChallenges(ctx.db);
+});
 jobRegistry.register("jobs.purge", emptyPayload, async (ctx) => {
   await purgeJobs(ctx);
 });

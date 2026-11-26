@@ -2,7 +2,9 @@ import { expect, test } from "@playwright/test";
 
 test("registration waits for the server's retry interval and preserves the form", async ({ page }) => {
   const origin = `http://127.0.0.1:${Number(process.env.AUDIT_PORT ?? 3100) + 1}`;
+  const worker = page.waitForEvent("worker");
   await page.goto(origin + "/join");
+  expect((await worker).url()).toMatch(new RegExp("^" + origin + "/assets/pow\\.worker-"));
   const handle = "retry-" + Date.now();
   await page.getByLabel("Name", { exact: true }).fill("Retry test");
   await page.getByLabel("Handle").fill(handle);
@@ -34,6 +36,8 @@ test("registration waits for the server's retry interval and preserves the form"
   await expect(page.getByLabel("Handle")).toHaveValue(handle);
   const success = page.waitForResponse((r) => r.url().endsWith("/auth/register") && r.status() === 201);
   await submit.click();
-  await success;
+  const proof = (await success).request().postDataJSON().challenge;
+  expect(proof.algorithm).toBe("SHA-256");
+  expect(proof.number).toBeLessThanOrEqual(proof.maxNumber);
   await expect(page).toHaveURL(origin + "/");
 });

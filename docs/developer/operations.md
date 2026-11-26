@@ -64,6 +64,8 @@ Invalid settings stop startup with one error listing the affected variables. Boo
 | `RATE_LIMITS`                  | `on`                                            | Set `off` to disable both layers for tests or local load experiments.                                                                                                            |
 | `RATE_LIMIT_STORE`             | `memory`                                        | L2 store, `memory` or `postgres`. L1 always uses memory.                                                                                                                         |
 | `RATE_LIMIT_KEY_SECRET`        | generated per process in local memory mode      | Required in production and with the PostgreSQL store. Use the same private random secret on every instance. Rotation gives networks and emails fresh budgets.                    |
+| `REGISTRATION_CHALLENGE`       | `pow` in production, `none` locally             | Enables the registration proof independently of rate limiting. Local Compose defaults to `none`.                                                                                 |
+| `CHALLENGE_SECRET`             | generated per process outside production        | Required with production proof of work. Supply at least 32 characters from a secure random source, shared across instances.                                                      |
 | `RATE_LIMIT_SCALE`             | `1`                                             | Positive multiplier applied to read and write quotas after overrides.                                                                                                            |
 | `RATE_LIMIT_OVERRIDES`         | `{}`                                            | JSON rule replacements by policy and base tier.                                                                                                                                  |
 | `PASSWORD_HASH_CONCURRENCY`    | `3`                                             | Maximum simultaneous scrypt operations per process. Minimum one.                                                                                                                 |
@@ -128,16 +130,19 @@ docker build --build-arg APP_COMMIT="$(git rev-parse HEAD)" -t ideaproxima .
 
 **Release steps** (once per deploy, before starting new instances):
 
+Export `DATABASE_URL`, `RATE_LIMIT_KEY_SECRET` and `CHALLENGE_SECRET` from your deployment secret store
+before running these commands.
+
 ```bash
-docker run --rm -e DATABASE_URL="$DATABASE_URL" ideaproxima node apps/api/dist/migrate.js
-docker run --rm -e DATABASE_URL="$DATABASE_URL" ideaproxima node apps/api/dist/seed.js   # base topics; idempotent
+docker run --rm -e DATABASE_URL -e RATE_LIMIT_KEY_SECRET -e CHALLENGE_SECRET ideaproxima node apps/api/dist/migrate.js
+docker run --rm -e DATABASE_URL -e RATE_LIMIT_KEY_SECRET -e CHALLENGE_SECRET ideaproxima node apps/api/dist/seed.js   # base topics; idempotent
 ```
 
 **Run:**
 
 ```bash
 docker run -d -p 3000:3000 \
-  -e DATABASE_URL="$DATABASE_URL" -e NODE_ENV=production \
+  -e DATABASE_URL -e RATE_LIMIT_KEY_SECRET -e CHALLENGE_SECRET -e NODE_ENV=production \
   ideaproxima
 ```
 
@@ -148,8 +153,11 @@ The image declares a `HEALTHCHECK` against `GET /readyz`, runs as the unprivileg
 steps above), then the app and worker once the migrations succeed. `--profile demo` adds the demo dataset. For production, the
 compose file is a template rather than a deployment: replace the fixed credentials, drop the published PostgreSQL
 port, put HTTPS in front of the API and remove the local `COOKIE_SECURE` and `ALLOW_INSECURE_COOKIES` overrides.
+Enable `REGISTRATION_CHALLENGE=pow` and supply the two private secrets.
 
 ## Deploying without Docker
+
+Provision the same three environment variables as for the container deployment.
 
 ```bash
 npm ci
@@ -204,6 +212,10 @@ with no actor.
   `node apps/api/dist/rebuild-metrics.js` (derived data is recomputable from facts).
 
 ## Security checklist
+
+Production registration uses a five-minute, network-bound proof of work. Provision a separate random
+`CHALLENGE_SECRET` on every API instance and keep their clocks synchronized with PostgreSQL.
+Rotating the secret invalidates outstanding challenges. The minute maintenance job purges expired replay receipts.
 
 - [ ] `NODE_ENV=production` and HTTPS in front of the API (cookies are then `Secure`, `HttpOnly`, `SameSite=Lax`).
 - [ ] Before enabling forwarded addresses, verify on staging that the origin is reachable only through your

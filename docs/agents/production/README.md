@@ -181,7 +181,7 @@ Updated by whoever finishes a step: `Not started`, `In progress`, `Waiting for t
 | 9    | 05   | C2    | Interface extraction: editor, topics, search, activity, people, account, dialogs, toasts and errors        | —                     | Done 2026-11-25 |
 | 10   | 03   | A     | GCRA, memory and PostgreSQL stores, trust tiers, the policy catalogue                                      | —                     | Done 2026-11-25 |
 | 11   | 03   | B     | Limits declared per endpoint and enforced; rate-limit headers; web handling of 429                         | —                     | Done 2026-11-26 |
-| 12   | 03   | C     | Proof of work on registration                                                                              | —                     | Not started     |
+| 12   | 03   | C     | Proof of work on registration                                                                              | —                     | Done 2026-11-26 |
 | 13   | 04   | A     | Mail, verification, password reset, e-mail change, registration modes                                      | Decision 7; mock-ups  | Not started     |
 | 14   | 04   | B     | Session list and revocation, security log, trust inputs, terms and minimum-age mechanism                   | Decision 15           | Not started     |
 | 15   | 06   | A     | Content languages, language detection, Unicode slugs                                                       | —                     | Not started     |

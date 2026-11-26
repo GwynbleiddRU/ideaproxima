@@ -11,6 +11,7 @@ import { control, Field } from "@/ui/Field";
 import { FormError } from "@/ui/Feedback";
 import { Logo } from "@/ui/Logo";
 import styles from "./AuthPage.module.scss";
+import { useRegistrationProof } from "./useRegistrationProof";
 
 const isLocal =
   typeof window !== "undefined" && ["localhost", "127.0.0.1"].includes(window.location.hostname);
@@ -103,7 +104,8 @@ export function JoinPage() {
   const t = useMessage();
   const { me } = useSession();
   const { redirect } = useSearch({ from: "/join" });
-  const register = useRegister();
+  const takeProof = useRegistrationProof();
+  const register = useRegister(takeProof);
   const [form, setForm] = useState({ displayName: "", handle: "", email: "", password: "" });
   const errors = isApiError(register.error) ? register.error.fieldErrors : {};
   const set = (key: keyof typeof form) => (e: { target: { value: string } }) =>

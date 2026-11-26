@@ -18,6 +18,7 @@ import { ideaRoutes } from "./http/routes/ideas";
 import { resourceRoutes } from "./http/routes/resources";
 import { webApp } from "./http/web";
 import { resolveSession } from "./modules/identity/service";
+import { proofOfWork } from "./modules/identity/challenge";
 import { createLogger } from "./observability/logger";
 import { identifyRequest, observeRequest } from "./observability/request";
 import { METRICS_PATH } from "./observability/metrics";
@@ -55,6 +56,14 @@ export function createApp(deps: AppDeps) {
   const limiter = config.rateLimits.enabled
     ? rateLimitMiddleware(config.rateLimits, deps.db, logger)
     : undefined;
+  const challengeProvider =
+    config.registrationChallenge.mode === "pow"
+      ? proofOfWork(
+          deps.db,
+          config.registrationChallenge.secret,
+          limiter?.registrationDebt ?? (async () => 0),
+        )
+      : undefined;
 
   app.use("*", ...identifyRequest);
   app.use("*", observeRequest(logger, config.log.requests, errorReporter));
@@ -85,6 +94,7 @@ export function createApp(deps: AppDeps) {
 
   app.use("/v1/*", async (c, next) => {
     c.set("config", config);
+    c.set("challengeProvider", challengeProvider);
     await next();
   });
   if (limiter) app.use("/v1/*", limiter.networkLimit);

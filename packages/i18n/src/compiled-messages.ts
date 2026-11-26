@@ -110,6 +110,8 @@ export const COMPILED_MESSAGES = {
     ],
     "errors.request_body_too_large": ["Request body exceeds ", ["maximum"], " bytes."],
     "errors.rate_limit_unavailable": ["Request limits could not be checked. Try again shortly."],
+    "errors.invalid_registration_challenge": ["The registration check is no longer valid. Please try again."],
+    "errors.challenge_unavailable": ["The registration check is unavailable. Try again shortly."],
     "errors.too_many_requests": [
       "Too many requests (",
       ["policy"],

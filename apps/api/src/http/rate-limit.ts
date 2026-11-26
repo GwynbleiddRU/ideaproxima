@@ -61,6 +61,18 @@ export function rateLimitMiddleware(config: AppConfig["rateLimits"], db: Databas
   const network = new MemoryRateLimitStore();
   const shared = config.store === "postgres" ? new PostgresRateLimitStore(db) : new MemoryRateLimitStore();
 
+  function reportStoreFailure(policy: RateLimitPolicyName, outcome: "fail_closed" | "fail_open") {
+    rateLimitDecisions.inc({ policy, outcome });
+    // Database errors can contain the SQL and its parameters.
+    logger.warn({ policy, outcome }, "rate-limit store unavailable");
+  }
+
+  // Use the longer registration window, including its configured overrides and natural refill.
+  const registrationRules = config.rules("auth.register", "anonymous");
+  const dailyIndex = registrationRules.length - 1;
+  const dailyRule = registrationRules[dailyIndex]!;
+  const spentUnits = (remaining: number) => (dailyRule.burst ?? dailyRule.limit) - remaining;
+
   async function check(
     store: RateLimitStore,
     budget: Budget,
@@ -79,10 +91,7 @@ export function rateLimitMiddleware(config: AppConfig["rateLimits"], db: Databas
         operation === "peek" ? await store.peek(key, rule) : await store.consume(key, rule, cost);
     } catch {
       const closed = policy.startsWith("auth.");
-      const outcome = closed ? "fail_closed" : "fail_open";
-      rateLimitDecisions.inc({ policy, outcome });
-      // Database errors can contain the SQL and its parameters.
-      logger.warn({ policy, outcome }, "rate-limit store unavailable");
+      reportStoreFailure(policy, closed ? "fail_closed" : "fail_open");
       if (closed) throw new DomainError("unavailable", "rate_limit_unavailable");
       return;
     }
@@ -135,6 +144,9 @@ export function rateLimitMiddleware(config: AppConfig["rateLimits"], db: Databas
         } else {
           const subject = budget.rule.scope === "account" ? actor!.id : clientAddress(c);
           await check(shared, budget, subject, "consume");
+          if (budget.policy === "auth.register" && budget.index === dailyIndex) {
+            c.set("priorRegistrations", spentUnits(budget.decision!.remaining) - 1);
+          }
         }
       }
       await next();
@@ -145,6 +157,15 @@ export function rateLimitMiddleware(config: AppConfig["rateLimits"], db: Databas
   return {
     networkLimit,
     endpointLimits,
+    async registrationDebt(network: string) {
+      const key = rateLimitKey("auth.register", dailyIndex, "network", network, config.keySecret);
+      try {
+        return spentUnits((await shared.peek(key, dailyRule)).remaining);
+      } catch {
+        reportStoreFailure("auth.register", "fail_closed");
+        throw new DomainError("unavailable", "rate_limit_unavailable");
+      }
+    },
     close: async () => {
       await network.close();
       await shared.close();

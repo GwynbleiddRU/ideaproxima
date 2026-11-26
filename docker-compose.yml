@@ -22,6 +22,8 @@ x-app-image: &app-image
 # This Compose stack has local-only credentials. Supply a private shared value in deployments.
 x-local-rate-limit: &local-rate-limit
   RATE_LIMIT_KEY_SECRET: "${RATE_LIMIT_KEY_SECRET:-ideaproxima-local-compose-only}"
+  REGISTRATION_CHALLENGE: "${REGISTRATION_CHALLENGE:-none}"
+  CHALLENGE_SECRET:
 
 services:
   postgres:

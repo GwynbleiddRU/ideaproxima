@@ -130,6 +130,8 @@ const envSettings = z.object({
   RATE_LIMITS: z.enum(["on", "off"]).default("on"),
   RATE_LIMIT_STORE: z.enum(["memory", "postgres"]).default("memory"),
   RATE_LIMIT_KEY_SECRET: z.string().trim().min(1).optional(),
+  REGISTRATION_CHALLENGE: z.enum(["pow", "none"]).optional(),
+  CHALLENGE_SECRET: z.string().trim().min(32).optional(),
   RATE_LIMIT_SCALE: z.coerce.number().positive().default(1),
   RATE_LIMIT_OVERRIDES: z
     .string()
@@ -176,6 +178,14 @@ function validSettings(...keys: (keyof typeof envSettings.shape)[]) {
 }
 
 const envSchema = envSettings
+  .refine(
+    (env) => env.NODE_ENV !== "production" || env.REGISTRATION_CHALLENGE === "none" || !!env.CHALLENGE_SECRET,
+    {
+      path: ["CHALLENGE_SECRET"],
+      error: "required for proof of work in production",
+      when: validSettings("NODE_ENV", "REGISTRATION_CHALLENGE", "CHALLENGE_SECRET"),
+    },
+  )
   .refine(
     (env) =>
       (env.NODE_ENV !== "production" && env.RATE_LIMIT_STORE !== "postgres") || !!env.RATE_LIMIT_KEY_SECRET,
@@ -306,6 +316,10 @@ export function loadConfig(
       ipv6Prefix: values.RATE_LIMIT_IPV6_PREFIX,
     },
     passwordHash: passwordHashLimits(values),
+    registrationChallenge: {
+      mode: values.REGISTRATION_CHALLENGE ?? (production ? "pow" : "none"),
+      secret: values.CHALLENGE_SECRET ?? randomBytes(32).toString("hex"),
+    },
     log: {
       requests: values.LOG_REQUESTS ?? values.NODE_ENV !== "test",
       level: values.LOG_LEVEL,

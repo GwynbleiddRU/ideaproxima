@@ -45,6 +45,7 @@ export default defineConfig({
         PORT: String(PORT + 1),
         JOBS_MODE: "off",
         RATE_LIMITS: "on",
+        REGISTRATION_CHALLENGE: "pow",
         RATE_LIMIT_STORE: "memory",
         RATE_LIMIT_OVERRIDES: JSON.stringify({
           "auth.register": {

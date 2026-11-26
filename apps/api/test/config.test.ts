@@ -7,6 +7,7 @@ describe("runtime configuration", () => {
     const defaults = loadConfig({});
     expect(defaults.http).toMatchObject({ port: 3000, internalPort: undefined, cookieSecure: false });
     expect(defaults.db.url).toBe("pglite:./.data/pglite");
+    expect(defaults.registrationChallenge.mode).toBe("none");
     expect(defaults.log).toEqual({ requests: true, level: "info", format: "pretty" });
     expect(defaults).toMatchObject({
       jobs: {
@@ -83,6 +84,7 @@ describe("runtime configuration", () => {
     ])
       expect(message).toContain(`- ${variable}:`);
     expect(message).toContain("RATE_LIMIT_KEY_SECRET");
+    expect(message).toContain("CHALLENGE_SECRET");
     expect(() => loadConfig({ LOG_REQUESTS: "flase" })).toThrow(/LOG_REQUESTS/);
     expect(() => loadConfig({ DATABASE_URL: "mysql://user:example-secret@localhost/db" })).toThrow(
       /^Invalid configuration:\n- DATABASE_URL: expected a PostgreSQL URL or a nonempty pglite: location$/,
@@ -99,6 +101,7 @@ describe("runtime configuration", () => {
       {
         NODE_ENV: "production",
         RATE_LIMIT_KEY_SECRET: "test",
+        REGISTRATION_CHALLENGE: "none",
         DATABASE_URL: "pglite:memory",
         ALLOW_PGLITE_IN_PRODUCTION: "true",
         COOKIE_SECURE: "false",
@@ -115,18 +118,21 @@ describe("runtime configuration", () => {
       {
         NODE_ENV: "production",
         RATE_LIMIT_KEY_SECRET: "test",
+        CHALLENGE_SECRET: "x".repeat(32),
         DATABASE_URL: "postgresql://localhost/db",
         TRUST_PROXY_HOPS: "1",
       },
       warn,
     );
     expect(config.http.cookieSecure).toBe(true);
+    expect(config.registrationChallenge.mode).toBe("pow");
     expect(warn).not.toHaveBeenCalled();
     loadConfig(
       {
         NODE_ENV: "production",
         DATABASE_URL: "postgres://localhost/db",
         CLIENT_IP_HEADER: "x-real-ip",
+        REGISTRATION_CHALLENGE: "none",
         RATE_LIMIT_KEY_SECRET: "test",
       },
       warn,

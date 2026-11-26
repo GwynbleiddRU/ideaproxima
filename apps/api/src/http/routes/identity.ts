@@ -15,6 +15,7 @@ import * as history from "../../modules/history/service";
 import * as identity from "../../modules/identity/service";
 import { SESSION_COOKIE, type AppEnv } from "../env";
 import { jsonBody, queryOf } from "../input";
+import { clientAddress } from "../client-address";
 
 const setSessionCookie = (c: Context<AppEnv>, auth: AuthResponse) =>
   setCookie(c, SESSION_COOKIE, auth.token, {
@@ -26,12 +27,16 @@ const setSessionCookie = (c: Context<AppEnv>, auth: AuthResponse) =>
   });
 
 export const identityRoutes = new Hono<AppEnv>()
+  .get("/auth/challenge", async (c) => {
+    c.header("Cache-Control", "no-store");
+    return c.json((await c.get("challengeProvider")?.issue(clientAddress(c))) ?? null);
+  })
   .post("/auth/register", async (c) => {
-    const auth = await identity.register(
-      c.get("ctx"),
-      await jsonBody(c, RegisterRequest),
-      c.get("config").http.sessionTtlDays,
-    );
+    const input = await jsonBody(c, RegisterRequest);
+    await c
+      .get("challengeProvider")
+      ?.verify(clientAddress(c), input.challenge, c.get("priorRegistrations") ?? 0);
+    const auth = await identity.register(c.get("ctx"), input, c.get("config").http.sessionTtlDays);
     setSessionCookie(c, auth);
     return c.json(auth, 201);
   })

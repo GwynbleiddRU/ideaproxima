@@ -19,6 +19,8 @@ Mutable by nature (not history): `people` profile fields, `accounts`, `topics`, 
 
 `rate_limits` holds a scoped key and its theoretical arrival time in an unlogged table. A database crash
 can reset these budgets. The worker purges timestamps older than one minute on a one-minute schedule.
+The same job purges expired `used_registration_challenges` receipts. Their primary key is the random salt.
+This operational table is logged so an accepted proof remains spent through a restart.
 
 ### Identity
 

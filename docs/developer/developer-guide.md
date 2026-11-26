@@ -264,6 +264,10 @@ is [`api/openapi.json`](api/openapi.json) and is also served live at `GET /v1/op
 - **Idempotency.** `PUT`/`DELETE` of stances and involvements are idempotent, even under concurrent double
   submission. Repeating an identical evaluation is a no-op (`changed: []`). Registering a source whose DOI/URL
   already exists returns it (200 rather than 201).
+- **Registration.** Fetch `GET /v1/auth/challenge` when opening the form. A JSON null means the client can
+  omit `challenge`. Otherwise find the integer specified in the endpoint reference, add it as `number` to
+  the returned object, and send the whole object as `challenge` with the registration. Fetch fresh work
+  after a failed submission or expiry. For a 429, wait for the server's retry delay first.
 - **Optimistic concurrency.** Publishing a revision requires `baseRevisionId` to be the current revision.
   Otherwise the response is 409.
 - **Derived values** live under `signals` / `derived`, carry `algorithm`, and are `null`/absent when there is no

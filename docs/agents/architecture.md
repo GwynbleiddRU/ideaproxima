@@ -210,6 +210,12 @@ allow ordinary reads and writes through and return 503 for credential checks. Lo
 charges wrong credentials for both known and unknown accounts, and clears failure debt on success. The
 process-wide hashing queue, body limit, and JSON-only writes still apply.
 
+Production registration requires a signed five-minute proof bound to the trusted network. Challenge
+issuance reads the daily registration budget. Verification checks the work against the budget before the
+current attempt, then claims the salt in a logged PostgreSQL table before password hashing. This keeps a
+consumed proof spent across instances, failed registrations and restarts. A same-origin worker solves it
+while the registration form is open.
+
 See the [policy table and measurements](production/03-rate-limiting.md#policies) and the
 [configuration and proxy checklist](../developer/operations.md#configuration).
 

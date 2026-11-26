@@ -73,10 +73,11 @@ export function useLogin() {
   });
 }
 
-export function useRegister() {
+export function useRegister(takeProof: () => Promise<RegisterRequest["challenge"]>) {
   const change = useSessionChange();
   return useMutation({
-    mutationFn: (input: RegisterRequest) => http.post<AuthResponse>("/auth/register", input),
+    mutationFn: async (input: RegisterRequest) =>
+      http.post<AuthResponse>("/auth/register", { ...input, challenge: await takeProof() }),
     meta: { inlineErrors: true },
     onSuccess: (auth, input) =>
       change({ person: auth.person, email: input.email.trim().toLowerCase(), preferences: auth.preferences }),

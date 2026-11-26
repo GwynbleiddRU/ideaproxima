@@ -418,6 +418,8 @@ a source, a counterargument) belongs in an argument, evidence or claim, where ot
 - **Private:** your email address and password, and your sessions. Password changes are not published.
 - **Abuse protection:** sign-in and registration attempts are rate-limited per network address, and writes are
   rate-limited per account. Too many requests return _rate_limited_ with a time to wait.
+  When registration protection is enabled, your browser solves a short puzzle in the background while you
+  fill in the form. You can keep typing. Repeated attempts from the same network can take longer.
 
 ## Display language
 

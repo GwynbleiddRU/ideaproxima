@@ -72,6 +72,8 @@ export const ERROR_MESSAGES = {
   unknown_endpoint: "No such endpoint. The API is served under /v1; GET /v1 lists its entry points.",
   request_body_too_large: "Request body exceeds {maximum} bytes.",
   rate_limit_unavailable: "Request limits could not be checked. Try again shortly.",
+  invalid_registration_challenge: "The registration check is no longer valid. Please try again.",
+  challenge_unavailable: "The registration check is unavailable. Try again shortly.",
   too_many_requests: "Too many requests ({policy}). Try again in {retryAfterSeconds}s.",
   http_request_failed: "The request could not be completed.",
   duplicate_record: "That already exists.",

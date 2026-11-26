@@ -198,6 +198,17 @@ const declarations = {
   },
 
   // ---------------------------------------------------------------- identity
+  registrationChallenge: {
+    method: "GET",
+    path: "/v1/auth/challenge",
+    tag: "Identity",
+    auth: "public",
+    limits: [],
+    summary: "Get a registration challenge",
+    description:
+      "Returns null when proof of work is disabled. Otherwise find a decimal integer from 0 through maxNumber whose SHA-256 digest of salt followed by the integer equals challenge. Submit the returned fields and number together within five minutes, from the same network.",
+    response: Req.RegistrationChallenge.nullable(),
+  },
   register: {
     method: "POST",
     path: "/v1/auth/register",
@@ -210,6 +221,7 @@ const declarations = {
     response: Res.AuthResponse,
     status: 201,
     errors: [
+      "validation_failed: registration proof missing, invalid, expired or already used",
       "conflict: email or handle already taken",
       "rate_limited: too many attempts",
       "unavailable: password service busy",

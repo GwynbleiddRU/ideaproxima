@@ -7,7 +7,7 @@ validates against and the test suite checks every response with. The machine-rea
 [`api/openapi.json`](api/openapi.json) (also served live at `GET /v1/openapi.json`). Conventions —
 authentication, errors, pagination, idempotency — are explained in the [developer guide](developer-guide.md#api-conventions).
 
-**68 endpoints.** Access “signed in” means a session (Bearer token or `ip_session` cookie) is required; further restrictions are listed per endpoint.
+**69 endpoints.** Access “signed in” means a session (Bearer token or `ip_session` cookie) is required; further restrictions are listed per endpoint.
 
 Every endpoint can answer 429 with [`RateLimited`](#schema-ratelimited) and a `Retry-After` delay in seconds.
 
@@ -26,6 +26,7 @@ Every endpoint can answer 429 with [`RateLimited`](#schema-ratelimited) and a `R
   - `GET /v1/search` — Search ideas, claims, sources and people (`search`)
   - `GET /v1/activity` — The global activity feed (`activity`)
 - [Identity](#identity) — Accounts, sessions, profiles, expertise and account moderation.
+  - `GET /v1/auth/challenge` — Get a registration challenge (`registrationChallenge`)
   - `POST /v1/auth/register` — Create an account (`register`)
   - `POST /v1/auth/login` — Sign in (`login`)
   - `POST /v1/auth/logout` — Sign out (revokes the current session) (`logout`)
@@ -276,6 +277,18 @@ Response `200`: [`ActivityPage`](#schema-activitypage)
 
 Accounts, sessions, profiles, expertise and account moderation.
 
+### `GET /v1/auth/challenge`
+
+**Get a registration challenge** · `registrationChallenge`
+
+**Access:** public
+
+**Rate limits:** `net.requests`
+
+Returns null when proof of work is disabled. Otherwise find a decimal integer from 0 through maxNumber whose SHA-256 digest of salt followed by the integer equals challenge. Submit the returned fields and number together within five minutes, from the same network.
+
+Response `200`: object \| null
+
 ### `POST /v1/auth/register`
 
 **Create an account** · `register`
@@ -292,6 +305,7 @@ Response `201`: [`Auth`](#schema-auth)
 
 Notable errors:
 
+- `validation_failed` — registration proof missing, invalid, expired or already used
 - `conflict` — email or handle already taken
 - `rate_limited` — too many attempts
 - `unavailable` — password service busy
@@ -2057,6 +2071,14 @@ Provide exactly one basis: `sourceId`, `source` (registered or matched by DOI/UR
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
+| `challenge` | object | no |  |
+| `challenge.algorithm` | `"SHA-256"` | yes |  |
+| `challenge.challenge` | string | yes | length 64–64 |
+| `challenge.salt` | string | yes | length 32–32 |
+| `challenge.maxNumber` | integer | yes |  |
+| `challenge.signature` | string | yes | length 64–64 |
+| `challenge.expiresAt` | string (date-time) | yes |  |
+| `challenge.number` | integer | yes | 0–∞ |
 | `handle` | string | yes | length 3–32 |
 | `displayName` | string | yes | length 2–80 |
 | `email` | string (email) | yes |  |

@@ -22,6 +22,7 @@ const env = {
   ALLOW_PGLITE_IN_PRODUCTION: "true",
   LOG_REQUESTS: "false",
   RATE_LIMITS: "off",
+  REGISTRATION_CHALLENGE: "none",
   RATE_LIMIT_KEY_SECRET: randomBytes(32).toString("hex"),
   WEB_ROOT: join(root, "apps/web/dist"),
 };

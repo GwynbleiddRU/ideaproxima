@@ -47,7 +47,25 @@ export const LocaleQuery = z.object({
 
 // ---------------------------------------------------------------- auth & people
 
+const sha256Hex = z
+  .string()
+  .length(64)
+  .regex(/^[0-9a-f]+$/);
+export const RegistrationChallenge = z.object({
+  algorithm: z.literal("SHA-256"),
+  challenge: sha256Hex,
+  salt: z
+    .string()
+    .length(32)
+    .regex(/^[0-9a-f]+$/),
+  maxNumber: z.int().positive(),
+  signature: sha256Hex,
+  expiresAt: z.iso.datetime(),
+});
+export type RegistrationChallenge = z.infer<typeof RegistrationChallenge>;
+
 export const RegisterRequest = z.object({
+  challenge: RegistrationChallenge.extend({ number: z.int().nonnegative() }).optional(),
   handle: z
     .string()
     .trim()
