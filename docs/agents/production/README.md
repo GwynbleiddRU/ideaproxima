@@ -183,7 +183,7 @@ Updated by whoever finishes a step: `Not started`, `In progress`, `Waiting for t
 | 11   | 03   | B     | Limits declared per endpoint and enforced; rate-limit headers; web handling of 429                         | —                     | Done 2026-11-26 |
 | 12   | 03   | C     | Proof of work on registration                                                                              | —                     | Done 2026-11-26 |
 | 13   | 04   | A     | Mail, verification, password reset, e-mail change, registration modes                                      | Decision 7; mock-ups  | Done 2026-11-26 |
-| 14   | 04   | B     | Session list and revocation, security log, trust inputs, terms and minimum-age mechanism                   | Decision 15           | Not started     |
+| 14   | 04   | B     | Session list and revocation, security log, trust inputs, terms and minimum-age mechanism                   | Decision 15           | Done 2026-11-27 |
 | 15   | 06   | A     | Content languages, language detection, Unicode slugs                                                       | —                     | Not started     |
 | 16   | 07   | A     | Every text can be hidden; one visibility writer; text-free activity payloads                               | —                     | Not started     |
 | 17   | 06   | B     | The multilingual search index                                                                              | —                     | Not started     |
@@ -341,7 +341,7 @@ default.
 | 12  | Hosting, CDN and mail providers; recovery objectives; who is on call        | One machine with compose, managed PostgreSQL; 5 min / 4 h                    | Step 33          |
 | 13  | Sign-in providers beyond ORCID                                              | ORCID first; Google and GitHub optional                                      | Step 26          |
 | 14  | The date of the `/v1` freeze                                                | Immediately before launch                                                    | Step 40          |
-| 15  | Minimum age for an account                                                  | 16, confirmed at registration together with the terms                        | Step 14          |
+| 15  | Minimum age for an account                                                  | 16 years, confirmed by the owner on 2026-11-26                               | Step 14          |
 | 16  | The operator's contact details for users, legal notices and the authorities | Placeholders in the contact page; launch is blocked until filled             | Launch           |
 | 17  | AI moderation at launch                                                     | `flag` in languages that pass the golden-set flag gate, `shadow` in the rest | Step 41; step 47 |
 | 18  | Production model files                                                      | The downloaded conversions, pinned by hash after the template check          | Step 22          |

@@ -43,6 +43,8 @@ export const ERROR_MESSAGES = {
   token_used: "This link has already been used. Use the most recent email or request another link.",
   handle_taken: "That handle is taken.",
   wrong_credentials: "Wrong email or password.",
+  confirm_minimum_age: "Confirm that you are at least {age} years old.",
+  accept_current_terms: "Review and accept the current terms.",
   account_already_active: "The account is already active.",
   account_already_deactivated: "The account is already deactivated.",
   already_hidden: "Already hidden.",

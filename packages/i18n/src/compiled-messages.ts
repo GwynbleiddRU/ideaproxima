@@ -54,6 +54,8 @@ export const COMPILED_MESSAGES = {
     ],
     "errors.handle_taken": ["That handle is taken."],
     "errors.wrong_credentials": ["Wrong email or password."],
+    "errors.confirm_minimum_age": ["Confirm that you are at least ", ["age"], " years old."],
+    "errors.accept_current_terms": ["Review and accept the current terms."],
     "errors.account_already_active": ["The account is already active."],
     "errors.account_already_deactivated": ["The account is already deactivated."],
     "errors.already_hidden": ["Already hidden."],

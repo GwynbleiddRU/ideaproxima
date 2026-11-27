@@ -65,6 +65,10 @@ export const RegistrationChallenge = z.object({
 export type RegistrationChallenge = z.infer<typeof RegistrationChallenge>;
 
 export const RegisterRequest = z.object({
+  confirmAge: z.boolean().optional().describe("Required when the configured minimum age is positive."),
+  minimumAge: z.int().nonnegative().optional().describe("Minimum age shown by the registration form."),
+  acceptTerms: z.boolean().optional().describe("Required when the operator has published a terms version."),
+  termsVersion: z.string().max(100).optional().describe("Version shown by the registration form."),
   challenge: RegistrationChallenge.extend({ number: z.int().nonnegative() }).optional(),
   handle: z
     .string()
@@ -80,8 +84,18 @@ export const RegisterRequest = z.object({
 });
 export type RegisterRequest = z.infer<typeof RegisterRequest>;
 
+export const AcceptTermsRequest = z.object({
+  acceptTerms: z.literal(true),
+  termsVersion: z.string().min(1).max(100),
+});
+export const AccountListQuery = z.object({
+  before: z.uuid().optional(),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+});
+
 export const AccountTokenRequest = z.object({ token: z.string().regex(/^[A-Za-z0-9_-]{43}$/) });
 export const ResendVerificationRequest = z.object({});
+export const RevokeOtherSessionsRequest = z.object({});
 export const ResetRequest = RegisterRequest.pick({ email: true });
 export const ResetConfirmRequest = AccountTokenRequest.extend({
   newPassword: RegisterRequest.shape.password,
@@ -407,8 +421,10 @@ export type EvaluationsQuery = z.infer<typeof EvaluationsQuery>;
 export const requestRegistry = z.registry<{ id: string }>();
 for (const [id, schema] of Object.entries({
   RegisterRequest,
+  AcceptTermsRequest,
   AccountTokenRequest,
   ResendVerificationRequest,
+  RevokeOtherSessionsRequest,
   ResetRequest,
   ResetConfirmRequest,
   EmailChangeRequest,

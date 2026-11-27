@@ -10,6 +10,7 @@ test("registration waits for the server's retry interval and preserves the form"
   await page.getByLabel("Handle").fill(handle);
   await page.getByLabel("Email").fill(handle + "@example.test");
   await page.getByLabel("Password").fill("long enough for this test");
+  await page.getByLabel("I am at least 16 years old.").check();
   // An invalid submission also spends the network budget, without creating a session.
   await page.request.post(origin + "/v1/auth/register", { data: {} });
   const submit = page.getByRole("button", { name: "Create account" });

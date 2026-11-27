@@ -49,6 +49,7 @@ test("the account picker saves its preference and an explicit URL overrides it",
       handle,
       email: `${handle}@example.test`,
       password: "strong-demo-password",
+      confirmAge: true,
       locale: "ru",
     },
   });
@@ -189,6 +190,7 @@ test("the Arabic fixture renders dialogs, mutation toasts and error feedback", a
       handle,
       email: handle + "@example.test",
       password: "strong-demo-password",
+      confirmAge: true,
       locale: "ar",
     },
   });

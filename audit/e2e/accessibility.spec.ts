@@ -20,6 +20,8 @@ const PAGES: [string, string][] = [
   ["activity", "/activity"],
   ["principles", "/about"],
   ["sign in", "/sign-in"],
+  ["registration", "/join"],
+  ["account settings", "/account"],
   ["forgot password", "/forgot-password"],
   ["reset password", "/reset-password#preview"],
   ["verify email", "/verify-email#preview"],
@@ -44,7 +46,7 @@ for (const colorScheme of ["light", "dark"] as const) {
     test.use({ colorScheme });
     for (const [name, path] of PAGES) {
       test(name, async ({ page }) => {
-        if (path === "/change-email") await signIn(page);
+        if (path === "/change-email" || path === "/account") await signIn(page);
         await page.goto(path);
         await settle(page);
         const results = await new AxeBuilder({ page })

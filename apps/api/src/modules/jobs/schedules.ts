@@ -14,6 +14,8 @@ const hour = 60 * 60 * 1000;
 export const schedules: readonly Schedule[] = [
   { name: "rate_limits.purge", kind: "rate_limits.purge", every: 60_000 },
   { name: "sessions.purge", kind: "sessions.purge", every: hour },
+  { name: "security_events.purge", kind: "security_events.purge", every: 24 * hour },
+  { name: "trust.recompute", kind: "trust.recompute", every: 24 * hour },
   { name: "account_tokens.purge", kind: "account_tokens.purge", every: 24 * hour },
   { name: "jobs.purge", kind: "jobs.purge", every: hour },
   { name: "metrics.reconcile", kind: "metrics.reconcile", every: 24 * hour },

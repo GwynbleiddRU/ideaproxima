@@ -15,6 +15,7 @@ const env = {
   RATE_LIMITS: "off",
 };
 const account = (handle: string) => ({
+  confirmAge: true,
   handle,
   displayName: handle,
   email: handle + "@example.test",

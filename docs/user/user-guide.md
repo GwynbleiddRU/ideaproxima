@@ -100,8 +100,10 @@ The theme follows your system by default; the footer switches between light, dar
 - **Verify your email.** By default you can sign in immediately. Open the verification message and choose **Verify email address** within 48 hours. Account settings can send a replacement link. On a site that requires verification first, follow the email before signing in.
 - **Forgot your password?** Choose this link on the sign-in page and enter your email. If there is an account, the message contains a one-hour reset link. Setting the new password signs out every device.
 - **Change email address** in account settings asks for the new address and your current password. Confirm the new address within 24 hours. You will also receive a notice at your old address. Use the newest link when you request a replacement.
-- **Sessions** last 30 days by default. Signing out revokes the session. Changing your password signs out every
-  other session.
+- **Joining** requires you to confirm you are at least 16. The archive records the age you confirmed and the time. You do not enter your birthday. When a site publishes terms, registration also asks you to review the terms and privacy notice. A new version prompts you at your next sign-in.
+- **Active sessions** in Account settings shows the client, start time and last use. The current browser is marked **This session**. You can sign out another session individually or choose **Sign out other sessions**. Sessions expire after 30 days by default. Changing your password also signs out your other sessions.
+- **Security history** shows sign-ins, unsuccessful sign-ins, credential changes and session revocations for the past 90 days. Only you can read it in the app.
+- **Account limits** shows your current trust tier and what would raise it. An established member has an account at least 30 days old, ten knowledge contributions, and a clear 90-day moderation history. The archive checks this daily.
 - **Expertise**: you may declare expertise in a topic. It is recorded as _self-declared_ with a date. Verified
   expertise (e.g. through ORCID) is planned, and the two kinds will always be shown separately.
 - **Your profile** shows your expertise, plain counts of your recorded contributions (ideas proposed, accepted

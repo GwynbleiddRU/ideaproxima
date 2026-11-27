@@ -127,6 +127,7 @@ export async function createHarness(overrides: NodeJS.ProcessEnv = {}): Promise<
     async user(handle, role = "member") {
       const res = await call<AuthResponse>("POST", "/auth/register", {
         body: {
+          confirmAge: true,
           handle,
           displayName: handle.replace(/-/g, " "),
           email: `${handle}@example.test`,

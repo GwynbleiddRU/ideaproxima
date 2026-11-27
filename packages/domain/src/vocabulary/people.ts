@@ -35,3 +35,13 @@ export const REVISION_STATUS_INFO: Record<RevisionStatus, Term> = {
   rejected: { label: "Rejected", description: "Not adopted. Preserved with the reason." },
   withdrawn: { label: "Withdrawn", description: "Withdrawn by its author before a decision." },
 };
+export const SECURITY_EVENT_KINDS = [
+  "signed_in",
+  "sign_in_failed",
+  "session_revoked",
+  "other_sessions_revoked",
+  "password_changed",
+  "password_reset",
+  "email_changed",
+] as const;
+export type SecurityEventKind = (typeof SECURITY_EVENT_KINDS)[number];

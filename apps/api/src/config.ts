@@ -148,6 +148,8 @@ const envSettings = z.object({
     })
     .default({}),
   REGISTRATION_MODE: z.enum(["immediate", "verified-first"]).default("immediate"),
+  MINIMUM_AGE: integer(0).default(16),
+  LEGAL_TERMS_VERSION: z.string().trim().max(100).optional(),
   PASSWORD_BREACH_CHECK: z.enum(["off", "hibp"]).default("off"),
   PUBLIC_BASE_URL: z
     .url({ protocol: /^https?$/ })
@@ -363,6 +365,7 @@ export function loadConfig(
       statementTimeoutMs: values.JOBS_STATEMENT_TIMEOUT_MS,
     },
     registrationMode: values.REGISTRATION_MODE,
+    registrationPolicy: { minimumAge: values.MINIMUM_AGE, termsVersion: values.LEGAL_TERMS_VERSION || null },
     passwordBreachCheck: values.PASSWORD_BREACH_CHECK,
     mail: {
       transport: values.MAIL_TRANSPORT ?? (production ? ("smtp" as const) : ("log" as const)),

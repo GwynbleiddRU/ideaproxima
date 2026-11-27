@@ -4,6 +4,7 @@
  */
 export const keys = {
   me: ["me"] as const,
+  accountSecurity: (personId: string) => ["account-security", personId] as const,
   ideas: (params: object) => ["ideas", params] as const,
   allIdeas: ["ideas"] as const,
   idea: (ref: string) => ["idea", ref] as const,

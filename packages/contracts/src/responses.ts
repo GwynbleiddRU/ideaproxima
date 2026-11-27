@@ -35,6 +35,8 @@ import {
   OUTCOME_RESULTS,
   PERSON_ROLES,
   RATE_LIMIT_POLICIES,
+  TRUST_TIERS,
+  SECURITY_EVENT_KINDS,
   type RateLimitPolicyName,
   RELATION_TYPES,
   REVISION_STATUSES,
@@ -208,9 +210,49 @@ export type PersonDto = z.infer<typeof PersonDto>;
 
 const Preferences = z.object({ locale: LocaleTag.nullable() });
 
+export const RegistrationPolicy = named(
+  "RegistrationPolicy",
+  z.object({ minimumAge: int.nonnegative(), termsVersion: z.string().nullable() }),
+);
+export type RegistrationPolicy = z.infer<typeof RegistrationPolicy>;
+export const SessionPage = named(
+  "SessionPage",
+  page(
+    z.object({
+      id,
+      createdAt: timestamp,
+      lastUsedAt: timestamp,
+      userAgentFamily: z.string().nullable(),
+      current: z.boolean(),
+    }),
+  ),
+);
+export type SessionPage = z.infer<typeof SessionPage>;
+export const SecurityEventPage = named(
+  "SecurityEventPage",
+  page(
+    z.object({
+      id,
+      createdAt: timestamp,
+      kind: z.enum(SECURITY_EVENT_KINDS),
+      userAgentFamily: z.string().nullable(),
+    }),
+  ),
+);
+export type SecurityEventPage = z.infer<typeof SecurityEventPage>;
+
 export const MeResponse = named(
   "Me",
-  z.object({ person: PersonDto, email: z.string(), emailVerified: z.boolean(), preferences: Preferences }),
+  z.object({
+    person: PersonDto,
+    email: z.string(),
+    emailVerified: z.boolean(),
+    preferences: Preferences,
+    trustTier: z.enum(TRUST_TIERS),
+    trustNextStep: z.enum(["verify_email", "wait_72_hours", "establish_history"]).nullable(),
+    termsAcceptanceRequired: z.boolean(),
+    termsVersion: z.string().nullable(),
+  }),
 );
 export type MeResponse = z.infer<typeof MeResponse>;
 

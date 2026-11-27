@@ -1,7 +1,7 @@
 import { and, eq, gt, inArray, isNull, sql } from "drizzle-orm";
 import { DomainError, isValidHandle } from "@ideaproxima/domain";
 import type { Locale } from "@ideaproxima/i18n";
-import type { RegisterRequest } from "@ideaproxima/contracts";
+import type { RegisterRequest, RegistrationPolicy } from "@ideaproxima/contracts";
 import { accounts, accountTokens, people, type TokenPurpose } from "../../db/schema";
 import { revokeAllSessions } from "./sessions";
 import { queryRows } from "../../db/client";
@@ -10,7 +10,8 @@ import { inTransaction, type Ctx } from "../shared/context";
 import { lockKey, lockKeys } from "../shared/locks";
 import { requireLocale } from "../shared/locales";
 import { hashPassword, hashToken, verifyPassword } from "./crypto";
-import { createAccount } from "./registration";
+import { createAccount, registrationAcceptance } from "./registration";
+import { recordSecurityEvent } from "./security";
 
 type TokenRow = typeof accountTokens.$inferSelect;
 type Issue = Pick<TokenRow, "email" | "purpose" | "personId"> &
@@ -53,7 +54,13 @@ export async function issueToken(tx: Ctx, input: Issue, locale: Locale) {
   return token!.id;
 }
 
-export async function registerAfterVerification(ctx: Ctx, input: RegisterRequest, locale: Locale) {
+export async function registerAfterVerification(
+  ctx: Ctx,
+  input: RegisterRequest,
+  locale: Locale,
+  policy: RegistrationPolicy,
+) {
+  const acceptance = registrationAcceptance(input, policy);
   if (!isValidHandle(input.handle)) throw new DomainError("validation_failed", "invalid_handle");
   const preference = input.locale ? requireLocale(input.locale) : null;
   const passwordHash = await hashPassword(input.password, ctx.passwordBreachCheck);
@@ -76,6 +83,7 @@ export async function registerAfterVerification(ctx: Ctx, input: RegisterRequest
             handle: input.handle,
             passwordHash,
             locale: preference,
+            acceptance,
           },
         },
         locale,
@@ -205,6 +213,7 @@ export async function consumeToken(
         pending.passwordHash,
         pending.locale,
         true,
+        pending.acceptance,
       );
       return;
     }
@@ -216,6 +225,7 @@ export async function consumeToken(
     if (purpose === "reset_password" && passwordHash) {
       await tx.db.update(accounts).set({ passwordHash }).where(eq(accounts.personId, id));
       await revokeAllSessions(tx.db, id);
+      await recordSecurityEvent(tx, id, "password_reset");
       await invalidateAccountTokens(tx, id, ["change_email"]);
       await queueMail(tx, { template: "password_changed", tokenId: candidate.id, locale });
     } else if (purpose === "change_email") {
@@ -229,6 +239,7 @@ export async function consumeToken(
         .set({ email: candidate.email, emailVerifiedAt: sql`now()` })
         .where(eq(accounts.personId, id));
       await invalidateAccountTokens(tx, id, ["reset_password", "verify_email"]);
+      await recordSecurityEvent(tx, id, "email_changed");
     } else if (purpose === "verify_email") {
       await tx.db
         .update(accounts)

@@ -38,10 +38,10 @@ export function useUpdateProfile(handle: string) {
   );
 }
 
-export function useChangePassword() {
+export function useChangePassword(personId: string) {
   return useApiMutation(
     (input: ChangePasswordRequest) => http.post<{ ok: true }>("/me/password", input),
-    [],
+    [keys.accountSecurity(personId)],
     { inlineErrors: true, success: "toast.passwordChanged" },
   );
 }

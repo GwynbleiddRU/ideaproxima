@@ -9,6 +9,7 @@ import type {
   PersonDto,
   ProfileDto,
   RegisterRequest,
+  RegistrationPolicy,
   UpdateProfileRequest,
 } from "@ideaproxima/contracts";
 import type { PersonRole } from "@ideaproxima/domain";
@@ -16,7 +17,8 @@ import { isLocale, type Locale } from "@ideaproxima/i18n";
 import { DomainError, authorize, isValidHandle, notFound, trustTier, type Actor } from "@ideaproxima/domain";
 import { queryRows, type Database } from "../../db/client";
 import { accounts, ideas, involvements, people, personExpertise, sessions, topics } from "../../db/schema";
-import { createAccount } from "./registration";
+import { createAccount, registrationAcceptance } from "./registration";
+import { recordSecurityEvent } from "./security";
 import { revokeAllSessions } from "./sessions";
 import { issueToken, invalidateAccountTokens } from "./tokens";
 import { lockKeys, lockKey } from "../shared/locks";
@@ -43,10 +45,17 @@ export const personDto = (p: PersonRow): PersonDto => ({
 
 // ---------------------------------------------------------------- sessions
 
-export async function createSession(db: Database, personId: string, ttlDays: number) {
+async function createSession(tx: Ctx, personId: string, ttlDays: number) {
   const token = newSessionToken();
   const expiresAt = new Date(Date.now() + ttlDays * 86_400_000);
-  await db.insert(sessions).values({ personId, tokenHash: hashToken(token), expiresAt });
+  await tx.db.insert(sessions).values({
+    personId,
+    tokenHash: hashToken(token),
+    expiresAt,
+    lastUsedAt: sql`now()`,
+    userAgent: tx.securityMetadata?.().userAgent,
+  });
+  await recordSecurityEvent(tx, personId, "signed_in");
   return { token, expiresAt };
 }
 
@@ -56,9 +65,12 @@ export async function resolveSession(
   token: string,
   requireVerifiedEmail = false,
 ): Promise<{ actor: Actor; sessionId: string; locale: Locale | null } | null> {
+  const touchDue = sql<boolean>`coalesce(${sessions.lastUsedAt}, ${sessions.createdAt}) <= now() - interval '10 minutes'`;
   const [row] = await db
     .select({
       sessionId: sessions.id,
+      touchDue,
+      establishedAt: accounts.establishedAt,
       id: people.id,
       role: people.role,
       deactivatedAt: people.deactivatedAt,
@@ -78,17 +90,18 @@ export async function resolveSession(
     )
     .limit(1);
   if (!row || row.deactivatedAt) return null;
+  if (row.touchDue)
+    await db
+      .update(sessions)
+      .set({ lastUsedAt: sql`now()` })
+      .where(and(eq(sessions.id, row.sessionId), isNull(sessions.revokedAt), touchDue));
   return {
     sessionId: row.sessionId,
     actor: {
       id: row.id,
       role: row.role,
       active: true,
-      trust: trustTier(
-        { ...row, establishedAt: null, restrictedUntil: null },
-        new Date(),
-        requireVerifiedEmail,
-      ),
+      trust: trustTier({ ...row, restrictedUntil: null }, new Date(), requireVerifiedEmail),
     },
     locale: savedLocale(row.locale),
   };
@@ -121,6 +134,7 @@ export async function changePassword(
     if (!changed.length) throw new DomainError("forbidden", "incorrect_current_password");
     await invalidateAccountTokens(tx, actorId, ["reset_password", "change_email"]);
     await revokeAllSessions(tx.db, actorId, currentSessionId);
+    await recordSecurityEvent(tx, actorId, "password_changed");
   });
 }
 
@@ -197,13 +211,6 @@ async function applyRole(ctx: Ctx, handle: string, role: PersonRole): Promise<Pe
   });
 }
 
-export async function revokeSession(db: Database, sessionId: string): Promise<void> {
-  await db
-    .update(sessions)
-    .set({ revokedAt: sql`now()` })
-    .where(eq(sessions.id, sessionId));
-}
-
 const savedLocale = (tag: string | null): Locale | null => (tag && isLocale(tag) ? tag : null);
 
 // ---------------------------------------------------------------- registration & login
@@ -212,21 +219,23 @@ export async function register(
   ctx: Ctx,
   input: RegisterRequest,
   ttlDays: number,
+  policy: RegistrationPolicy,
   requestLocale?: Locale,
 ): Promise<AuthResponse> {
+  const acceptance = registrationAcceptance(input, policy);
   if (!isValidHandle(input.handle)) throw new DomainError("validation_failed", "invalid_handle");
   const locale = input.locale === undefined ? null : requireLocale(input.locale);
   const passwordHash = await hashPassword(input.password, ctx.passwordBreachCheck);
   return inTransaction(ctx, async (tx) => {
     await lockKeys(tx, ["email:" + input.email, "handle:" + input.handle]);
-    const person = await createAccount(tx, input, passwordHash, locale, false);
+    const person = await createAccount(tx, input, passwordHash, locale, false, acceptance);
     if (requestLocale)
       await issueToken(
         tx,
         { personId: person.id, email: input.email, purpose: "verify_email" },
         requestLocale,
       );
-    const session = await createSession(tx.db, person.id, ttlDays);
+    const session = await createSession(tx, person.id, ttlDays);
     return {
       person: personDto(person),
       emailVerified: false,
@@ -260,6 +269,7 @@ export async function login(
   const active = row && !row.person.deactivatedAt;
   const matches = await verifyPassword(input.password, active ? row.passwordHash : undefined);
   if (!active || !matches) {
+    await recordSecurityEvent(ctx, row?.person.id ?? null, "sign_in_failed");
     await failureBudget?.(input.email, "consume");
     throw new DomainError("unauthenticated", "wrong_credentials");
   }
@@ -271,7 +281,7 @@ export async function login(
       .from(accounts)
       .where(and(eq(accounts.personId, row.person.id), eq(accounts.email, input.email)));
     if (current?.hash !== row.passwordHash) throw new DomainError("unauthenticated", "wrong_credentials");
-    return createSession(tx.db, row.person.id, ttlDays);
+    return createSession(tx, row.person.id, ttlDays);
   });
   return {
     person: personDto(row.person),
@@ -284,12 +294,17 @@ export async function login(
 
 // ---------------------------------------------------------------- me & profiles
 
-export async function getMe(ctx: Ctx): Promise<MeResponse> {
+export async function getMe(
+  ctx: Ctx,
+  termsVersion: string | null,
+  requireVerifiedEmail: boolean,
+): Promise<MeResponse> {
   if (!ctx.actor) throw new DomainError("unauthenticated", "sign_in_required");
   const [row] = await ctx.db
     .select({
       person: people,
       email: accounts.email,
+      termsVersion: accounts.termsVersion,
       locale: accounts.locale,
       verified: accounts.emailVerifiedAt,
     })
@@ -300,6 +315,17 @@ export async function getMe(ctx: Ctx): Promise<MeResponse> {
   return {
     person: personDto(row.person),
     email: row.email,
+    trustTier: ctx.actor.trust,
+    trustNextStep:
+      ctx.actor.trust === "new"
+        ? requireVerifiedEmail && !row.verified
+          ? "verify_email"
+          : "wait_72_hours"
+        : ctx.actor.trust === "member"
+          ? "establish_history"
+          : null,
+    termsVersion,
+    termsAcceptanceRequired: termsVersion !== null && termsVersion !== row.termsVersion,
     emailVerified: !!row.verified,
     preferences: { locale: savedLocale(row.locale) },
   };

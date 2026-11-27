@@ -65,6 +65,7 @@ it("persists, overrides and clears account preferences without changing the publ
   const created = await h.call<AuthResponse>("POST", "/auth/register", {
     body: {
       handle: "language-test",
+      confirmAge: true,
       displayName: "Language Test",
       email: "locale@example.test",
       password: "localisation fixture",

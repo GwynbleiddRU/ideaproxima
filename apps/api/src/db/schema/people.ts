@@ -15,6 +15,8 @@ import {
   CAPACITIES,
   EXPERTISE_BASES,
   PERSON_ROLES,
+  SECURITY_EVENT_KINDS,
+  type SecurityEventKind,
   type Capacity,
   type ExpertiseBasis,
   type PersonRole,
@@ -64,6 +66,11 @@ export const accounts = pgTable(
     email: text("email").notNull(),
     passwordHash: text("password_hash").notNull(),
     emailVerifiedAt: tstz("email_verified_at"),
+    establishedAt: tstz("established_at"),
+    termsVersion: text("terms_version"),
+    termsAcceptedAt: tstz("terms_accepted_at"),
+    confirmedMinimumAge: integer("confirmed_minimum_age"),
+    ageConfirmedAt: tstz("age_confirmed_at"),
     locale: text("locale"),
     createdAt: createdAt(),
   },
@@ -71,6 +78,22 @@ export const accounts = pgTable(
 );
 
 export const tokenPurposes = ["verify_email", "reset_password", "change_email"] as const;
+export const securityEvents = pgTable(
+  "security_events",
+  {
+    id: pk(),
+    personId: uuid("person_id").references(() => people.id),
+    kind: text("kind").$type<SecurityEventKind>().notNull(),
+    networkKeyHash: text("network_key_hash"),
+    userAgent: text("user_agent"),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    check("security_events_kind_check", inList("kind", SECURITY_EVENT_KINDS)),
+    index("security_events_person_page_idx").on(t.personId, t.id),
+    index("security_events_retention_idx").on(t.createdAt),
+  ],
+);
 export type TokenPurpose = (typeof tokenPurposes)[number];
 export const accountTokens = pgTable(
   "account_tokens",
@@ -84,6 +107,7 @@ export const accountTokens = pgTable(
       handle: string;
       displayName: string;
       passwordHash: string;
+      acceptance?: { termsVersion: string | null; minimumAge: number; confirmedAt: string };
       locale: string | null;
     }>(),
     tokenHash: text("token_hash"),
@@ -112,10 +136,16 @@ export const sessions = pgTable(
     createdAt: createdAt(),
     expiresAt: tstz("expires_at").notNull(),
     revokedAt: tstz("revoked_at"),
+    lastUsedAt: tstz("last_used_at"),
+    userAgent: text("user_agent"),
+    mfaAt: tstz("mfa_at"),
   },
   (t) => [
     uniqueIndex("sessions_token_hash_key").on(t.tokenHash),
     index("sessions_person_idx").on(t.personId),
+    index("sessions_person_page_idx")
+      .on(t.personId, t.id)
+      .where(sql`revoked_at is null`),
   ],
 );
 

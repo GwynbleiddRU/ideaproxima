@@ -1,7 +1,10 @@
 import { Link, useRouter, useSearch } from "@tanstack/react-router";
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import { LIMITS } from "@ideaproxima/domain";
-import { errorMessage, isApiError } from "@/api/http";
+import type { RegistrationPolicy } from "@ideaproxima/contracts";
+import { useQuery } from "@tanstack/react-query";
+import { errorMessage, http, isApiError } from "@/api/http";
+import { TermsConfirmation } from "@/components/TermsConfirmation";
 import { useLogin, useRegister, useSession } from "@/api/session";
 import forms from "@/components/forms.module.scss";
 import { LocalizedText, useMessage } from "@/locales/react";
@@ -28,7 +31,7 @@ function BackToApp({ redirect }: { redirect?: string }) {
 
 export function SignInPage() {
   const t = useMessage();
-  const { me } = useSession();
+  const { me, account } = useSession();
   const { redirect } = useSearch({ from: "/sign-in" });
   const login = useLogin();
   const [email, setEmail] = useState("");
@@ -39,7 +42,7 @@ export function SignInPage() {
     login.mutate({ email, password });
   };
 
-  if (me) return <BackToApp redirect={redirect} />;
+  if (me) return <BackToApp redirect={account?.termsAcceptanceRequired ? "/account" : redirect} />;
   return (
     <AuthLayout title={t("auth.welcome")} lede={t("auth.signInLede")}>
       <form onSubmit={submit} className={forms.form}>
@@ -109,14 +112,27 @@ export function JoinPage() {
   const { redirect } = useSearch({ from: "/join" });
   const takeProof = useRegistrationProof();
   const register = useRegister(takeProof);
+  const policy = useQuery({
+    queryKey: ["registration-policy"],
+    queryFn: () => http.get<RegistrationPolicy>("/auth/registration-policy"),
+  });
   const [form, setForm] = useState({ displayName: "", handle: "", email: "", password: "" });
   const errors = isApiError(register.error) ? register.error.fieldErrors : {};
   const set = (key: keyof typeof form) => (e: { target: { value: string } }) =>
     setForm({ ...form, [key]: e.target.value });
 
-  const submit = (event: FormEvent) => {
+  const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    register.mutate({ ...form, locale: activeLocale() });
+    if (!policy.data) return;
+    const values = new FormData(event.currentTarget);
+    register.mutate({
+      ...form,
+      locale: activeLocale(),
+      confirmAge: values.has("confirmAge"),
+      minimumAge: policy.data.minimumAge,
+      acceptTerms: values.has("acceptTerms"),
+      termsVersion: policy.data.termsVersion ?? undefined,
+    });
   };
 
   if (me) return <BackToApp redirect={redirect} />;
@@ -131,36 +147,38 @@ export function JoinPage() {
   return (
     <AuthLayout title={t("auth.join")} lede={t("auth.joinLede")}>
       <form onSubmit={submit} className={forms.form}>
-        <Field label={t("auth.name")} error={errors.displayName}>
-          {(p) => (
-            <input
-              {...p}
-              className={control}
-              autoComplete="name"
-              value={form.displayName}
-              onChange={set("displayName")}
-              minLength={LIMITS.displayName.min}
-              maxLength={LIMITS.displayName.max}
-              required
-              autoFocus
-            />
-          )}
-        </Field>
-        <Field label={t("auth.handle")} hint={t("auth.handleHint")} error={errors.handle}>
-          {(p) => (
-            <input
-              {...p}
-              className={control}
-              autoComplete="username"
-              value={form.handle}
-              onChange={(e) => setForm({ ...form, handle: e.target.value.toLowerCase() })}
-              pattern="[a-z0-9](?:[a-z0-9\-]*[a-z0-9])?"
-              minLength={LIMITS.handle.min}
-              maxLength={LIMITS.handle.max}
-              required
-            />
-          )}
-        </Field>
+        <div className={styles.pair}>
+          <Field label={t("auth.name")} error={errors.displayName}>
+            {(p) => (
+              <input
+                {...p}
+                className={control}
+                autoComplete="name"
+                value={form.displayName}
+                onChange={set("displayName")}
+                minLength={LIMITS.displayName.min}
+                maxLength={LIMITS.displayName.max}
+                required
+                autoFocus
+              />
+            )}
+          </Field>
+          <Field label={t("auth.handle")} hint={t("auth.handleHint")} error={errors.handle}>
+            {(p) => (
+              <input
+                {...p}
+                className={control}
+                autoComplete="username"
+                value={form.handle}
+                onChange={(e) => setForm({ ...form, handle: e.target.value.toLowerCase() })}
+                pattern="[a-z0-9](?:[a-z0-9\-]*[a-z0-9])?"
+                minLength={LIMITS.handle.min}
+                maxLength={LIMITS.handle.max}
+                required
+              />
+            )}
+          </Field>
+        </div>
         <Field label={t("auth.email")} error={errors.email}>
           {(p) => (
             <input
@@ -193,13 +211,27 @@ export function JoinPage() {
             />
           )}
         </Field>
-        <AuthError error={register.error && !Object.keys(errors).length ? register.error : null} />
+        {policy.data && (policy.data.minimumAge > 0 || policy.data.termsVersion) && (
+          <div className={styles.confirmations} key={JSON.stringify(policy.data)}>
+            {policy.data.minimumAge > 0 && (
+              <label className={forms.confirmation}>
+                <input name="confirmAge" type="checkbox" required />
+                <span>{t("auth.confirmAge", { age: policy.data.minimumAge })}</span>
+              </label>
+            )}
+            {policy.data.termsVersion && <TermsConfirmation />}
+          </div>
+        )}
+        <AuthError
+          error={policy.error ?? (register.error && !Object.keys(errors).length ? register.error : null)}
+        />
         <Button
           type="submit"
           variant="primary"
           size="lg"
           block
           retryError={register.error}
+          disabled={!policy.data}
           loading={register.isPending}
         >
           {t("auth.create")}

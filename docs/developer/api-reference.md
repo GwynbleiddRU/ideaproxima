@@ -7,7 +7,7 @@ validates against and the test suite checks every response with. The machine-rea
 [`api/openapi.json`](api/openapi.json) (also served live at `GET /v1/openapi.json`). Conventions —
 authentication, errors, pagination, idempotency — are explained in the [developer guide](developer-guide.md#api-conventions).
 
-**75 endpoints.** Access “signed in” means a session (Bearer token or `ip_session` cookie) is required; further restrictions are listed per endpoint.
+**81 endpoints.** Access “signed in” means a session (Bearer token or `ip_session` cookie) is required; further restrictions are listed per endpoint.
 
 Every endpoint can answer 429 with [`RateLimited`](#schema-ratelimited) and a `Retry-After` delay in seconds.
 
@@ -26,6 +26,7 @@ Every endpoint can answer 429 with [`RateLimited`](#schema-ratelimited) and a `R
   - `GET /v1/search` — Search ideas, claims, sources and people (`search`)
   - `GET /v1/activity` — The global activity feed (`activity`)
 - [Identity](#identity) — Accounts, sessions, profiles, expertise and account moderation.
+  - `GET /v1/auth/registration-policy` — Get the minimum registration age and active terms version (`registrationPolicy`)
   - `GET /v1/auth/challenge` — Get a registration challenge (`registrationChallenge`)
   - `POST /v1/auth/register` — Create an account (`register`)
   - `POST /v1/auth/verify-email` — Verify an email address (`verifyEmail`)
@@ -37,6 +38,11 @@ Every endpoint can answer 429 with [`RateLimited`](#schema-ratelimited) and a `R
   - `POST /v1/auth/login` — Sign in (`login`)
   - `POST /v1/auth/logout` — Sign out (revokes the current session) (`logout`)
   - `GET /v1/me` — The signed-in account (`me`)
+  - `GET /v1/me/sessions` — List your active sessions (`mySessions`)
+  - `DELETE /v1/me/sessions/:session` — End one of your sessions (`endSession`)
+  - `POST /v1/me/sessions/revoke-others` — End all your other sessions (`endOtherSessions`)
+  - `GET /v1/me/security-events` — Read your private security history for the past 90 days (`mySecurityEvents`)
+  - `POST /v1/me/terms` — Accept the current terms (`acceptTerms`)
   - `PATCH /v1/me` — Update your profile or saved language (`updateMe`)
   - `POST /v1/me/password` — Change your password (`changePassword`)
   - `POST /v1/me/expertise` — Declare expertise in a topic (`declareExpertise`)
@@ -283,6 +289,16 @@ Response `200`: [`ActivityPage`](#schema-activitypage)
 
 Accounts, sessions, profiles, expertise and account moderation.
 
+### `GET /v1/auth/registration-policy`
+
+**Get the minimum registration age and active terms version** · `registrationPolicy`
+
+**Access:** public
+
+**Rate limits:** `net.requests`
+
+Response `200`: [`RegistrationPolicy`](#schema-registrationpolicy)
+
 ### `GET /v1/auth/challenge`
 
 **Get a registration challenge** · `registrationChallenge`
@@ -314,6 +330,7 @@ Response `202`: [`Ok`](#schema-ok)
 Notable errors:
 
 - `validation_failed` — registration proof missing, invalid, expired or already used
+- `validation_failed` — required age or terms confirmation missing or outdated
 - `conflict` — email or handle already taken
 - `rate_limited` — too many attempts
 - `unavailable` — password service busy
@@ -459,6 +476,102 @@ Response `200`: [`Ok`](#schema-ok)
 **Rate limits:** `net.requests`
 
 Response `200`: [`Me`](#schema-me)
+
+### `GET /v1/me/sessions`
+
+**List your active sessions** · `mySessions`
+
+**Access:** signed in
+
+**Rate limits:** `net.requests`
+
+Query parameters:
+
+| Name | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `before` | string (uuid) | no |  |
+| `limit` | integer | no | 1–100; default `20` |
+
+Response `200`: [`SessionPage`](#schema-sessionpage)
+
+Notable errors:
+
+- `unauthenticated` — sign in required
+
+### `DELETE /v1/me/sessions/:session`
+
+**End one of your sessions** · `endSession`
+
+**Access:** signed in
+
+**Rate limits:** `net.requests`, `write.any`, `write.knowledge`
+
+Path parameters:
+
+| Name | Description |
+| --- | --- |
+| `session` | Private session identifier (UUID). |
+
+Response `200`: [`Ok`](#schema-ok)
+
+Notable errors:
+
+- `unauthenticated` — sign in required
+- `not_found` — no such active session
+
+### `POST /v1/me/sessions/revoke-others`
+
+**End all your other sessions** · `endOtherSessions`
+
+**Access:** signed in
+
+**Rate limits:** `net.requests`, `write.any`, `write.knowledge`
+
+Request body: [`RevokeOtherSessionsRequest`](#schema-revokeothersessionsrequest)
+
+Response `200`: [`Ok`](#schema-ok)
+
+Notable errors:
+
+- `unauthenticated` — sign in required
+
+### `GET /v1/me/security-events`
+
+**Read your private security history for the past 90 days** · `mySecurityEvents`
+
+**Access:** signed in
+
+**Rate limits:** `net.requests`
+
+Query parameters:
+
+| Name | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `before` | string (uuid) | no |  |
+| `limit` | integer | no | 1–100; default `20` |
+
+Response `200`: [`SecurityEventPage`](#schema-securityeventpage)
+
+Notable errors:
+
+- `unauthenticated` — sign in required
+
+### `POST /v1/me/terms`
+
+**Accept the current terms** · `acceptTerms`
+
+**Access:** signed in
+
+**Rate limits:** `net.requests`, `write.any`, `write.knowledge`
+
+Request body: [`AcceptTermsRequest`](#schema-accepttermsrequest)
+
+Response `200`: [`Ok`](#schema-ok)
+
+Notable errors:
+
+- `unauthenticated` — sign in required
+- `validation_failed` — terms version changed or disabled
 
 ### `PATCH /v1/me`
 
@@ -1465,6 +1578,13 @@ Notable errors:
 
 Named request and response shapes. Nested inline objects are listed with dotted paths.
 
+### <a id="schema-accepttermsrequest"></a>AcceptTermsRequest
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `acceptTerms` | `true` | yes |  |
+| `termsVersion` | string | yes | length 1–100 |
+
 ### <a id="schema-accounttokenrequest"></a>AccountTokenRequest
 
 | Field | Type | Required | Notes |
@@ -2041,6 +2161,10 @@ Provide exactly one basis: `sourceId`, `source` (registered or matched by DOI/UR
 | `emailVerified` | boolean | yes |  |
 | `preferences` | object | yes |  |
 | `preferences.locale` | string \| null | yes (nullable) | length 0–35 |
+| `trustTier` | `anonymous` \| `restricted` \| `new` \| `member` \| `established` \| `staff` | yes |  |
+| `trustNextStep` | `verify_email` \| `wait_72_hours` \| `establish_history` \| null | yes (nullable) |  |
+| `termsAcceptanceRequired` | boolean | yes |  |
+| `termsVersion` | string \| null | yes |  |
 
 ### <a id="schema-moderationrequest"></a>ModerationRequest
 
@@ -2196,6 +2320,10 @@ Provide exactly one basis: `sourceId`, `source` (registered or matched by DOI/UR
 
 | Field | Type | Required | Notes |
 | --- | --- | --- | --- |
+| `confirmAge` | boolean | no | Required when the configured minimum age is positive. |
+| `minimumAge` | integer | no | Minimum age shown by the registration form. — 0–∞ |
+| `acceptTerms` | boolean | no | Required when the operator has published a terms version. |
+| `termsVersion` | string | no | Version shown by the registration form. — length 0–100 |
 | `challenge` | object | no |  |
 | `challenge.algorithm` | `"SHA-256"` | yes |  |
 | `challenge.challenge` | string | yes | length 64–64 |
@@ -2213,6 +2341,13 @@ Provide exactly one basis: `sourceId`, `source` (registered or matched by DOI/UR
 ### <a id="schema-registration"></a>Registration
 
 Type: [`Auth`](#schema-auth) \| [`Ok`](#schema-ok)
+
+### <a id="schema-registrationpolicy"></a>RegistrationPolicy
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `minimumAge` | integer | yes | 0–∞ |
+| `termsVersion` | string \| null | yes |  |
 
 ### <a id="schema-relation"></a>Relation
 
@@ -2289,6 +2424,10 @@ Type: object
 | `decidedAt` | string (date-time) \| null | yes (nullable) |  |
 | `decisionNote` | string | yes |  |
 
+### <a id="schema-revokeothersessionsrequest"></a>RevokeOtherSessionsRequest
+
+Type: object
+
 ### <a id="schema-searchresults"></a>SearchResults
 
 | Field | Type | Required | Notes |
@@ -2301,6 +2440,29 @@ Type: object
 | `claims[].status` | `unassessed` \| `established` \| `supported` \| `hypothesis` \| `unknown` \| `doubtful` \| `refuted` \| `contested` | yes |  |
 | `sources` | [`Source`](#schema-source)[] | yes |  |
 | `people` | [`PersonRef`](#schema-personref)[] | yes |  |
+
+### <a id="schema-securityeventpage"></a>SecurityEventPage
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `items` | object[] | yes |  |
+| `items[].id` | string (uuid) | yes |  |
+| `items[].createdAt` | string (date-time) | yes |  |
+| `items[].kind` | `signed_in` \| `sign_in_failed` \| `session_revoked` \| `other_sessions_revoked` \| `password_changed` \| `password_reset` \| `email_changed` | yes |  |
+| `items[].userAgentFamily` | string \| null | yes |  |
+| `nextCursor` | string \| null | yes |  |
+
+### <a id="schema-sessionpage"></a>SessionPage
+
+| Field | Type | Required | Notes |
+| --- | --- | --- | --- |
+| `items` | object[] | yes |  |
+| `items[].id` | string (uuid) | yes |  |
+| `items[].createdAt` | string (date-time) | yes |  |
+| `items[].lastUsedAt` | string (date-time) | yes |  |
+| `items[].userAgentFamily` | string \| null | yes |  |
+| `items[].current` | boolean | yes |  |
+| `nextCursor` | string \| null | yes |  |
 
 ### <a id="schema-setrolerequest"></a>SetRoleRequest
 

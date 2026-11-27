@@ -6,6 +6,9 @@ import {
   ResetRequest,
   ResetConfirmRequest,
   AccountTokenRequest,
+  AcceptTermsRequest,
+  RevokeOtherSessionsRequest,
+  AccountListQuery,
   EmailChangeRequest,
   DeclareExpertiseRequest,
   LoginRequest,
@@ -19,7 +22,11 @@ import {
 import * as history from "../../modules/history/service";
 import * as identity from "../../modules/identity/service";
 import { SESSION_COOKIE, type AppEnv } from "../env";
-import { jsonBody, queryOf } from "../input";
+import { jsonBody, queryOf, uuidParam } from "../input";
+import { endSessions, listSessions } from "../../modules/identity/sessions";
+import { listSecurityEvents } from "../../modules/identity/security";
+import { acceptTerms } from "../../modules/identity/registration";
+import { DomainError } from "@ideaproxima/domain";
 import { clientAddress } from "../client-address";
 import { requestLocale } from "../locale";
 import { setTimeout as delay } from "node:timers/promises";
@@ -50,6 +57,10 @@ const setSessionCookie = (c: Context<AppEnv>, auth: AuthResponse) =>
   });
 
 export const identityRoutes = new Hono<AppEnv>()
+  .get("/auth/registration-policy", (c) => {
+    c.header("Cache-Control", "no-store");
+    return c.json(c.get("config").registrationPolicy);
+  })
   .get("/auth/challenge", async (c) => {
     c.header("Cache-Control", "no-store");
     return c.json((await c.get("challengeProvider")?.issue(clientAddress(c))) ?? null);
@@ -60,13 +71,19 @@ export const identityRoutes = new Hono<AppEnv>()
       .get("challengeProvider")
       ?.verify(clientAddress(c), input.challenge, c.get("priorRegistrations") ?? 0);
     if (c.get("config").registrationMode === "verified-first") {
-      await registerAfterVerification(c.get("ctx"), input, requestLocale(c));
+      await registerAfterVerification(
+        c.get("ctx"),
+        input,
+        requestLocale(c),
+        c.get("config").registrationPolicy,
+      );
       return c.json({ ok: true }, 202);
     }
     const auth = await identity.register(
       c.get("ctx"),
       input,
       c.get("config").http.sessionTtlDays,
+      c.get("config").registrationPolicy,
       requestLocale(c),
     );
     setSessionCookie(c, auth);
@@ -125,13 +142,48 @@ export const identityRoutes = new Hono<AppEnv>()
   })
   .post("/auth/logout", async (c) => {
     const sessionId = c.get("sessionId");
-    if (sessionId) await identity.revokeSession(c.get("ctx").db, sessionId);
+    if (sessionId) await endSessions(c.get("ctx"), { one: sessionId, logout: true });
     deleteCookie(c, SESSION_COOKIE, { path: "/" });
     return c.json({ ok: true });
   })
   .get("/me", async (c) => {
     c.header("Cache-Control", "private, no-store");
-    return c.json(await identity.getMe(c.get("ctx")));
+    const config = c.get("config");
+    return c.json(
+      await identity.getMe(
+        c.get("ctx"),
+        config.registrationPolicy.termsVersion,
+        config.rateLimits.requireVerifiedEmail,
+      ),
+    );
+  })
+  .get("/me/sessions", async (c) => {
+    c.header("Cache-Control", "private, no-store");
+    const q = queryOf(c, AccountListQuery);
+    return c.json(await listSessions(c.get("ctx"), c.get("sessionId"), q.limit, q.before));
+  })
+  .delete("/me/sessions/:session", async (c) => {
+    const id = uuidParam(c, "session");
+    await endSessions(c.get("ctx"), { one: id });
+    if (id === c.get("sessionId")) deleteCookie(c, SESSION_COOKIE, { path: "/" });
+    return c.json({ ok: true });
+  })
+  .post("/me/sessions/revoke-others", async (c) => {
+    await jsonBody(c, RevokeOtherSessionsRequest);
+    const current = c.get("sessionId");
+    if (!current) throw new DomainError("unauthenticated", "sign_in_required");
+    await endSessions(c.get("ctx"), { except: current });
+    return c.json({ ok: true });
+  })
+  .get("/me/security-events", async (c) => {
+    c.header("Cache-Control", "private, no-store");
+    const q = queryOf(c, AccountListQuery);
+    return c.json(await listSecurityEvents(c.get("ctx"), q.limit, q.before));
+  })
+  .post("/me/terms", async (c) => {
+    const input = await jsonBody(c, AcceptTermsRequest);
+    await acceptTerms(c.get("ctx"), input.termsVersion, c.get("config").registrationPolicy.termsVersion);
+    return c.json({ ok: true });
   })
   .patch("/me", async (c) =>
     c.json(await identity.updateProfile(c.get("ctx"), await jsonBody(c, UpdateProfileRequest))),

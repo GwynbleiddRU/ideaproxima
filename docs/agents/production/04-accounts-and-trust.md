@@ -3,7 +3,7 @@
 Part of the [production-readiness program](README.md). Prompt for the implementing agent:
 `prompts/api/04-accounts-and-trust-prompt.md`.
 
-| Status     | Phase A done 2026-11-26. Phase B is next at step 14. Phases C and D are scheduled for steps 26 and 27.                                                                                                                                                   |
+| Status     | Phase A done 2026-11-26 and phase B done 2026-11-27. Phases C and D are scheduled for steps 26 and 27.                                                                                                                                                   |
 | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Depends on | [02](02-background-jobs.md) (e-mail is sent by jobs), [03](03-rate-limiting.md) (`auth.recovery`, trust tiers), [05](05-localization.md) A (translator, error reasons); phase D also [07](07-moderation-core.md) (the actions that need a second factor) |
 | Unblocks   | `TRUST_REQUIRE_VERIFIED_EMAIL`; notices in [07](07-moderation-core.md); the launch                                                                                                                                                                       |
@@ -234,7 +234,7 @@ implemented. Phase B adds `MINIMUM_AGE` beside the terms mechanism.
 2. The terms, the privacy notice and the contribution licence (and with it `LEGAL_TERMS_VERSION`).
 3. Which providers beyond ORCID to enable at launch.
 4. The mail provider (it must deliver to every target region).
-5. The minimum age for an account (default 16).
+5. The owner confirmed the minimum registration age of 16 on 2026-11-26. The age check applies independently of published terms.
 
 ## Implementation notes
 
@@ -258,3 +258,25 @@ Started on clean local `main` at `4d7b442`. Steps 1–12 were marked done. The c
 | Browser    | `npm run test:e2e` passed all 75 checks. Both registration modes followed real inline-worker mail links through sign-up, confirmation, email change and recovery. All five new routes passed the accessibility audit in both themes.                                                                                |
 
 **Next eligible row:** step 14 (plan 04 phase B), after the owner confirms decision 15 on minimum age (documented default 16). The phase-B session should carry the verification status and recovery machinery forward. Terms and privacy texts, provider selection and later federation/MFA work retain their own gates.
+
+### Step 14 · Phase B · 2026-11-27
+
+The session began on clean local `main` at `76bb0bb`. The sequence marked steps 1–13 done. The checkout contained step 13's account-token migration, both registration modes, mail worker and replay tests. The unchanged baseline passed `npm run check` with 248 PGlite tests passing, three PostgreSQL-only tests skipped and all 75 endpoints covered. The Windows sandbox could not resolve the user profile for tsx, so the baseline and runtime checks used the normal host runtime.
+
+The owner confirmed a minimum registration age of **16** before implementation and approved the revised local preview in `designs/account-sessions-and-acceptance.html`. The existing registration and account pages use the site's form controls, responsive layout and both themes.
+
+- Six endpoints now expose registration policy, list active sessions, revoke one, revoke the others, list the caller's security events, and accept a published terms version. The private account response includes the trust tier, its next step and whether the terms need review.
+- Generated migration `0008_modern_cerise.sql` adds the operational `security_events` table and account/session metadata. Security history stores a keyed digest of the trusted network and a recognized client family. Failed sign-ins for unknown accounts have no person ID. Owner-only reads and a scheduled purge enforce the 90-day retention period. Session activity uses a conditional ten-minute update, including for legacy sessions that have only a creation time.
+- Both registration modes record the threshold confirmed and the time. Verified-first registration carries the original evidence through email confirmation. Legacy accounts and pending requests have no invented acceptance evidence. The terms mechanism defaults to unset pending owner-supplied texts and the policy pages in step 32.
+- The daily `trust.recompute` job uses the existing knowledge-action list, a 30-day account age and ten contributions. Until plan 07 provides decisions and appeals, a hide or deactivation within 90 days disqualifies its subject's account while the disposition stands. A restoration or reactivation cancels that disposition. Plan 07 must connect its decision and restriction records when they exist. `TRUST_REQUIRE_VERIFIED_EMAIL` remains false by default.
+- Changes span the domain and contract packages, Drizzle schema and migration, API identity and job modules, web registration and account settings, locale messages, integration and browser tests, Compose settings and the account, architecture, data and operations guides.
+
+| Check         | Step 14 evidence                                                                                                                                                                                                                                                                                                                                 |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Generation    | `npm run db:generate`, `npm run i18n:compile` and `npm run docs:api` regenerated the migration, catalogues and API documents.                                                                                                                                                                                                                    |
+| Repository    | `npm run check` passed typecheck, lint, formatting, document links, all 252 applicable PGlite tests and both builds. Three PostgreSQL-only tests were skipped. All 81 endpoints were exercised and contract-checked.                                                                                                                             |
+| PostgreSQL 17 | `npm run test:pg` passed all 255 tests. Concurrent single-session revocations returned one success. When two browsers each revoked the others, exactly one kept access. Tests verified ten-minute last-use updates, private event isolation and the 90-day cutoff and purge.                                                                     |
+| Policy        | Both registration modes rejected missing confirmation and stale terms and recorded the age threshold, version and acceptance time. A changed terms version prompted review. The trust tests checked the nine-to-ten contribution boundary, account age, optional verification, an unchanged marker on retry, and a hide followed by restoration. |
+| Browser       | `npm run test:e2e` passed all 79 checks. Both registration modes revoked a second browser session, verified its loss of access and continued with the first session. Registration and account settings passed the light and dark accessibility checks.                                                                                           |
+
+**Next eligible row:** step 15, plan 06 phase A (content languages, language detection and Unicode slugs). Use `prompts/api/06-multilingual-content-and-search-prompt.md`. Plan 04 resumes at step 26. Terms, privacy text, contribution licence, mail provider and optional sign-in providers retain their later owner decisions.

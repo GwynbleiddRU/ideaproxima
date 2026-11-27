@@ -34,6 +34,7 @@ test("a newcomer joins, proposes an idea and develops it", async ({ page }) => {
     await page.getByLabel("Handle").fill(`e2e-${id}`);
     await page.getByLabel("Email").fill(`e2e-${id}@example.test`);
     await page.getByLabel("Password").fill("a-long-test-password");
+    await page.getByLabel("I am at least 16 years old.").check();
     await page.getByRole("button", { name: "Create account" }).click();
     await expect(page.getByRole("button", { name: "Your account" })).toBeVisible();
   });

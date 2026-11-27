@@ -30,6 +30,7 @@ export function useSession() {
   const me = data?.person ?? null;
   return {
     me,
+    account: data,
     email: data?.email ?? null,
     emailVerified: data?.emailVerified ?? false,
     locale: data?.preferences.locale ?? null,
@@ -70,13 +71,7 @@ export function useLogin() {
   return useMutation({
     mutationFn: (input: LoginRequest) => http.post<AuthResponse>("/auth/login", input),
     meta: { inlineErrors: true },
-    onSuccess: (auth, input) =>
-      change({
-        person: auth.person,
-        emailVerified: auth.emailVerified,
-        email: input.email.trim().toLowerCase(),
-        preferences: auth.preferences,
-      }),
+    onSuccess: async () => change(await http.get<MeResponse>("/me")),
   });
 }
 
@@ -86,15 +81,9 @@ export function useRegister(takeProof: () => Promise<RegisterRequest["challenge"
     mutationFn: async (input: RegisterRequest) =>
       http.post<RegistrationResponse>("/auth/register", { ...input, challenge: await takeProof() }),
     meta: { inlineErrors: true },
-    onSuccess: (auth, input) =>
-      "person" in auth
-        ? change({
-            person: auth.person,
-            emailVerified: auth.emailVerified,
-            email: input.email.trim().toLowerCase(),
-            preferences: auth.preferences,
-          })
-        : undefined,
+    onSuccess: async (auth) => {
+      if ("person" in auth) await change(await http.get<MeResponse>("/me"));
+    },
   });
 }
 

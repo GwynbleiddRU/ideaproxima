@@ -16,13 +16,16 @@ describe.each(["immediate", "verified-first"])("%s registration and account mail
   const password = "correct horse battery";
   const input = {
     handle: "mail-user",
+    confirmAge: true,
+    acceptTerms: true,
+    termsVersion: "mail-test",
     displayName: "Robin <Robin>",
     email: "robin@example.test",
     password,
     locale: "ar",
   };
   beforeAll(async () => {
-    h = await createHarness({ REGISTRATION_MODE: mode });
+    h = await createHarness({ REGISTRATION_MODE: mode, LEGAL_TERMS_VERSION: "mail-test" });
     const sender = createMailSender(loadConfig({}).mail);
     h.ctx.mail = {
       key: "fixture-worker-key",
@@ -56,6 +59,17 @@ describe.each(["immediate", "verified-first"])("%s registration and account mail
     return new URL(msg!.text.trim().split("\n").at(-1)!).hash.slice(1);
   };
   it("follows links, refuses replay and wrong purpose, changes only a confirmed address, and ends every session after reset", async () => {
+    for (const [override, reason] of [
+      [{ confirmAge: undefined }, "confirm_minimum_age"],
+      [{ acceptTerms: false }, "accept_current_terms"],
+      [{ termsVersion: "outdated" }, "accept_current_terms"],
+    ] as const) {
+      expect(
+        (await h.call("POST", "/auth/register", { body: { ...input, ...override } })).body.error.details
+          .reason,
+      ).toBe(reason);
+    }
+    expect(await h.db.select().from(accountTokens)).toHaveLength(0);
     const reg = await h.call("POST", "/auth/register", { body: input });
     expect(reg.status).toBe(mode === "immediate" ? 201 : 202);
     if (mode === "verified-first") {
@@ -81,6 +95,14 @@ describe.each(["immediate", "verified-first"])("%s registration and account mail
     const verify = () => h.call("POST", "/auth/verify-email", { body: { token: verification } });
     expect((await Promise.all([verify(), verify()])).map((r) => r.status).sort()).toEqual([200, 400]);
     expect((await verify()).body.error.details.reason).toBe("token_used");
+    const [accepted] = await h.db.select().from(accounts);
+    expect(accepted).toMatchObject({
+      termsVersion: "mail-test",
+      termsAcceptedAt: expect.any(Date),
+      confirmedMinimumAge: 16,
+      ageConfirmedAt: expect.any(Date),
+    });
+    expect(accepted!.termsAcceptedAt).toEqual(accepted!.ageConfirmedAt);
     const login = async () => (await h.call("POST", "/auth/login", { body: input })).body.token as string;
     const session = await login();
     const second = await login();

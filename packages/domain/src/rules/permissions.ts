@@ -14,6 +14,7 @@ import type { TrustTier } from "./rate-limits";
  *    superseded, withdrawn, or hidden by moderation — and all of that is itself recorded.
  */
 export const ACTIONS = [
+  "account.manage", // private settings and security history of the actor's own account
   "idea.propose",
   "idea.revise", // publish a revision directly
   "idea.revision.propose", // propose a revision for stewards to decide
@@ -53,6 +54,7 @@ export interface PermissionContext {
 const isModerator = (a: Actor) => a.role === "moderator" || a.role === "admin";
 
 const POLICY: Record<Action, (a: Actor, ctx: PermissionContext) => boolean> = {
+  "account.manage": () => true,
   "idea.propose": () => true,
   "idea.revise": (a, c) => !!c.isSteward || isModerator(a),
   "idea.revision.propose": () => true,

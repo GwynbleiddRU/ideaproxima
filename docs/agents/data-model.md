@@ -26,9 +26,10 @@ This operational table is logged so an accepted proof remains spent through a re
 
 - **people** — public identity. `handle` (unique), `display_name`, `bio`, `affiliation`, `capacities text[]`
   (CHECK ⊆ vocabulary), `role` (member/moderator/admin), `deactivated_at`.
-- **accounts** — `person_id` PK, `email` (unique, lowercased), `password_hash` (scrypt), `email_verified_at`, and a nullable product `locale` preference.
+- **accounts** — `person_id` PK, `email` (unique, lowercased), `password_hash` (scrypt), `email_verified_at`, and a nullable product `locale` preference. Private registration records include `confirmed_minimum_age`, `age_confirmed_at`, `terms_version` and `terms_accepted_at`. Older accounts retain nulls. `established_at` is a rebuildable marker maintained by the daily trust job.
 - **account_tokens** — private operational verification (48 hours), recovery (one hour), and email change (24 hours). The worker installs the token hash at dispatch. Verified-first requests hold a pending registration with its scrypt hash until consumption or replacement. Expired rows are purged after 30 days.
-- **sessions** — `token_hash` (unique, SHA-256), `expires_at`, `revoked_at`.
+- **sessions** — `token_hash` (unique, SHA-256), expiry, revocation, browser family, last use and the reserved `mfa_at` timestamp. A legacy session falls back to its creation time until its first eligible last-use update.
+- **security_events** — private operational history indexed by person and by retention date. Failed sign-ins for an unknown address have no person reference. Only the normalized client family and a keyed hash of the trusted network are retained. A daily job purges events after 90 days.
 - **topics** — `slug` (unique), `name`, `description`, `parent_id` (hierarchy), `position`.
 - **topic_translations** — `(topic_id, locale)` PK, translated `name` and `description`. The catalog service
   overlays this text on topic reads. The canonical `topics` row supplies fallback and names in idea references.

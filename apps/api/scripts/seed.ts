@@ -97,6 +97,7 @@ async function seedDemo(db: Database) {
         password: "demo-password-123",
       },
       1,
+      { minimumAge: 0, termsVersion: null },
     );
     as[p.handle] = { ...base, actor: { id: auth.person.id, role: "member", active: true, trust: "new" } };
     await identity.updateProfile(as[p.handle], { bio: p.bio, capacities: [...p.capacities] });

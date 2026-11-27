@@ -60,7 +60,7 @@ Invalid settings stop startup with one error listing the affected variables. Boo
 | `CLIENT_IP_HEADER`             | unset                                           | Single-value header overwritten by the edge, e.g. `cf-connecting-ip`, `fly-client-ip` or `x-real-ip`. Takes precedence over hop counting. A missing header uses the socket peer. |
 | `TRUST_PROXY`                  | `false`                                         | Deprecated for one release. `true` warns at startup and defaults `TRUST_PROXY_HOPS` to one (the last entry).                                                                     |
 | `RATE_LIMIT_IPV6_PREFIX`       | `64`                                            | IPv6 network prefix length (0–128). IPv4-mapped addresses share their IPv4 bucket. Invalid addresses share one unknown bucket.                                                   |
-| `TRUST_REQUIRE_VERIFIED_EMAIL` | `false`                                         | Require verified email for promotion from new to member. Keep false until verification ships in plan 04.                                                                         |
+| `TRUST_REQUIRE_VERIFIED_EMAIL` | `false`                                         | Require verified email for promotion from new to member. Enable after existing members have been invited to verify.                                                              |
 | `RATE_LIMITS`                  | `on`                                            | Set `off` to disable both layers for tests or local load experiments.                                                                                                            |
 | `RATE_LIMIT_STORE`             | `memory`                                        | L2 store, `memory` or `postgres`. L1 always uses memory.                                                                                                                         |
 | `RATE_LIMIT_KEY_SECRET`        | generated per process in local memory mode      | Required in production and with the PostgreSQL store. Use the same private random secret on every instance. Rotation gives networks and emails fresh budgets.                    |
@@ -80,6 +80,8 @@ Invalid settings stop startup with one error listing the affected variables. Boo
 | `METRICS_REFRESH_MODE`         | `sync`                                          | Compute signals during the write, or set `async` to enqueue one pending refresh per affected idea.                                                                               |
 | `JOBS_CONCURRENCY`             | `4`                                             | Maximum active handlers per worker process.                                                                                                                                      |
 | `JOBS_QUEUES`                  | `default,mail`                                  | Comma-separated queue names with optional per-process caps, e.g. `default,moderation=2`.                                                                                         |
+| `MINIMUM_AGE`                  | `16`                                            | Registration requires confirmation of this age in both modes. Set to 0 to disable the age check.                                                                                 |
+| `LEGAL_TERMS_VERSION`          | Unset                                           | Set an identifier of up to 100 characters only after publishing the terms and privacy notice. Changing it prompts members to review and accept the new version at sign-in.       |
 | `REGISTRATION_MODE`            | `immediate`                                     | Immediate creates a session at registration. Use `verified-first` to create the account after mailbox confirmation.                                                              |
 | `PASSWORD_BREACH_CHECK`        | `off`                                           | `hibp` checks a five-character password hash prefix at creation, change and reset. The request times out after 1.5 seconds and an outage permits the password.                   |
 | `PUBLIC_BASE_URL`              | Local web origin in development                 | Public HTTP(S) origin used for account links. Required in production. Use HTTPS for a public site.                                                                               |
@@ -297,7 +299,9 @@ Include `mail` in the queues processed by at least one worker. SMTP receives a s
 Delivery is at least once. Retries reuse the link while its token is live. The development log transport
 prints working links and is intended for a private local console. Keep SMTP credentials and the worker key
 out of logs. Verify sender-domain SPF, DKIM and DMARC with the chosen provider before public deployment.
-Keep `TRUST_REQUIRE_VERIFIED_EMAIL=false` until existing members have been invited to verify.
+After inviting existing members to verify, operators can set `TRUST_REQUIRE_VERIFIED_EMAIL=true` across API instances. The default is false. Keep `LEGAL_TERMS_VERSION` unset until the owner supplies the texts and step 32 serves `/policies/terms` and `/policies/privacy`. The age setting operates independently.
+
+The daily `trust.recompute` job rebuilds the established marker. The daily `security_events.purge` removes events at least 90 days old. Owner-facing reads enforce the same cutoff between purges. The API exposes security history only to its owner. Any operator investigation must have a documented reason.
 
 ### Legally required erasure
 
@@ -316,7 +320,7 @@ COMMIT;
 ```
 
 Prefer redaction over deletion, so that references from other records stay intact. To erase a person, anonymise
-the `people` row (display name, bio, affiliation) and delete their private account tokens, sessions and `accounts` row in the same transaction. Include pending registration tokens for the erased mailbox. Their contributions then remain
+the `people` row (display name, bio, affiliation) and delete their private account tokens, sessions, security events and `accounts` row in the same transaction. Include pending registration tokens for the erased mailbox. Their contributions then remain
 attributed to an anonymous former contributor.
 
 ## Scaling

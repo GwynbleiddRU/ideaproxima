@@ -25,10 +25,11 @@ import { Chip } from "@/ui/Chip";
 import { control, Field } from "@/ui/Field";
 import { FormError } from "@/ui/Feedback";
 import styles from "./people.module.scss";
+import { AccountSecurity } from "./AccountSecurity";
 
 export function AccountPage() {
   const t = useMessage();
-  const { me, email } = useSession();
+  const { me, email, account } = useSession();
   const logout = useLogout();
   const navigate = useNavigate();
   if (!me) return null;
@@ -57,9 +58,10 @@ export function AccountPage() {
           <LanguageSwitcher settings />
         </section>
         <AccountEmail />
+        {account && <AccountSecurity account={account} />}
         <ProfileForm me={me} />
         <ExpertiseForm handle={me.handle} />
-        <PasswordForm />
+        <PasswordForm personId={me.id} />
       </div>
     </div>
   );
@@ -273,9 +275,9 @@ function ExpertiseForm({ handle }: { handle: string }) {
   );
 }
 
-function PasswordForm() {
+function PasswordForm({ personId }: { personId: string }) {
   const t = useMessage();
-  const change = useChangePassword();
+  const change = useChangePassword(personId);
   const [currentPassword, setCurrent] = useState("");
   const [newPassword, setNew] = useState("");
   const errors = isApiError(change.error) ? change.error.fieldErrors : {};

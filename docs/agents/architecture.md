@@ -151,6 +151,10 @@ Dispatch runs on the mail queue. The worker derives the credential from a privat
 and stores only its SHA-256 digest. Changing credentials and consuming the link commit together. Password
 reset revokes every session. Mailbox and credential operations stay outside the public activity ledger.
 
+The owner set the minimum registration age to 16. Both registration modes capture the confirmed age threshold and time. Verified-first sign-up carries this evidence in the pending token until the account exists. Published terms have their own version and acceptance time. Older records retain unknown values. A new version prompts review at sign-in.
+
+Session and security lists are private, keyset-paged and scoped to the authenticated person. Session lookups update last use only when at least ten minutes have elapsed, with the same condition on the update for concurrent readers. Credential changes and revocations commit with their private security events. The daily trust job uses the knowledge-action catalogue, account age and moderation history. It preserves an eligible account’s original establishment time across recomputations.
+
 ### ADR-13 UUIDv7 identifiers
 
 Time-ordered (compact B-tree indexes, natural ledger ordering), globally unique across tables (polymorphic

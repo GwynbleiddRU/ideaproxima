@@ -1,4 +1,6 @@
 import { Hono } from "hono";
+import { clientAddress } from "./http/client-address";
+import { securityMetadata } from "./modules/identity/security";
 import { bodyLimit } from "hono/body-limit";
 import { getCookie } from "hono/cookie";
 import { cors } from "hono/cors";
@@ -115,6 +117,8 @@ export function createApp(deps: AppDeps) {
       weights,
       metricsRefreshMode: config.jobs.metricsRefreshMode,
       passwordBreachCheck: config.passwordBreachCheck,
+      securityMetadata: () =>
+        securityMetadata(c.req.header("user-agent"), clientAddress(c), config.rateLimits.keySecret),
     });
     c.set("sessionId", session?.sessionId ?? null);
     setRequestLocale(c, session?.locale);

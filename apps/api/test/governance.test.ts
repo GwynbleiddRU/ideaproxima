@@ -25,6 +25,7 @@ describe("authentication", () => {
         displayName: "Dana",
         email: "DANA@example.test",
         password: "another long password",
+        confirmAge: true,
       },
     });
     expect(dupEmail.status).toBe(409);
@@ -34,6 +35,7 @@ describe("authentication", () => {
         displayName: "Dana",
         email: "x@example.test",
         password: "another long password",
+        confirmAge: true,
       },
     });
     expect(dupHandle.status).toBe(409);

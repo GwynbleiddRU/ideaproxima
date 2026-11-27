@@ -1,6 +1,7 @@
 import type { PersonRole } from "../vocabulary/people";
 
-export type TrustTier = "anonymous" | "restricted" | "new" | "member" | "established" | "staff";
+export const TRUST_TIERS = ["anonymous", "restricted", "new", "member", "established", "staff"] as const;
+export type TrustTier = (typeof TRUST_TIERS)[number];
 
 interface TrustAccount {
   role: PersonRole;

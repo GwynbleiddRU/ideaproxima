@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 import { expect, test } from "@playwright/test";
 
 for (const mode of ["immediate", "verified-first"])
-  test("account mail through the browser in " + mode + " mode", async ({ page }) => {
+  test("account mail through the browser in " + mode + " mode", async ({ page, request }) => {
     // This process owns its own mailbox and in-memory database, including the real inline worker.
     const port = Number(process.env.AUDIT_PORT ?? 3100) + 2;
     const origin = "http://127.0.0.1:" + port;
@@ -20,6 +20,7 @@ for (const mode of ["immediate", "verified-first"])
           DATABASE_URL: "pglite:memory",
           JOBS_MODE: "inline",
           REGISTRATION_MODE: mode,
+          LEGAL_TERMS_VERSION: mode === "verified-first" ? "browser-test" : "",
           REGISTRATION_CHALLENGE: "none",
           RATE_LIMITS: "off",
           MAIL_TRANSPORT: "log",
@@ -69,6 +70,9 @@ for (const mode of ["immediate", "verified-first"])
       await page.getByLabel("Handle").fill("browser-reader");
       await page.getByLabel("Email", { exact: true }).fill(email);
       await page.getByLabel("Password", { exact: true }).fill(password);
+      await page.getByLabel("I am at least 16 years old.").check();
+      if (mode === "verified-first") await page.getByRole("checkbox", { name: /I accept the terms/ }).check();
+      else await expect(page.getByRole("link", { name: "terms", exact: true })).toHaveCount(0);
       await page.getByRole("button", { name: "Create account" }).click();
       if (mode === "verified-first")
         await expect(page.getByRole("heading", { name: "Check your email" })).toBeVisible();
@@ -81,7 +85,14 @@ for (const mode of ["immediate", "verified-first"])
       await page.getByRole("button", { name: "Verify email address" }).click();
       await expect(page.getByRole("heading", { name: "Email verified" })).toBeVisible();
       if (mode === "verified-first") await login(email, password);
+      const other = await request.post(origin + "/v1/auth/login", { data: { email, password } });
+      expect(other.ok()).toBe(true);
       await page.goto(origin + "/account");
+      await expect(page.getByText("This session", { exact: true })).toBeVisible();
+      await page.getByRole("button", { name: "Sign out this session" }).click();
+      await expect(page.getByRole("button", { name: "Sign out this session" })).toHaveCount(0);
+      expect((await request.get(origin + "/v1/me")).status()).toBe(401);
+      await expect(page.getByRole("heading", { name: "Security history" })).toBeVisible();
       await page.getByRole("link", { name: "Change email address" }).click();
       await page.getByLabel("New email address").fill(newEmail);
       await page.getByLabel("Current password").fill(password);

@@ -674,6 +674,46 @@
         }
       }
     },
+    "/v1/auth/registration-policy": {
+      "get": {
+        "operationId": "registrationPolicy",
+        "tags": [
+          "Identity"
+        ],
+        "summary": "Get the minimum registration age and active terms version",
+        "x-rate-limits": [
+          "net.requests"
+        ],
+        "x-mutates": false,
+        "security": [],
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RegistrationPolicy"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "default": {
+            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/auth/challenge": {
       "get": {
         "operationId": "registrationChallenge",
@@ -775,7 +815,7 @@
           "auth.register"
         ],
         "x-mutates": true,
-        "description": "Immediate mode creates a session (201). Verified-first mode always accepts the request (202, {ok:true}) and emails instructions.\n\n**Notable errors:**\n- `validation_failed`: registration proof missing, invalid, expired or already used\n- `conflict`: email or handle already taken\n- `rate_limited`: too many attempts\n- `unavailable`: password service busy",
+        "description": "Immediate mode creates a session (201). Verified-first mode always accepts the request (202, {ok:true}) and emails instructions.\n\n**Notable errors:**\n- `validation_failed`: registration proof missing, invalid, expired or already used\n- `validation_failed`: required age or terms confirmation missing or outdated\n- `conflict`: email or handle already taken\n- `rate_limited`: too many attempts\n- `unavailable`: password service busy",
         "security": [],
         "parameters": [],
         "requestBody": {
@@ -1328,6 +1368,324 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/Person"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "default": {
+            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/me/sessions": {
+      "get": {
+        "operationId": "mySessions",
+        "tags": [
+          "Identity"
+        ],
+        "summary": "List your active sessions",
+        "x-rate-limits": [
+          "net.requests"
+        ],
+        "x-mutates": false,
+        "description": "**Notable errors:**\n- `unauthenticated`: sign in required",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "before",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SessionPage"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "default": {
+            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/me/sessions/{session}": {
+      "delete": {
+        "operationId": "endSession",
+        "tags": [
+          "Identity"
+        ],
+        "summary": "End one of your sessions",
+        "x-rate-limits": [
+          "net.requests",
+          "write.any",
+          "write.knowledge"
+        ],
+        "x-mutates": true,
+        "description": "**Notable errors:**\n- `unauthenticated`: sign in required\n- `not_found`: no such active session",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "session",
+            "in": "path",
+            "required": true,
+            "description": "Private session identifier (UUID).",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ok"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "default": {
+            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/me/sessions/revoke-others": {
+      "post": {
+        "operationId": "endOtherSessions",
+        "tags": [
+          "Identity"
+        ],
+        "summary": "End all your other sessions",
+        "x-rate-limits": [
+          "net.requests",
+          "write.any",
+          "write.knowledge"
+        ],
+        "x-mutates": true,
+        "description": "**Notable errors:**\n- `unauthenticated`: sign in required",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RevokeOtherSessionsRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ok"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "default": {
+            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/me/security-events": {
+      "get": {
+        "operationId": "mySecurityEvents",
+        "tags": [
+          "Identity"
+        ],
+        "summary": "Read your private security history for the past 90 days",
+        "x-rate-limits": [
+          "net.requests"
+        ],
+        "x-mutates": false,
+        "description": "**Notable errors:**\n- `unauthenticated`: sign in required",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "before",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SecurityEventPage"
+                }
+              }
+            }
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimited"
+          },
+          "default": {
+            "description": "Error. `error.code` is one of validation_failed, unauthenticated, forbidden, not_found, conflict, invariant_violated, rate_limited, payload_too_large, unavailable (503), internal_error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/me/terms": {
+      "post": {
+        "operationId": "acceptTerms",
+        "tags": [
+          "Identity"
+        ],
+        "summary": "Accept the current terms",
+        "x-rate-limits": [
+          "net.requests",
+          "write.any",
+          "write.knowledge"
+        ],
+        "x-mutates": true,
+        "description": "**Notable errors:**\n- `unauthenticated`: sign in required\n- `validation_failed`: terms version changed or disabled",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AcceptTermsRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Ok"
                 }
               }
             }
@@ -4790,6 +5148,24 @@
       }
     },
     "schemas": {
+      "AcceptTermsRequest": {
+        "type": "object",
+        "properties": {
+          "acceptTerms": {
+            "type": "boolean",
+            "const": true
+          },
+          "termsVersion": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          }
+        },
+        "required": [
+          "acceptTerms",
+          "termsVersion"
+        ]
+      },
       "AccountTokenRequest": {
         "type": "object",
         "properties": {
@@ -7461,13 +7837,52 @@
               "locale"
             ],
             "additionalProperties": false
+          },
+          "trustTier": {
+            "type": "string",
+            "enum": [
+              "anonymous",
+              "restricted",
+              "new",
+              "member",
+              "established",
+              "staff"
+            ]
+          },
+          "trustNextStep": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "verify_email",
+                  "wait_72_hours",
+                  "establish_history"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "termsAcceptanceRequired": {
+            "type": "boolean"
+          },
+          "termsVersion": {
+            "type": [
+              "string",
+              "null"
+            ]
           }
         },
         "required": [
           "person",
           "email",
           "emailVerified",
-          "preferences"
+          "preferences",
+          "trustTier",
+          "trustNextStep",
+          "termsAcceptanceRequired",
+          "termsVersion"
         ],
         "additionalProperties": false
       },
@@ -8101,6 +8516,24 @@
       "RegisterRequest": {
         "type": "object",
         "properties": {
+          "confirmAge": {
+            "description": "Required when the configured minimum age is positive.",
+            "type": "boolean"
+          },
+          "minimumAge": {
+            "description": "Minimum age shown by the registration form.",
+            "type": "integer",
+            "minimum": 0
+          },
+          "acceptTerms": {
+            "description": "Required when the operator has published a terms version.",
+            "type": "boolean"
+          },
+          "termsVersion": {
+            "description": "Version shown by the registration form.",
+            "type": "string",
+            "maxLength": 100
+          },
           "challenge": {
             "type": "object",
             "properties": {
@@ -8192,6 +8625,26 @@
             "$ref": "#/components/schemas/Ok"
           }
         ]
+      },
+      "RegistrationPolicy": {
+        "type": "object",
+        "properties": {
+          "minimumAge": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "termsVersion": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "minimumAge",
+          "termsVersion"
+        ],
+        "additionalProperties": false
       },
       "Relation": {
         "type": "object",
@@ -8500,6 +8953,10 @@
         ],
         "additionalProperties": false
       },
+      "RevokeOtherSessionsRequest": {
+        "type": "object",
+        "properties": {}
+      },
       "SearchResults": {
         "type": "object",
         "properties": {
@@ -8565,6 +9022,116 @@
           "claims",
           "sources",
           "people"
+        ],
+        "additionalProperties": false
+      },
+      "SecurityEventPage": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "createdAt": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "signed_in",
+                    "sign_in_failed",
+                    "session_revoked",
+                    "other_sessions_revoked",
+                    "password_changed",
+                    "password_reset",
+                    "email_changed"
+                  ]
+                },
+                "userAgentFamily": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              },
+              "required": [
+                "id",
+                "createdAt",
+                "kind",
+                "userAgentFamily"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "nextCursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor"
+        ],
+        "additionalProperties": false
+      },
+      "SessionPage": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "createdAt": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "lastUsedAt": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "userAgentFamily": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "current": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "id",
+                "createdAt",
+                "lastUsedAt",
+                "userAgentFamily",
+                "current"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "nextCursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor"
         ],
         "additionalProperties": false
       },

@@ -18,6 +18,7 @@ export interface Ctx {
   weights: WeightPolicy;
   metricsRefreshMode?: "sync" | "async";
   passwordBreachCheck?: "off" | "hibp";
+  securityMetadata?: () => { networkKeyHash: string | null; userAgent: string | null };
   mail?: { baseUrl: string; key: string; sender: MailSender };
   [inTransactionScope]?: (() => void)[];
 }

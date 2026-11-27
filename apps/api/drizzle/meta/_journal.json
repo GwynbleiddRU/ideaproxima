@@ -57,6 +57,13 @@
       "when": 1795687449954,
       "tag": "0007_slim_red_ghost",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1795759435366,
+      "tag": "0008_modern_cerise",
+      "breakpoints": true
     }
   ]
 }
